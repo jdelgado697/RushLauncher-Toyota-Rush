@@ -20,6 +20,9 @@
  <symbol id="settings" viewBox="0 0 24 24"><path d="M10 3h4l.6 2.2 1.7.8 2-.9 2.8 2.8-.9 2 .8 1.7L23 12v3l-2.2.6-.8 1.7.9 2-2.8 2.8-2-.9-1.7.8L14 24h-4l-.6-2.2-1.7-.8-2 .9-2.8-2.8.9-2-.8-1.7L1 15v-3l2.2-.6.8-1.7-.9-2L5.9 5l2 .9 1.7-.8Z" transform="translate(0 -1) scale(.96)"/><circle cx="12" cy="12" r="3.2"/></symbol>
  <symbol id="phone" viewBox="0 0 24 24"><path d="m5 3 4 2-1.4 4c1.4 2.7 3.5 4.8 6.4 6.4l4-1.4 3 4c-1 2.7-2.6 3.8-4.5 3.6A19.5 19.5 0 0 1 2.4 7.5C2.2 5.5 3.4 4 5 3Z"/></symbol>
  <symbol id="maps" viewBox="0 0 24 24"><path d="m4 20 5-17 5 9 6 8-9-4-7 4Z"/></symbol>
+ <symbol id="waze" viewBox="0 0 24 24"><path d="M5 14.5C3.9 9.1 7 4.5 12.3 4.5c4.8 0 7.6 3.1 7.6 7.1 0 2.4-1.4 4-3.3 5l-6.6 1.4c-2.4.5-4.2-.4-5-3.5Z"/><circle cx="10" cy="18.7" r="1.5"/><circle cx="17.4" cy="17.6" r="1.5"/><circle cx="11.7" cy="11.4" r=".9" fill="currentColor" stroke="none"/><circle cx="16" cy="11.4" r=".9" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="youtube" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="m10 9 5 3-5 3Z" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="netflix" viewBox="0 0 24 24"><path d="M6 20V4l12 16V4M6 4h4l8 12" stroke-width="2.4"/></symbol>
  <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
  <symbol id="prev" viewBox="0 0 24 24"><path d="M6 5v14m11-14-10 7 10 7V5Z"/></symbol>
  <symbol id="next" viewBox="0 0 24 24"><path d="M18 5v14M7 5l10 7-10 7V5Z"/></symbol>
@@ -60,11 +63,11 @@
         <div class="tiny-desc">Datos reales del dispositivo</div>
       </div>
     </section>
-    <section class="navigation card" data-go="maps" role="button" tabindex="0" aria-label="Abrir mapas">
+    <section class="navigation card" data-go="waze" role="button" tabindex="0" aria-label="Abrir Waze">
       <div class="map-lines"></div>
-      <span class="tag"><svg class="glyph"><use href="#maps"/></svg> NAVEGACIÓN</span>
+      <span class="tag"><svg class="glyph"><use href="#waze"/></svg> NAVEGACIÓN · WAZE</span>
       <div class="map-chevron"><svg class="glyph"><use href="#maps"/></svg></div>
-      <div class="nav-caption">Abrir Google Maps <svg class="glyph tiny"><use href="#arrow"/></svg></div>
+      <div class="nav-caption">Abrir Waze <svg class="glyph tiny"><use href="#arrow"/></svg></div>
     </section>
     <section class="service card" id="serviceCard" role="button" tabindex="0" aria-label="Configurar recordatorio de aceite">
       <div class="card-heading"><svg class="glyph"><use href="#oil"/></svg><span>SERVICIO DE ACEITE</span><svg class="glyph tiny right"><use href="#arrow"/></svg></div>
@@ -77,7 +80,7 @@
       <img src="rush_hero.jpg" class="vehicle-photo" alt="Ilustración conceptual de Toyota Rush blanco" />
       <div class="hero-heading"><span class="hero-badge"><svg class="glyph"><use href="#car"/></svg> TU VEHÍCULO</span>
       <div class="hero-title">TOYOTA <b>RUSH</b></div><div class="hero-subtitle">2021 · XLI · 4×2</div></div>
-      <div class="hero-caption">RUSH LAUNCHER <span>v1.0</span></div>
+      <div class="hero-caption">RUSH LAUNCHER <span>v1.2</span></div>
     </section>
     <section class="media card">
       <div class="media-art"><svg class="glyph"><use href="#music"/></svg></div>
@@ -100,10 +103,12 @@
   </div>
   <nav class="dock" aria-label="Accesos rápidos">
     <button class="dock-btn" data-go="phone"><svg class="glyph"><use href="#phone"/></svg><span>Teléfono</span></button>
-    <button class="dock-btn" data-go="maps"><svg class="glyph"><use href="#maps"/></svg><span>Mapas</span></button>
+    <button class="dock-btn highlighted" data-go="waze"><svg class="glyph"><use href="#waze"/></svg><span>Waze</span></button>
     <button class="dock-btn" data-go="radio"><svg class="glyph"><use href="#radio"/></svg><span>Radio</span></button>
     <button class="dock-btn" data-go="spotify"><svg class="glyph"><use href="#music"/></svg><span>Spotify</span></button>
-    <button class="dock-btn highlighted" data-go="autokit"><svg class="glyph"><use href="#link"/></svg><span>AutoKit</span></button>
+    <button class="dock-btn video-btn" data-go="youtube"><svg class="glyph youtube-glyph"><use href="#youtube"/></svg><span>YouTube</span></button>
+    <button class="dock-btn video-btn" data-go="netflix"><svg class="glyph netflix-glyph"><use href="#netflix"/></svg><span>Netflix</span></button>
+    <button class="dock-btn" data-go="autokit"><svg class="glyph"><use href="#link"/></svg><span>AutoKit</span></button>
     <button class="dock-btn" id="openLocalSettings"><svg class="glyph"><use href="#settings"/></svg><span>Ajustes</span></button>
   </nav>
 </main>
