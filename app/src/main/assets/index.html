@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#050b19">
+  <title>Rush Launcher · Toyota Rush 2021 XLI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" class="iconset" aria-hidden="true">
+ <symbol id="car" viewBox="0 0 24 24"><path d="M5 17h14l1-6-2.5-4H6.5L4 11l1 6ZM7 17v2M17 17v2M4.5 12h15M7 14h1M16 14h1"/></symbol>
+ <symbol id="clock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+ <symbol id="bluetooth" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></symbol>
+ <symbol id="signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-6M14 20v-9M19 20V5"/></symbol>
+ <symbol id="gps" viewBox="0 0 24 24"><path d="M20 11c0 5-8 11-8 11S4 16 4 11a8 8 0 1 1 16 0Z"/><circle cx="12" cy="11" r="2.5"/></symbol>
+ <symbol id="music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13M9 7l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></symbol>
+ <symbol id="radio" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="16.5" cy="13.5" r="2.5"/><path d="m5 7 13-4M6 13h5M6 17h5"/></symbol>
+ <symbol id="settings" viewBox="0 0 24 24"><path d="M10 3h4l.6 2.2 1.7.8 2-.9 2.8 2.8-.9 2 .8 1.7L23 12v3l-2.2.6-.8 1.7.9 2-2.8 2.8-2-.9-1.7.8L14 24h-4l-.6-2.2-1.7-.8-2 .9-2.8-2.8.9-2-.8-1.7L1 15v-3l2.2-.6.8-1.7-.9-2L5.9 5l2 .9 1.7-.8Z" transform="translate(0 -1) scale(.96)"/><circle cx="12" cy="12" r="3.2"/></symbol>
+ <symbol id="phone" viewBox="0 0 24 24"><path d="m5 3 4 2-1.4 4c1.4 2.7 3.5 4.8 6.4 6.4l4-1.4 3 4c-1 2.7-2.6 3.8-4.5 3.6A19.5 19.5 0 0 1 2.4 7.5C2.2 5.5 3.4 4 5 3Z"/></symbol>
+ <symbol id="maps" viewBox="0 0 24 24"><path d="m4 20 5-17 5 9 6 8-9-4-7 4Z"/></symbol>
+ <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="prev" viewBox="0 0 24 24"><path d="M6 5v14m11-14-10 7 10 7V5Z"/></symbol>
+ <symbol id="next" viewBox="0 0 24 24"><path d="M18 5v14M7 5l10 7-10 7V5Z"/></symbol>
+ <symbol id="oil" viewBox="0 0 24 24"><path d="M4 10h12l4 4-3 5H6l-2-4V10Zm5 0V7h7M3 10V7h5M21 19c2-2 3-3 1-5"/></symbol>
+ <symbol id="exit" viewBox="0 0 24 24"><path d="M10 3H4v18h6M15 7l5 5-5 5M8 12h12"/></symbol>
+ <symbol id="arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+ <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+ <symbol id="x" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+ <symbol id="link" viewBox="0 0 24 24"><path d="M10 14a5 5 0 0 0 7 .3l3-3a5 5 0 0 0-7-7L11 6M14 10a5 5 0 0 0-7-.3l-3 3a5 5 0 0 0 7 7l2-2"/></symbol>
+</svg>
+<main class="dashboard" id="dashboard">
+  <header class="header">
+    <div class="brand">
+      <div class="toyota-mark" aria-label="Toyota">T</div>
+      <div>
+        <div class="hello">Buenos días <span class="model-title">· Toyota Rush</span></div>
+        <div class="date" id="date">Hoy</div>
+      </div>
+    </div>
+    <div class="top-clock" id="clock">--:--</div>
+    <div class="top-right">
+      <div class="status-note" id="connectLabel">TBOX LITE S</div>
+      <svg class="glyph tiny glow"><use href="#bluetooth"/></svg>
+      <svg class="glyph tiny"><use href="#signal"/></svg>
+      <button class="top-button" data-go="exit" aria-label="Regresar al inicio de Android"><svg class="glyph"><use href="#exit"/></svg><span>Salir</span></button>
+    </div>
+  </header>
+  <div class="content-grid">
+    <section class="info card" aria-label="GPS y velocidad">
+      <div class="gauge-box">
+         <div class="gauge"><div class="gauge-inner"><div class="big-speed" id="speed">—</div><small>km/h</small></div></div>
+      </div>
+      <div class="gps-info">
+        <div class="eyebrow">VELOCIDAD GPS</div>
+        <div class="gps-heading" id="heading">Rumbo: —</div>
+        <div class="eyebrow second">ESTADO</div>
+        <button class="gps-status" id="gpsButton" aria-label="Comprobar señal GPS"><span class="status-dot"></span><span id="gpsStatus">Sin datos GPS</span></button>
+        <div class="tiny-desc">Datos reales del dispositivo</div>
+      </div>
+    </section>
+    <section class="navigation card" data-go="maps" role="button" tabindex="0" aria-label="Abrir mapas">
+      <div class="map-lines"></div>
+      <span class="tag"><svg class="glyph"><use href="#maps"/></svg> NAVEGACIÓN</span>
+      <div class="map-chevron"><svg class="glyph"><use href="#maps"/></svg></div>
+      <div class="nav-caption">Abrir Google Maps <svg class="glyph tiny"><use href="#arrow"/></svg></div>
+    </section>
+    <section class="service card" id="serviceCard" role="button" tabindex="0" aria-label="Configurar recordatorio de aceite">
+      <div class="card-heading"><svg class="glyph"><use href="#oil"/></svg><span>SERVICIO DE ACEITE</span><svg class="glyph tiny right"><use href="#arrow"/></svg></div>
+      <div class="service-info" id="serviceInfo">Configurar kilometraje</div>
+      <div class="service-meter"><span id="serviceBar"></span></div>
+      <div class="small-muted" id="serviceDetail">Registro manual · no conectado al vehículo</div>
+    </section>
+    <section class="vehicle card">
+      <div class="hero-orbit"></div>
+      <img src="rush_hero.jpg" class="vehicle-photo" alt="Ilustración conceptual de Toyota Rush blanco" />
+      <div class="hero-heading"><span class="hero-badge"><svg class="glyph"><use href="#car"/></svg> TU VEHÍCULO</span>
+      <div class="hero-title">TOYOTA <b>RUSH</b></div><div class="hero-subtitle">2021 · XLI · 4×2</div></div>
+      <div class="hero-caption">RUSH LAUNCHER <span>v1.0</span></div>
+    </section>
+    <section class="media card">
+      <div class="media-art"><svg class="glyph"><use href="#music"/></svg></div>
+      <div class="media-body">
+        <div class="card-heading">MÚSICA <span class="card-tip">Controles del reproductor activo</span></div>
+        <button class="media-open" data-go="spotify">Abrir Spotify <svg class="glyph tiny"><use href="#arrow"/></svg></button>
+        <div class="controls">
+          <button class="control" data-media="previous" aria-label="Anterior"><svg class="glyph"><use href="#prev"/></svg></button>
+          <button class="control primary" data-media="toggle" aria-label="Reproducir o pausar"><svg class="glyph"><use href="#play"/></svg></button>
+          <button class="control" data-media="next" aria-label="Siguiente"><svg class="glyph"><use href="#next"/></svg></button>
+        </div>
+      </div>
+    </section>
+    <section class="radio card" data-go="radio" role="button" tabindex="0" aria-label="Información de radio FM Toyota">
+      <div class="radio-icon"><svg class="glyph"><use href="#radio"/></svg></div>
+      <div class="radio-title">Radio FM</div>
+      <div class="small-muted">Desde el sistema Toyota</div>
+      <div class="radio-prompt">Ver indicaciones <svg class="glyph tiny"><use href="#arrow"/></svg></div>
+    </section>
+  </div>
+  <nav class="dock" aria-label="Accesos rápidos">
+    <button class="dock-btn" data-go="phone"><svg class="glyph"><use href="#phone"/></svg><span>Teléfono</span></button>
+    <button class="dock-btn" data-go="maps"><svg class="glyph"><use href="#maps"/></svg><span>Mapas</span></button>
+    <button class="dock-btn" data-go="radio"><svg class="glyph"><use href="#radio"/></svg><span>Radio</span></button>
+    <button class="dock-btn" data-go="spotify"><svg class="glyph"><use href="#music"/></svg><span>Spotify</span></button>
+    <button class="dock-btn highlighted" data-go="autokit"><svg class="glyph"><use href="#link"/></svg><span>AutoKit</span></button>
+    <button class="dock-btn" id="openLocalSettings"><svg class="glyph"><use href="#settings"/></svg><span>Ajustes</span></button>
+  </nav>
+</main>
+<div id="modal" class="overlay" hidden>
+ <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+   <div class="dialog-top"><h2 id="dialogTitle">Ajustes</h2><button class="close" id="closeModal"><svg class="glyph"><use href="#x"/></svg></button></div>
+   <div id="dialogBody" class="dialog-body"></div>
+ </div>
+</div>
+<div id="toast" aria-live="polite" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
