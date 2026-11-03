@@ -146,9 +146,9 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void openMaps() {
         try {
-            launchPackage("com.google.android.apps.maps", "Google Maps");
+            launchPackage("com.waze", "Waze");
         } catch (Exception ignored) {
-            message("Google Maps no esta disponible");
+            message("Waze no esta disponible");
         }
     }
 
@@ -158,7 +158,14 @@ public class MainActivity extends Activity implements LocationListener {
                 launchPackage("com.spotify.music", "Spotify");
                 break;
             case "maps":
+            case "waze":
                 openMaps();
+                break;
+            case "youtube":
+                launchPackage("com.google.android.youtube", "YouTube");
+                break;
+            case "netflix":
+                launchPackage("com.netflix.mediaclient", "Netflix");
                 break;
             case "phone":
             case "autokit":
