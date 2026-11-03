@@ -34,9 +34,33 @@
     el.addEventListener('click', function () { route(el.getAttribute('data-go')); });
     if (el.getAttribute('role') === 'button') el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); route(el.getAttribute('data-go')); } });
   });
+  // Los iconos reflejan el estado real recibido de Android MediaSession.
+  var mediaPlaying = null;
+  function setMediaIcon(playing) {
+    var use = $('#mediaPlayIcon');
+    if (!use) return;
+    use.setAttribute('href', playing ? '#pause' : '#play');
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', playing ? '#pause' : '#play');
+    $('#mediaToggle').setAttribute('aria-label', playing ? 'Pausar música' : 'Reproducir música');
+  }
+  window.rushMediaState = function (playing, title, app) {
+    if (typeof playing === 'boolean') {
+      mediaPlaying = playing;
+      setMediaIcon(playing);
+      $('#mediaTrack').textContent = (title ? title : app || 'Reproductor') + (playing ? ' · en reproducción' : ' · en pausa');
+    } else {
+      // Sin permiso MediaSession no afirmamos que la reproducción esté sincronizada.
+      $('#mediaTrack').textContent = 'Activa sincronización en Ajustes';
+    }
+  };
   document.querySelectorAll('[data-media]').forEach(function (el) {
     el.addEventListener('click', function () {
       if (!android) { toast('Control multimedia disponible en el Android Box con reproductor activo.'); return; }
+      if (el.getAttribute('data-media') === 'toggle') {
+        // Feedback inmediato; MediaSession corrige el icono segun la reproduccion real.
+        mediaPlaying = !mediaPlaying;
+        setMediaIcon(mediaPlaying);
+      }
       window.Rush.media(el.getAttribute('data-media'));
     });
   });
@@ -85,13 +109,80 @@
     });
     $('#clearKm').addEventListener('click', function() { service=null;localStorage.removeItem('rush_service');serviceUI();closeModal(); });
   }
-  $('#serviceCard').addEventListener('click', serviceDialog);
-  $('#serviceCard').addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); serviceDialog(); } });
+  function showPanel(which) {
+    var obd = which === 'obd';
+    $('#servicePanel').hidden = obd;
+    $('#obdPanel').hidden = !obd;
+    $('#serviceTab').classList.toggle('active', !obd);
+    $('#obdTab').classList.toggle('active', obd);
+    $('#serviceTab').setAttribute('aria-pressed', String(!obd));
+    $('#obdTab').setAttribute('aria-pressed', String(obd));
+  }
+  $('#serviceTab').addEventListener('click', function(){ showPanel('service'); });
+  $('#obdTab').addEventListener('click', function(){ showPanel('obd'); });
+  $('#servicePanel').addEventListener('click', serviceDialog);
+  $('#servicePanel').addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); serviceDialog(); } });
+
+  window.rushObdStatus = function(message) {
+    $('#obdConnectionStatus').textContent = message;
+    var messageInDialog = $('#obdModalStatus');
+    if(messageInDialog) messageInDialog.textContent = message;
+  };
+  window.rushObdData = function(speed, rpm, coolant) {
+    $('#obdSpeed').textContent = speed >= 0 ? String(speed) : '—';
+    $('#obdRpm').textContent = rpm >= 0 ? String(rpm) : '—';
+    $('#obdTemp').textContent = coolant > -1000 ? String(coolant) : '—';
+  };
+  window.rushObdDevices = function(devices) {
+    var list = $('#obdDeviceList');
+    if (!list) return;
+    list.textContent = '';
+    if (!Array.isArray(devices) || devices.length === 0) {
+      list.textContent = 'No hay dispositivos vinculados. Vincula un adaptador Bluetooth Classic ELM327 desde Ajustes de Android.';
+      return;
+    }
+    devices.forEach(function(device) {
+      var btn = document.createElement('button');
+      btn.className = 'action secondary obd-device';
+      btn.textContent = String(device.name || 'Dispositivo') + ' · ' + String(device.address || '');
+      btn.addEventListener('click', function(){
+        if (!android) {toast('OBD requiere Android y un adaptador ELM327.');return;}
+        window.Rush.connectObd(String(device.address));
+        closeModal();
+        showPanel('obd');
+      });
+      list.appendChild(btn);
+    });
+  };
+  function openObdDialog() {
+    showPanel('obd');
+    openModal('Conectar OBD-II · Bluetooth Classic',
+      '<p>Vincula antes tu adaptador ELM327 con Android. Solo se leen datos del motor; no se modifica la ECU.</p>'+
+      '<button class="action" id="scanObd">Buscar dispositivos vinculados</button>'+
+      '<button class="action secondary" id="obdBluetoothSettings">Ajustes Bluetooth</button>'+
+      '<button class="action secondary" id="disconnectObd">Desconectar</button>'+
+      '<div id="obdModalStatus" class="note">Estado: sin conexión</div>'+
+      '<div id="obdDeviceList" class="obd-device-list">Pulsa buscar para ver los dispositivos vinculados.</div>');
+    $('#scanObd').addEventListener('click',function(){
+      if(android)window.Rush.requestObdDevices();
+      else toast('Requiere un adaptador ELM327 vinculado al Android Box.');
+    });
+    $('#obdBluetoothSettings').addEventListener('click',function(){if(android)window.Rush.bluetoothSettings();else toast('Abrir Ajustes Bluetooth en Android.');});
+    $('#disconnectObd').addEventListener('click',function(){if(android)window.Rush.disconnectObd();closeModal();});
+    if(android)window.Rush.requestObdDevices();
+  }
+  $('#openObdSettings').addEventListener('click',openObdDialog);
   $('#openLocalSettings').addEventListener('click', function () {
     openModal('Rush Launcher · Ajustes', '<p>Diseñado para Toyota Rush 2021 XLI en TBox Lite S (referencia 800 × 480).</p>'+
-      '<button class="action" id="openAndroidSettings">Ajustes de Android</button><button class="action secondary" id="openService">Recordatorio de aceite</button>'+
+      '<button class="action" id="enableHome">Elegir Rush como inicio del TBox</button>'+
+      '<button class="action" id="allowMedia">Sincronizar Spotify · dar permiso</button>'+
+      '<button class="action secondary" id="openObd">Conectar OBD-II</button>'+
+      '<button class="action secondary" id="openAndroidSettings">Ajustes de Android</button><button class="action secondary" id="openService">Recordatorio de aceite</button>'+
       '<button class="action secondary" id="leaveApp">Salir al inicio anterior</button>'+
-      '<div class="note">Versión 1.2 · Waze predeterminado · YouTube y Netflix desde accesos directos. No modifica firmware, sintonizador FM, controles del vehículo ni cámara de retroceso. El velocímetro solo se activa con datos GPS reales.</div>');
+      '<div class="note">Versión 1.3 · Waze, inicio seleccionable, control Spotify con autorización y OBD-II Bluetooth de solo lectura. No modifica firmware, sintonizador FM, controles del vehículo ni cámara de retroceso. El velocímetro solo se activa con datos GPS reales.</div>');
+    $('#enableHome').addEventListener('click', function(){closeModal();route('enableHome');});
+    $('#allowMedia').addEventListener('click',function(){closeModal();if(android)window.Rush.requestMediaAccess();else toast('Configúralo en el Android Box.');});
+    $('#openObd').addEventListener('click',function(){openObdDialog();});
     $('#openAndroidSettings').addEventListener('click', function(){ closeModal();route('settings'); });
     $('#openService').addEventListener('click',serviceDialog);
     $('#leaveApp').addEventListener('click',function(){closeModal();route('exit');});
