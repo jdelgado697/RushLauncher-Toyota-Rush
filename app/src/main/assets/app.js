@@ -28,7 +28,7 @@
     if (name === 'radio') {
       showRadioHelp(); return;
     }
-    toast('En la aplicación instalada se abrirá ' + ({spotify:'Spotify',maps:'Google Maps',autokit:'AutoKit',phone:'AutoKit',settings:'Ajustes Android'}[name] || name) + '.');
+    toast('En la aplicación instalada se abrirá ' + ({spotify:'Spotify',maps:'Waze',waze:'Waze',youtube:'YouTube',netflix:'Netflix',autokit:'AutoKit',phone:'AutoKit',settings:'Ajustes Android'}[name] || name) + '.');
   }
   document.querySelectorAll('[data-go]').forEach(function (el) {
     el.addEventListener('click', function () { route(el.getAttribute('data-go')); });
@@ -91,7 +91,7 @@
     openModal('Rush Launcher · Ajustes', '<p>Diseñado para Toyota Rush 2021 XLI en TBox Lite S (referencia 800 × 480).</p>'+
       '<button class="action" id="openAndroidSettings">Ajustes de Android</button><button class="action secondary" id="openService">Recordatorio de aceite</button>'+
       '<button class="action secondary" id="leaveApp">Salir al inicio anterior</button>'+
-      '<div class="note">Versión 1.0. No modifica firmware, sintonizador FM, controles del vehículo ni cámara de retroceso. El velocímetro solo se activa con datos GPS reales.</div>');
+      '<div class="note">Versión 1.2 · Waze predeterminado · YouTube y Netflix desde accesos directos. No modifica firmware, sintonizador FM, controles del vehículo ni cámara de retroceso. El velocímetro solo se activa con datos GPS reales.</div>');
     $('#openAndroidSettings').addEventListener('click', function(){ closeModal();route('settings'); });
     $('#openService').addEventListener('click',serviceDialog);
     $('#leaveApp').addEventListener('click',function(){closeModal();route('exit');});
