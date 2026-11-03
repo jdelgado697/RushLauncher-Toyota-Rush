@@ -24,6 +24,7 @@
  <symbol id="youtube" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="m10 9 5 3-5 3Z" fill="currentColor" stroke="none"/></symbol>
  <symbol id="netflix" viewBox="0 0 24 24"><path d="M6 20V4l12 16V4M6 4h4l8 12" stroke-width="2.4"/></symbol>
  <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="pause" viewBox="0 0 24 24"><path d="M7 5h3v14H7ZM14 5h3v14h-3Z" fill="currentColor" stroke="none"/></symbol>
  <symbol id="prev" viewBox="0 0 24 24"><path d="M6 5v14m11-14-10 7 10 7V5Z"/></symbol>
  <symbol id="next" viewBox="0 0 24 24"><path d="M18 5v14M7 5l10 7-10 7V5Z"/></symbol>
  <symbol id="oil" viewBox="0 0 24 24"><path d="M4 10h12l4 4-3 5H6l-2-4V10Zm5 0V7h7M3 10V7h5M21 19c2-2 3-3 1-5"/></symbol>
@@ -69,11 +70,25 @@
       <div class="map-chevron"><svg class="glyph"><use href="#maps"/></svg></div>
       <div class="nav-caption">Abrir Waze <svg class="glyph tiny"><use href="#arrow"/></svg></div>
     </section>
-    <section class="service card" id="serviceCard" role="button" tabindex="0" aria-label="Configurar recordatorio de aceite">
-      <div class="card-heading"><svg class="glyph"><use href="#oil"/></svg><span>SERVICIO DE ACEITE</span><svg class="glyph tiny right"><use href="#arrow"/></svg></div>
-      <div class="service-info" id="serviceInfo">Configurar kilometraje</div>
-      <div class="service-meter"><span id="serviceBar"></span></div>
-      <div class="small-muted" id="serviceDetail">Registro manual · no conectado al vehículo</div>
+    <section class="service card" id="serviceCard" aria-label="Mantenimiento y datos OBD-II">
+      <div class="service-tabs" aria-label="Información del vehículo">
+        <button class="service-tab active" id="serviceTab" aria-pressed="true">ACEITE</button>
+        <button class="service-tab" id="obdTab" aria-pressed="false">OBD-II</button>
+      </div>
+      <div id="servicePanel" role="button" tabindex="0" aria-label="Configurar recordatorio de aceite">
+        <div class="service-info" id="serviceInfo">Configurar kilometraje</div>
+        <div class="service-meter"><span id="serviceBar"></span></div>
+        <div class="small-muted" id="serviceDetail">Registro manual · no conectado al vehículo</div>
+      </div>
+      <div id="obdPanel" hidden>
+        <div class="obd-readouts">
+          <div><b id="obdSpeed">—</b><small>km/h</small></div>
+          <div><b id="obdRpm">—</b><small>RPM</small></div>
+          <div><b id="obdTemp">—</b><small>°C motor</small></div>
+        </div>
+        <button class="obd-connect" id="openObdSettings">Conectar OBD-II</button>
+        <div id="obdConnectionStatus" class="obd-status">Sin adaptador conectado</div>
+      </div>
     </section>
     <section class="vehicle card">
       <div class="hero-orbit"></div>
@@ -85,11 +100,11 @@
     <section class="media card">
       <div class="media-art"><svg class="glyph"><use href="#music"/></svg></div>
       <div class="media-body">
-        <div class="card-heading">MÚSICA <span class="card-tip">Controles del reproductor activo</span></div>
+        <div class="card-heading">MÚSICA <span class="card-tip" id="mediaTrack">Reproductor activo · pendiente</span></div>
         <button class="media-open" data-go="spotify">Abrir Spotify <svg class="glyph tiny"><use href="#arrow"/></svg></button>
         <div class="controls">
           <button class="control" data-media="previous" aria-label="Anterior"><svg class="glyph"><use href="#prev"/></svg></button>
-          <button class="control primary" data-media="toggle" aria-label="Reproducir o pausar"><svg class="glyph"><use href="#play"/></svg></button>
+          <button class="control primary" id="mediaToggle" data-media="toggle" aria-label="Reproducir"><svg class="glyph"><use id="mediaPlayIcon" href="#play"/></svg></button>
           <button class="control" data-media="next" aria-label="Siguiente"><svg class="glyph"><use href="#next"/></svg></button>
         </div>
       </div>
