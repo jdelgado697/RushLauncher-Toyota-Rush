@@ -37,6 +37,19 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Verificar JavaScript de la interfaz
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S)
+          if not scripts:
+              raise SystemExit("Falta JavaScript de la interfaz")
+          Path("/tmp/rush-ui-inline.js").write_text("\\n".join(scripts), encoding="utf-8")
+          PY
+          node --check /tmp/rush-ui-inline.js
+
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
