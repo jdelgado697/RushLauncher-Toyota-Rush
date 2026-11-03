@@ -69,7 +69,7 @@ public class MainActivity extends Activity implements LocationListener {
             }
         });
         webView = new WebView(this);
-        webView.setBackgroundColor(0xFF050B19);
+        webView.setBackgroundColor(0xFFE9EDF4);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -191,6 +191,9 @@ public class MainActivity extends Activity implements LocationListener {
             case "phone":
             case "autokit":
                 launchAutoKit();
+                break;
+            case "bluetoothSettings":
+                openBluetoothSettings();
                 break;
             case "settings":
                 try {
