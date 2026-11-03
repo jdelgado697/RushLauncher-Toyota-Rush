@@ -1,139 +1,228 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#050b19">
-  <title>Rush Launcher · Toyota Rush 2021 XLI</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#e9edf4">
+<title>Rush Launcher · Toyota Rush 2021 XLI</title>
+<style>
+:root{--bg:#e9edf4;--panel:#e8edf5;--ink:#27303d;--muted:#818d9f;--accent:#bafa43;--accent-ink:#47711d;--shadow:9px 9px 19px #cdd4df,-9px -9px 20px #fff;--inset:inset 3px 3px 7px #cdd4df,inset -3px -3px 7px #fff;font:500 13px/1.3 "Roboto","Arial",sans-serif;color:var(--ink)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}button,input{font:inherit;color:inherit}button{cursor:pointer;border:0;background:none;touch-action:manipulation}button:focus-visible,[role=button]:focus-visible,input:focus-visible{outline:3px solid #87bb21;outline-offset:1px}.icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}.icons{display:none}
+.shell{height:100dvh;min-height:330px;padding:11px 16px 10px;display:grid;grid-template-rows:41px minmax(0,1fr) 59px;gap:11px;background:radial-gradient(ellipse at 83% -5%,#fff7df 0,transparent 34%),radial-gradient(ellipse at 3% 5%,#dfe8f6 0,transparent 38%),var(--bg)}
+.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}.section-title{font-size:20px;font-weight:800;letter-spacing:-.5px}.clock{font-size:26px;font-weight:850;letter-spacing:-1px;font-variant-numeric:tabular-nums}.status{display:flex;align-items:center;justify-content:flex-end;gap:9px;font-size:11px;font-weight:700}.status .icon{width:17px}.gear{display:grid;place-items:center;border-radius:50%;width:37px;height:37px;background:var(--panel);box-shadow:var(--shadow)}.gear .icon{width:21px;height:21px}
+.panel,.surface{border-radius:23px;background:linear-gradient(145deg,#f0f4fa 0%,#e5ebf4 90%);box-shadow:var(--shadow);min-width:0;min-height:0}.pane{display:none;width:100%;height:100%;min-height:0}.pane.active{display:block}.row-home{display:grid;grid-template-columns:54% minmax(0,1fr);gap:14px;height:100%}.hero{position:relative;overflow:hidden;padding:13px 16px}.hero-label{font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700}.hero-title{font-size:25px;font-weight:900;letter-spacing:-1.2px;position:relative;z-index:2}.hero-sub{color:#929dae;font-size:12px;font-weight:650;position:relative;z-index:2}.accent-line{width:32px;height:3px;border-radius:9px;background:var(--accent);margin-top:7px;position:relative;z-index:2}.hero-visual{position:absolute;right:5%;top:23%;width:81%;height:55%;background:#cfd9ea;border-radius:15px;overflow:hidden;box-shadow:inset 2px 2px 5px #bfc9db,3px 5px 9px #bbc5d48a}.hero-visual img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.98}.hero-visual:after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 14px #e7edf2a8;pointer-events:none}.hero-badges{position:absolute;right:15px;top:10px;display:flex;gap:9px}.ministat{font-size:10px;color:#747f91;text-align:center}.ministat strong{display:block;font-size:19px;color:var(--ink);font-weight:850}.quick{position:absolute;bottom:9px;left:11px;right:11px;display:flex;gap:6px;z-index:3}.quick button{display:flex;gap:3px;align-items:center;justify-content:center;flex:1;min-width:0;height:35px;border-radius:12px;background:#edf2faeb;box-shadow:3px 4px 8px #b7c3d1,-3px -3px 8px #fff;color:#334052;font-size:10px;font-weight:700}.quick .icon{width:15px;height:15px}.quick .yt{color:#ee2637}.quick .netflix{color:#e12236}.quick .waze{color:#399edd}
+.home-right{display:grid;grid-template-rows:1.05fr .95fr;gap:13px;min-height:0}.map-preview{display:flex;flex-direction:column;justify-content:space-between;padding:13px 16px;overflow:hidden;position:relative;text-align:left;width:100%}.map-preview:before{content:"";position:absolute;inset:0;background:linear-gradient(35deg,transparent 46%,#c7d4e4 46% 47%,transparent 47% 65%,#d5dfed 65% 67%,transparent 67%),repeating-linear-gradient(0deg,transparent 0 24px,#d7e0eb 25px 26px),repeating-linear-gradient(90deg,transparent 0 34px,#d7e0eb 35px 36px);opacity:.58;transform:rotate(-9deg) scale(1.3)}.map-preview>*{position:relative;z-index:1}.small-label{font-size:10px;font-weight:800;letter-spacing:1.1px;color:#7a879a;text-transform:uppercase}.map-pin{display:grid;place-items:center;align-self:center;width:44px;height:44px;border-radius:50%;background:#f4f7fb;box-shadow:var(--shadow);color:#69a7dc}.map-pin .icon{width:27px;height:27px}.map-footer{display:flex;justify-content:space-between;align-items:end;gap:8px}.map-footer strong{font-size:21px;font-weight:850}.pill{border-radius:22px;background:var(--accent);font-weight:850;padding:8px 14px;color:#233527;box-shadow:3px 5px 8px #b4c0ce}.player{display:grid;grid-template-columns:56px 1fr;gap:10px;padding:15px;align-items:center;min-height:0}.album{width:53px;height:53px;border-radius:18px;display:grid;place-items:center;background:#f8fbff;box-shadow:var(--shadow);color:#e12a41}.album .icon{width:26px;height:26px}.player-title{font-size:17px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player-track{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.player-controls{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:5px}.round{width:33px;height:33px;display:grid;place-items:center;border-radius:50%;box-shadow:var(--shadow);background:#eaf0f7}.round.primary{width:40px;height:40px;background:var(--accent);color:#1c3221}
+.bottom{border-radius:28px;box-shadow:var(--shadow);background:linear-gradient(145deg,#f1f5fb,#e2e9f2);display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:3px 6px}.tab{display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;border-radius:18px;font-size:10px;color:#68788d;position:relative;font-weight:700}.tab .icon{width:20px;height:20px}.tab.selected{color:var(--accent-ink)}.tab.selected:after{content:"";position:absolute;bottom:1px;width:26px;height:3px;background:#75a916;border-radius:9px}
+.dashboard-grid{display:grid;grid-template-columns:21% minmax(0,1fr) 21%;gap:13px;height:100%}.gauge-card{display:flex;flex-direction:column;padding:13px;justify-content:space-between}.gauge-name{display:flex;gap:5px;align-items:center;color:#8490a2;letter-spacing:1px;font-weight:700;font-size:10px}.gauge-name .icon{width:16px;height:16px}.gauge-ring{width:min(100%,138px);aspect-ratio:1;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;border:13px solid #cbd5e3;border-bottom-color:transparent;transform:rotate(0deg)}.gauge-num{font-size:40px;font-weight:850;letter-spacing:-2px;line-height:1}.gauge-unit{font-size:10px;color:#8090a3;margin-top:5px}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,1fr) .73fr;gap:9px;min-height:0}.metric{padding:8px 10px;border-radius:17px;min-width:0;display:flex;flex-direction:column;justify-content:space-between}.metric .icon{width:15px;height:15px}.metric-value{font-size:21px;font-weight:850;line-height:1}.metric-label{font-size:10px;color:#8490a2;line-height:1.15}.metric-bottom{grid-column:span 1}.metric-bottom.span2{grid-column:span 2}.metric-bottom .metric-value{font-size:13px}.metric-bottom .metric-label{font-size:9px}
+.conn-grid{display:grid;grid-template-columns:36% 1fr;gap:14px;height:100%}.connection-left,.connection-right{padding:19px;overflow:auto}.eyebrow{color:var(--muted);font-size:10px;letter-spacing:2px;font-weight:750}.connection-left h2{font-size:19px;line-height:1.15;margin:9px 0 14px}.segment{display:flex;background:#e2e9f3;border-radius:30px;padding:4px;box-shadow:var(--inset);gap:4px}.segment button{flex:1;min-width:0;border-radius:25px;font-size:11px;font-weight:700;padding:8px 3px}.segment .current{background:var(--accent);color:#243c1b}.segment button:disabled{color:#9ba7b7}.hint{font-size:11px;color:#8390a1;line-height:1.4}.connection-right{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;text-align:center}.bluetooth-big{font-size:42px;color:#83bc13}.connection-right h2{font-size:22px;margin:0}.connection-right p{color:#77879a;font-size:11px;margin:0;max-width:325px}.btn-primary{padding:11px 19px;background:var(--accent);border-radius:25px;font-weight:850;box-shadow:4px 6px 11px #bfc8d6,-4px -4px 10px #fff}.btn-secondary{border-radius:20px;background:#e8edf5;box-shadow:var(--shadow);padding:8px 12px;font-weight:750;font-size:11px}.device-list{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;width:100%;max-height:86px;overflow:auto}.device-list button{font-size:10px;max-width:100%}.device-list small{color:#9ca4b1}
+.garage-layout{display:grid;grid-template-rows:41% 1fr;gap:12px;height:100%}.garage-hero{padding:13px 19px;display:grid;grid-template-columns:1.15fr 1fr .95fr;align-items:center;gap:14px}.garage-hero h2{margin:5px 0 0;font-size:23px;letter-spacing:-.7px}.garage-hero .car-mini{width:100%;height:100%;min-height:0;object-fit:cover;object-position:center;border-radius:14px}.garage-plate{align-self:center;text-align:center}.plate-label{font-size:10px;color:#8390a2}.plate-number{font-size:19px;font-weight:850;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.garage-cards{display:grid;grid-template-columns:1.05fr .95fr 1fr 1fr;gap:12px}.garage-card{padding:14px;min-width:0;display:flex;flex-direction:column;justify-content:space-between}.garage-card strong{font-size:16px}.garage-card .soft-detail{font-size:11px;color:#7f8fa3}.garage-card .big-placeholder{font-size:23px;font-weight:850}.garage-card button{align-self:start}.about-layout{height:100%;display:grid;grid-template-columns:1.1fr 1fr;gap:14px}.about-card{padding:20px;display:flex;flex-direction:column;gap:8px;justify-content:center}.about-card h2{font-size:23px;margin:0}.about-card p{font-size:12px;color:#7c899d}.actions-wrap{display:flex;flex-wrap:wrap;gap:10px}
+.overlay{position:fixed;z-index:30;inset:0;display:grid;place-items:center;background:rgba(42,51,66,.3);padding:15px}.overlay[hidden]{display:none!important}.dialog{background:#edf2f8;border-radius:24px;padding:20px;max-width:450px;width:100%;max-height:93vh;overflow:auto;box-shadow:10px 10px 30px #69768970,-10px -10px 40px #ffffff90}.dialog-title{font-size:19px;font-weight:850;margin:0 0 10px}.dialog p{font-size:12px;color:#667489}.dialog .close{float:right;font-size:21px}.dialog label{display:block;font-size:11px;color:#717c90;margin:10px 0 4px}.dialog input{width:100%;padding:10px;border:1px solid #c9d1df;border-radius:12px;background:#f6f9fc}.dialog-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.toast{position:fixed;z-index:50;bottom:78px;left:50%;transform:translateX(-50%);max-width:90%;border-radius:16px;background:#263548;color:white;padding:9px 14px;font-size:11px;box-shadow:0 5px 18px #5661746e}
+@media(max-width:860px){.shell{padding:8px 10px;grid-template-rows:34px minmax(0,1fr) 51px;gap:8px}.section-title{font-size:17px}.clock{font-size:22px}.panel{border-radius:16px}.hero-title{font-size:20px}.hero-label{font-size:9px}.hero-visual{right:3%;height:54%;width:84%}.ministat strong{font-size:16px}.map-footer strong{font-size:17px}.player{padding:8px;grid-template-columns:40px 1fr;gap:7px}.album{width:40px;height:40px;border-radius:12px}.player-title{font-size:14px}.player-controls{margin-top:2px}.round{width:29px;height:29px}.round.primary{width:35px;height:35px}.quick button{font-size:9px;height:29px}.dashboard-grid{gap:8px}.metrics{gap:6px}.metric{padding:6px}.metric-value{font-size:17px}.metric-label{font-size:9px}.gauge-ring{border-width:9px}.gauge-num{font-size:28px}.connection-left,.connection-right{padding:13px}.connection-left h2{font-size:16px}.garage-hero{padding:9px;gap:7px}.garage-hero h2{font-size:17px}.garage-cards{gap:8px}.garage-card{padding:9px}.garage-card strong{font-size:13px}.garage-card .soft-detail{font-size:10px}.garage-card .big-placeholder{font-size:17px}}
+@media(max-height:400px){.shell{grid-template-rows:28px minmax(0,1fr) 43px;gap:5px}.header{height:28px}.hero-visual{top:22%;height:52%}.quick button{height:25px}.metrics{gap:4px}.metric{padding:4px}.gauge-num{font-size:23px}}
+</style>
 </head>
 <body>
-<svg xmlns="http://www.w3.org/2000/svg" class="iconset" aria-hidden="true">
- <symbol id="car" viewBox="0 0 24 24"><path d="M5 17h14l1-6-2.5-4H6.5L4 11l1 6ZM7 17v2M17 17v2M4.5 12h15M7 14h1M16 14h1"/></symbol>
- <symbol id="clock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
- <symbol id="bluetooth" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></symbol>
- <symbol id="signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-6M14 20v-9M19 20V5"/></symbol>
- <symbol id="gps" viewBox="0 0 24 24"><path d="M20 11c0 5-8 11-8 11S4 16 4 11a8 8 0 1 1 16 0Z"/><circle cx="12" cy="11" r="2.5"/></symbol>
- <symbol id="music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13M9 7l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></symbol>
- <symbol id="radio" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="16.5" cy="13.5" r="2.5"/><path d="m5 7 13-4M6 13h5M6 17h5"/></symbol>
- <symbol id="settings" viewBox="0 0 24 24"><path d="M10 3h4l.6 2.2 1.7.8 2-.9 2.8 2.8-.9 2 .8 1.7L23 12v3l-2.2.6-.8 1.7.9 2-2.8 2.8-2-.9-1.7.8L14 24h-4l-.6-2.2-1.7-.8-2 .9-2.8-2.8.9-2-.8-1.7L1 15v-3l2.2-.6.8-1.7-.9-2L5.9 5l2 .9 1.7-.8Z" transform="translate(0 -1) scale(.96)"/><circle cx="12" cy="12" r="3.2"/></symbol>
- <symbol id="phone" viewBox="0 0 24 24"><path d="m5 3 4 2-1.4 4c1.4 2.7 3.5 4.8 6.4 6.4l4-1.4 3 4c-1 2.7-2.6 3.8-4.5 3.6A19.5 19.5 0 0 1 2.4 7.5C2.2 5.5 3.4 4 5 3Z"/></symbol>
- <symbol id="maps" viewBox="0 0 24 24"><path d="m4 20 5-17 5 9 6 8-9-4-7 4Z"/></symbol>
- <symbol id="waze" viewBox="0 0 24 24"><path d="M5 14.5C3.9 9.1 7 4.5 12.3 4.5c4.8 0 7.6 3.1 7.6 7.1 0 2.4-1.4 4-3.3 5l-6.6 1.4c-2.4.5-4.2-.4-5-3.5Z"/><circle cx="10" cy="18.7" r="1.5"/><circle cx="17.4" cy="17.6" r="1.5"/><circle cx="11.7" cy="11.4" r=".9" fill="currentColor" stroke="none"/><circle cx="16" cy="11.4" r=".9" fill="currentColor" stroke="none"/></symbol>
- <symbol id="youtube" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="m10 9 5 3-5 3Z" fill="currentColor" stroke="none"/></symbol>
- <symbol id="netflix" viewBox="0 0 24 24"><path d="M6 20V4l12 16V4M6 4h4l8 12" stroke-width="2.4"/></symbol>
- <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
- <symbol id="pause" viewBox="0 0 24 24"><path d="M7 5h3v14H7ZM14 5h3v14h-3Z" fill="currentColor" stroke="none"/></symbol>
- <symbol id="prev" viewBox="0 0 24 24"><path d="M6 5v14m11-14-10 7 10 7V5Z"/></symbol>
- <symbol id="next" viewBox="0 0 24 24"><path d="M18 5v14M7 5l10 7-10 7V5Z"/></symbol>
- <symbol id="oil" viewBox="0 0 24 24"><path d="M4 10h12l4 4-3 5H6l-2-4V10Zm5 0V7h7M3 10V7h5M21 19c2-2 3-3 1-5"/></symbol>
- <symbol id="exit" viewBox="0 0 24 24"><path d="M10 3H4v18h6M15 7l5 5-5 5M8 12h12"/></symbol>
- <symbol id="arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
- <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
- <symbol id="x" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
- <symbol id="link" viewBox="0 0 24 24"><path d="M10 14a5 5 0 0 0 7 .3l3-3a5 5 0 0 0-7-7L11 6M14 10a5 5 0 0 0-7-.3l-3 3a5 5 0 0 0 7 7l2-2"/></symbol>
+<svg class="icons" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v11H3zM9 21v-7h6v7"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M6 17V9m6 8V4m6 13v-6"/></symbol>
+<symbol id="i-connection" viewBox="0 0 24 24"><path d="M2 13h4l3-7 5 13 3-6h5"/></symbol>
+<symbol id="i-garage" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12M7 21V11h10v10M7 15h10"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7h.01"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="m10 2 4 0 .7 2.4 1.8.8 2.2-1.2 2.8 3-1.3 2.1.6 1.9 2.2.7v4l-2.2.7-.7 1.8 1.3 2.1-2.9 2.8-2.1-1.1-1.8.7-.7 2.3h-4l-.7-2.3-1.8-.7-2.1 1.1-2.9-2.8 1.3-2.1-.7-1.8-2.2-.7v-4l2.2-.7.7-1.9-1.3-2.1 2.8-3 2.2 1.2 1.8-.8z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-speed" viewBox="0 0 24 24"><path d="M3 17a10 10 0 1 1 18 0M12 14l5-5M12 14l-2 2"/></symbol>
+<symbol id="i-rpm" viewBox="0 0 24 24"><path d="M12 12 5 3a6 6 0 0 1 7 9Zm0 0 9-3a6 6 0 0 1-9 3Zm0 0-2 10a6 6 0 0 1 2-10Z"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13M9 7l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3"/></symbol>
+<symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5v14m11-14-10 7 10 7V5Z"/></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="M18 5v14M7 5l10 7-10 7V5Z"/></symbol>
+<symbol id="i-yt" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3Z"/></symbol>
+<symbol id="i-bluetooth" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 8a15 15 0 0 1 20 0M5 12a11 11 0 0 1 14 0m-11 4a6 6 0 0 1 8 0M12 20h.01"/></symbol>
+<symbol id="i-radio" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="3"/><circle cx="17" cy="14" r="3"/><path d="m5 7 14-4M5 13h6M5 17h6"/></symbol>
+<symbol id="i-oil" viewBox="0 0 24 24"><path d="M4 10h12l4 4-3 5H6l-2-4zM9 10V7h7M3 10V7h5"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 10v4M11 8l-3 5h3l-1 3 5-6h-3V8"/></symbol>
+<symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 4C9 4 4 7 4 15c0 4 3 5 6 5 7 0 10-9 10-16ZM4 20c3-4 7-7 12-10"/></symbol>
+<symbol id="i-thermo" viewBox="0 0 24 24"><path d="M10 14V5a2 2 0 0 1 4 0v9a5 5 0 1 1-4 0ZM12 9v8"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="m14 2-9 12h7l-2 8 9-13h-7z"/></symbol>
 </svg>
-<main class="dashboard" id="dashboard">
-  <header class="header">
-    <div class="brand">
-      <div class="toyota-mark" aria-label="Toyota">T</div>
-      <div>
-        <div class="hello">Buenos días <span class="model-title">· Toyota Rush</span></div>
-        <div class="date" id="date">Hoy</div>
-      </div>
-    </div>
-    <div class="top-clock" id="clock">--:--</div>
-    <div class="top-right">
-      <div class="status-note" id="connectLabel">TBOX LITE S</div>
-      <svg class="glyph tiny glow"><use href="#bluetooth"/></svg>
-      <svg class="glyph tiny"><use href="#signal"/></svg>
-      <button class="top-button" data-go="exit" aria-label="Regresar al inicio de Android"><svg class="glyph"><use href="#exit"/></svg><span>Salir</span></button>
-    </div>
-  </header>
-  <div class="content-grid">
-    <section class="info card" aria-label="GPS y velocidad">
-      <div class="gauge-box">
-         <div class="gauge"><div class="gauge-inner"><div class="big-speed" id="speed">—</div><small>km/h</small></div></div>
-      </div>
-      <div class="gps-info">
-        <div class="eyebrow">VELOCIDAD GPS</div>
-        <div class="gps-heading" id="heading">Rumbo: —</div>
-        <div class="eyebrow second">ESTADO</div>
-        <button class="gps-status" id="gpsButton" aria-label="Comprobar señal GPS"><span class="status-dot"></span><span id="gpsStatus">Sin datos GPS</span></button>
-        <div class="tiny-desc">Datos reales del dispositivo</div>
-      </div>
-    </section>
-    <section class="navigation card" data-go="waze" role="button" tabindex="0" aria-label="Abrir Waze">
-      <div class="map-lines"></div>
-      <span class="tag"><svg class="glyph"><use href="#waze"/></svg> NAVEGACIÓN · WAZE</span>
-      <div class="map-chevron"><svg class="glyph"><use href="#maps"/></svg></div>
-      <div class="nav-caption">Abrir Waze <svg class="glyph tiny"><use href="#arrow"/></svg></div>
-    </section>
-    <section class="service card" id="serviceCard" aria-label="Mantenimiento y datos OBD-II">
-      <div class="service-tabs" aria-label="Información del vehículo">
-        <button class="service-tab active" id="serviceTab" aria-pressed="true">ACEITE</button>
-        <button class="service-tab" id="obdTab" aria-pressed="false">OBD-II</button>
-      </div>
-      <div id="servicePanel" role="button" tabindex="0" aria-label="Configurar recordatorio de aceite">
-        <div class="service-info" id="serviceInfo">Configurar kilometraje</div>
-        <div class="service-meter"><span id="serviceBar"></span></div>
-        <div class="small-muted" id="serviceDetail">Registro manual · no conectado al vehículo</div>
-      </div>
-      <div id="obdPanel" hidden>
-        <div class="obd-readouts">
-          <div><b id="obdSpeed">—</b><small>km/h</small></div>
-          <div><b id="obdRpm">—</b><small>RPM</small></div>
-          <div><b id="obdTemp">—</b><small>°C motor</small></div>
-        </div>
-        <button class="obd-connect" id="openObdSettings">Conectar OBD-II</button>
-        <div id="obdConnectionStatus" class="obd-status">Sin adaptador conectado</div>
-      </div>
-    </section>
-    <section class="vehicle card">
-      <div class="hero-orbit"></div>
-      <img src="rush_hero.jpg" class="vehicle-photo" alt="Ilustración conceptual de Toyota Rush blanco" />
-      <div class="hero-heading"><span class="hero-badge"><svg class="glyph"><use href="#car"/></svg> TU VEHÍCULO</span>
-      <div class="hero-title">TOYOTA <b>RUSH</b></div><div class="hero-subtitle">2021 · XLI · 4×2</div></div>
-      <div class="hero-caption">RUSH LAUNCHER <span>v1.2</span></div>
-    </section>
-    <section class="media card">
-      <div class="media-art"><svg class="glyph"><use href="#music"/></svg></div>
-      <div class="media-body">
-        <div class="card-heading">MÚSICA <span class="card-tip" id="mediaTrack">Reproductor activo · pendiente</span></div>
-        <button class="media-open" data-go="spotify">Abrir Spotify <svg class="glyph tiny"><use href="#arrow"/></svg></button>
-        <div class="controls">
-          <button class="control" data-media="previous" aria-label="Anterior"><svg class="glyph"><use href="#prev"/></svg></button>
-          <button class="control primary" id="mediaToggle" data-media="toggle" aria-label="Reproducir"><svg class="glyph"><use id="mediaPlayIcon" href="#play"/></svg></button>
-          <button class="control" data-media="next" aria-label="Siguiente"><svg class="glyph"><use href="#next"/></svg></button>
-        </div>
-      </div>
-    </section>
-    <section class="radio card" data-go="radio" role="button" tabindex="0" aria-label="Información de radio FM Toyota">
-      <div class="radio-icon"><svg class="glyph"><use href="#radio"/></svg></div>
-      <div class="radio-title">Radio FM</div>
-      <div class="small-muted">Desde el sistema Toyota</div>
-      <div class="radio-prompt">Ver indicaciones <svg class="glyph tiny"><use href="#arrow"/></svg></div>
-    </section>
+<div class="shell">
+<header class="top">
+ <div class="section-title" id="sectionTitle">Inicio</div>
+ <div class="clock" id="clock">--:--</div>
+ <div class="status"><svg class="icon"><use href="#i-wifi"/></svg><span>TBOX LITE S</span><button class="gear" id="openSettings" aria-label="Ajustes"><svg class="icon"><use href="#i-settings"/></svg></button></div>
+</header>
+<main id="panes">
+<section id="page-home" class="pane active" aria-label="Inicio">
+ <div class="row-home">
+  <div class="hero panel">
+   <div class="hero-label">MI VEHÍCULO</div><div class="hero-title">Toyota Rush</div><div class="hero-sub">2021 · XLI · 4×2</div><div class="accent-line"></div>
+   <div class="hero-badges"><div class="ministat"><strong id="homeSpeed">—</strong>km/h GPS</div><div class="ministat"><strong id="homeRpm">—</strong>RPM OBD</div></div>
+   <div class="hero-visual"><img src="rush_hero.jpg" alt="Toyota Rush blanco, imagen de referencia"/></div>
+   <div class="quick">
+    <button data-open="waze"><svg class="icon waze"><use href="#i-pin"/></svg>Waze</button>
+    <button data-open="youtube"><svg class="icon yt"><use href="#i-yt"/></svg>YouTube</button>
+    <button data-open="netflix"><span class="netflix">N</span>Netflix</button>
+    <button data-open="spotify"><svg class="icon"><use href="#i-music"/></svg>Spotify</button>
+    <button data-open="autokit"><svg class="icon"><use href="#i-bluetooth"/></svg>AutoKit</button>
+   </div>
   </div>
-  <nav class="dock" aria-label="Accesos rápidos">
-    <button class="dock-btn" data-go="phone"><svg class="glyph"><use href="#phone"/></svg><span>Teléfono</span></button>
-    <button class="dock-btn highlighted" data-go="waze"><svg class="glyph"><use href="#waze"/></svg><span>Waze</span></button>
-    <button class="dock-btn" data-go="radio"><svg class="glyph"><use href="#radio"/></svg><span>Radio</span></button>
-    <button class="dock-btn" data-go="spotify"><svg class="glyph"><use href="#music"/></svg><span>Spotify</span></button>
-    <button class="dock-btn video-btn" data-go="youtube"><svg class="glyph youtube-glyph"><use href="#youtube"/></svg><span>YouTube</span></button>
-    <button class="dock-btn video-btn" data-go="netflix"><svg class="glyph netflix-glyph"><use href="#netflix"/></svg><span>Netflix</span></button>
-    <button class="dock-btn" data-go="autokit"><svg class="glyph"><use href="#link"/></svg><span>AutoKit</span></button>
-    <button class="dock-btn" id="openLocalSettings"><svg class="glyph"><use href="#settings"/></svg><span>Ajustes</span></button>
-  </nav>
-</main>
-<div id="modal" class="overlay" hidden>
- <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
-   <div class="dialog-top"><h2 id="dialogTitle">Ajustes</h2><button class="close" id="closeModal"><svg class="glyph"><use href="#x"/></svg></button></div>
-   <div id="dialogBody" class="dialog-body"></div>
+  <div class="home-right">
+   <button class="map-preview panel" data-open="waze" aria-label="Abrir Waze">
+     <span class="small-label">NAVEGACIÓN · WAZE</span>
+     <span class="map-pin"><svg class="icon"><use href="#i-pin"/></svg></span>
+     <span class="map-footer"><span><strong>Tu ruta</strong><br/><span class="hint">Abrir navegación en Waze</span></span><span class="pill">Abrir</span></span>
+   </button>
+   <div class="player panel">
+    <button class="album" data-open="spotify" aria-label="Abrir reproductor"><svg class="icon"><use href="#i-music"/></svg></button>
+    <div style="min-width:0"><div class="player-title">Música</div><div class="player-track" id="mediaTrack">Reproductor sin sincronizar</div>
+      <div class="player-controls">
+       <button class="round" data-media="previous" aria-label="Anterior"><svg class="icon"><use href="#i-prev"/></svg></button>
+       <button class="round primary" data-media="toggle" id="mediaToggle" aria-label="Reproducir o pausar"><svg class="icon"><use id="mediaPlayIcon" href="#i-play"/></svg></button>
+       <button class="round" data-media="next" aria-label="Siguiente"><svg class="icon"><use href="#i-next"/></svg></button>
+      </div>
+    </div>
+   </div>
+  </div>
  </div>
+</section>
+<section id="page-dashboard" class="pane" aria-label="Tablero">
+ <div class="dashboard-grid">
+  <div class="gauge-card panel"><span class="gauge-name"><svg class="icon"><use href="#i-speed"/></svg>VELOCIDAD</span><div class="gauge-ring"><span class="gauge-num" id="dashSpeed">—</span><span class="gauge-unit">km/h</span></div><button class="btn-secondary" id="gpsActivate">Activar GPS</button></div>
+  <div class="metrics">
+   <div class="metric panel"><svg class="icon"><use href="#i-leaf"/></svg><span class="metric-value">—</span><span class="metric-label">Consumo*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-thermo"/></svg><span class="metric-value" id="dashCoolant">—</span><span class="metric-label">Refrigerante °C</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-thermo"/></svg><span class="metric-value">—</span><span class="metric-label">Catalizador*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-battery"/></svg><span class="metric-value">—</span><span class="metric-label">Voltaje*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-speed"/></svg><span class="metric-value">—</span><span class="metric-label">Carga motor*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-leaf"/></svg><span class="metric-value">—</span><span class="metric-label">Aire admisión*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-connection"/></svg><span class="metric-value">—</span><span class="metric-label">Presión*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-chart"/></svg><span class="metric-value">—</span><span class="metric-label">Ajuste combustible*</span></div>
+   <div class="metric panel"><svg class="icon"><use href="#i-bolt"/></svg><span class="metric-value">—</span><span class="metric-label">Encendido*</span></div>
+   <button class="metric metric-bottom span2 panel" data-view="connection" style="text-align:left"><svg class="icon"><use href="#i-bluetooth"/></svg><span class="metric-value">OBD2 · Conectar</span><span class="metric-label" id="dashObdState">Sin conexión</span></button>
+   <button class="metric metric-bottom panel" data-view="about" style="text-align:left"><svg class="icon"><use href="#i-info"/></svg><span class="metric-value">Datos reales</span><span class="metric-label">* Sin lectura disponible</span></button>
+  </div>
+  <div class="gauge-card panel"><span class="gauge-name"><svg class="icon"><use href="#i-rpm"/></svg>RPM</span><div class="gauge-ring"><span class="gauge-num" id="dashRpm">—</span><span class="gauge-unit">x1000 rpm</span></div><span class="hint" style="text-align:center">Requiere OBD2</span></div>
+ </div>
+</section>
+<section id="page-connection" class="pane" aria-label="Conexión">
+ <div class="conn-grid">
+  <div class="connection-left panel">
+   <div class="eyebrow">ADAPTADOR</div><h2>Conecta tu adaptador OBD2</h2>
+   <div class="segment"><button class="current">Bluetooth</button><button disabled title="Próximamente">Wi-Fi</button><button disabled title="Próximamente">USB</button></div>
+   <p class="eyebrow" style="margin-top:22px">DATOS DE TU TOYOTA</p>
+   <p class="hint">Vincula primero un ELM327 Bluetooth Classic desde los ajustes de Android. La conexión es solo de lectura.</p>
+   <button class="btn-secondary" data-open="bluetoothSettings">Vincular en Android</button>
+  </div>
+  <div class="connection-right panel">
+   <svg class="icon" style="width:42px;height:42px;color:#8ac31f"><use href="#i-bluetooth"/></svg>
+   <h2>Conexión Bluetooth</h2>
+   <p id="obdConnectionStatus">Sin conexión OBD2</p>
+   <button class="btn-primary" id="scanObd">Buscar dispositivos vinculados</button>
+   <div class="device-list" id="obdDeviceList"><span class="hint">Los dispositivos aparecerán aquí</span></div>
+   <button class="btn-secondary" id="disconnectObd">Desconectar</button>
+  </div>
+ </div>
+</section>
+<section id="page-garage" class="pane" aria-label="Garaje">
+ <div class="garage-layout">
+  <div class="garage-hero panel">
+   <div><div class="eyebrow">MI VEHÍCULO</div><h2>Toyota Rush</h2><div class="hero-sub">2021 XLI · 4×2 · Chile</div><div class="accent-line"></div></div>
+   <img class="car-mini" src="rush_hero.jpg" alt="Toyota Rush blanco"/>
+   <div class="garage-plate"><div class="plate-label">PATENTE · REGISTRO LOCAL</div><div class="plate-number" id="plateText">Sin configurar</div><button class="btn-secondary" id="editPlate">Editar patente</button></div>
+  </div>
+  <div class="garage-cards">
+   <div class="garage-card panel"><div class="eyebrow">SERVICIO</div><strong id="serviceInfo">Configura tu mantenimiento</strong><span class="soft-detail" id="serviceDetail">Kilometraje manual</span><button class="btn-secondary" id="serviceButton">Editar servicio</button></div>
+   <div class="garage-card panel"><div class="eyebrow">VIAJE</div><div class="big-placeholder">—</div><div class="soft-detail">Consumo medio no disponible</div></div>
+   <div class="garage-card panel"><div class="eyebrow">DIAGNÓSTICO OBD</div><strong id="garageObd">Sin conexión</strong><div class="soft-detail">No se muestran códigos sin escanear</div><button class="btn-secondary" data-view="connection">Conectar</button></div>
+   <div class="garage-card panel"><div class="eyebrow">DOCUMENTOS</div><strong>Registro personal</strong><div class="soft-detail">No se consultan multas ni revisión técnica</div><button class="btn-secondary" id="editPlate2">Editar patente</button></div>
+  </div>
+ </div>
+</section>
+<section id="page-about" class="pane" aria-label="Acerca de">
+ <div class="about-layout">
+  <div class="about-card panel"><div class="eyebrow">TOYOTA RUSH · XLI 2021</div><h2>Rush Launcher <span style="color:#719e22">2.0</span></h2><p>Diseño claro para la pantalla original de tu Toyota mediante Carlinkit TBox Lite S. Waze, AutoKit, Spotify, YouTube y Netflix como accesos directos.</p><p>La radio FM y la cámara siguen siendo funciones independientes del sistema Toyota.</p></div>
+  <div class="about-card panel"><div class="eyebrow">CONFIGURACIÓN</div>
+   <div class="actions-wrap">
+    <button class="btn-secondary" id="mediaPermission">Permiso multimedia</button>
+    <button class="btn-secondary" id="enableHome">Elegir inicio</button>
+    <button class="btn-secondary" data-open="settings">Ajustes Android</button>
+    <button class="btn-secondary" data-open="exit">Volver al inicio original</button>
+   </div><p id="gpsStatus" class="hint">GPS sin iniciar · no inventamos datos del vehículo</p></div>
+ </div>
+</section>
+</main>
+<nav class="bottom" aria-label="Menú principal">
+ <button class="tab selected" data-view="home" aria-current="page"><svg class="icon"><use href="#i-home"/></svg>Inicio</button>
+ <button class="tab" data-view="dashboard"><svg class="icon"><use href="#i-chart"/></svg>Tablero</button>
+ <button class="tab" data-view="connection"><svg class="icon"><use href="#i-connection"/></svg>Conexión</button>
+ <button class="tab" data-view="garage"><svg class="icon"><use href="#i-garage"/></svg>Garaje</button>
+ <button class="tab" data-view="about"><svg class="icon"><use href="#i-info"/></svg>Acerca de</button>
+</nav>
 </div>
-<div id="toast" aria-live="polite" class="toast" hidden></div>
-<script src="app.js"></script>
-</body>
-</html>
+<div class="overlay" id="modal" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><button class="close" id="closeModal" aria-label="Cerrar">×</button><h2 id="dialogTitle" class="dialog-title">Ajustes</h2><div id="dialogBody"></div></div></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+(function(){
+'use strict';
+var nativeReady=!!(window.Rush&&typeof window.Rush.open==='function'),$=function(s){return document.querySelector(s);};
+var mod=$('#modal'),toastTimer,mediaPlaying=null,lastGps=null,lastObd=null;
+var plate=(localStorage.getItem('rush_plate')||'').slice(0,15),service=null;
+try{service=JSON.parse(localStorage.getItem('rush_service')||'null')}catch(e){}
+function text(sel,val){var el=$(sel);if(el)el.textContent=String(val)}
+function toast(val){var el=$('#toast');el.textContent=val;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(function(){el.hidden=true},2600)}
+function clock(){text('#clock',new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',hour12:false}))}clock();setInterval(clock,12000);
+function switchView(v){
+ var names={home:'Inicio',dashboard:'Tablero',connection:'Conexión',garage:'Garaje',about:'Acerca de'};
+ if(!names[v])return;
+ document.querySelectorAll('.pane').forEach(function(e){e.classList.toggle('active',e.id==='page-'+v)});
+ document.querySelectorAll('.tab').forEach(function(e){var on=e.getAttribute('data-view')===v;e.classList.toggle('selected',on);if(on)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current')});
+ text('#sectionTitle',names[v]);
+}
+document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){switchView(b.getAttribute('data-view'))})});
+function openApp(app){if(nativeReady){window.Rush.open(app);return}toast('Vista previa: abrir '+app+' requiere Android')}
+document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){openApp(b.getAttribute('data-open'))})});
+function openModal(title,body){text('#dialogTitle',title);$('#dialogBody').innerHTML=body;mod.hidden=false}
+function closeModal(){mod.hidden=true;$('#dialogBody').textContent=''}
+$('#closeModal').addEventListener('click',closeModal);mod.addEventListener('click',function(e){if(e.target===mod)closeModal()});
+function serviceUi(){
+ if(!service||!Number.isFinite(service.current)||!Number.isFinite(service.next)){text('#serviceInfo','Configura tu mantenimiento');text('#serviceDetail','Kilometraje manual');return}
+ var remain=service.next-service.current;
+ text('#serviceInfo',remain>0?remain.toLocaleString('es-CL')+' km restantes':'Servicio pendiente');
+ text('#serviceDetail','Odómetro manual: '+service.current.toLocaleString('es-CL')+' km');
+}
+function plateUi(){text('#plateText',plate||'Sin configurar')}plateUi();serviceUi();
+function editPlate(){openModal('Patente de tu Toyota','<p>Dato local y opcional. No consultamos registros externos.</p><label for="plateInput">Patente</label><input id="plateInput" maxlength="15" autocomplete="off"><div class="dialog-actions"><button class="btn-primary" id="savePlate">Guardar</button><button class="btn-secondary" id="clearPlate">Borrar</button></div>');$('#plateInput').value=plate;$('#savePlate').onclick=function(){plate=$('#plateInput').value.trim().toUpperCase().slice(0,15);if(plate)localStorage.setItem('rush_plate',plate);else localStorage.removeItem('rush_plate');plateUi();closeModal()};$('#clearPlate').onclick=function(){plate='';localStorage.removeItem('rush_plate');plateUi();closeModal()}}
+$('#editPlate').addEventListener('click',editPlate);$('#editPlate2').addEventListener('click',editPlate);
+function editService(){
+ openModal('Servicio · datos manuales','<p>Introduce el kilometraje real y el próximo cambio. No hay lectura automática del odómetro.</p><label for="currentKm">Kilometraje actual</label><input id="currentKm" type="number" min="0" step="1"><label for="nextKm">Próximo servicio (km)</label><input id="nextKm" type="number" min="1" step="1"><div class="dialog-actions"><button class="btn-primary" id="saveService">Guardar</button><button class="btn-secondary" id="clearService">Borrar</button></div>');
+ $('#currentKm').value=service&&Number.isFinite(service.current)?service.current:'';
+ $('#nextKm').value=service&&Number.isFinite(service.next)?service.next:'';
+ $('#saveService').onclick=function(){var a=$('#currentKm').value,b=$('#nextKm').value,n=Number(a),m=Number(b);if(a===''||b===''||!Number.isInteger(n)||!Number.isInteger(m)||n<0||m<=0){toast('Introduce kilómetros válidos');return}service={current:n,next:m};localStorage.setItem('rush_service',JSON.stringify(service));serviceUi();closeModal()};
+ $('#clearService').onclick=function(){service=null;localStorage.removeItem('rush_service');serviceUi();closeModal()};
+}
+$('#serviceButton').addEventListener('click',editService);
+function askGps(){if(nativeReady)window.Rush.askGps();else toast('Los datos GPS requieren Android')}
+$('#gpsActivate').addEventListener('click',askGps);
+window.rushGpsStatus=function(s){text('#gpsStatus','GPS: '+s);if(!/conectado|buscando señal/i.test(s)){lastGps=null;renderSpeed()}};
+function renderSpeed(){var x=lastObd&&lastObd.speed>=0?lastObd.speed:lastGps;text('#homeSpeed',x===null||x===undefined?'—':Math.max(0,Math.round(x)));text('#dashSpeed',x===null||x===undefined?'—':Math.max(0,Math.round(x)))}
+window.rushGpsData=function(speed,heading){lastGps=typeof speed==='number'&&isFinite(speed)?Math.max(0,speed):null;renderSpeed();text('#gpsStatus','GPS conectado · rumbo '+(typeof heading==='number'&&isFinite(heading)?Math.round(heading)+'°':'no disponible'))};
+window.rushObdStatus=function(s){text('#obdConnectionStatus',s);text('#dashObdState',s);text('#garageObd',s);if(/desconectado|no disponible|error/i.test(s)){lastObd=null;renderSpeed();text('#homeRpm','—');text('#dashRpm','—');text('#dashCoolant','—')}};
+window.rushObdData=function(speed,rpm,coolant){lastObd={speed:speed,rpm:rpm,coolant:coolant};renderSpeed();text('#homeRpm',rpm>=0?rpm:'—');text('#dashRpm',rpm>=0?(rpm/1000).toFixed(1):'—');text('#dashCoolant',coolant>-1000?coolant:'—')};
+window.rushObdDevices=function(devices){
+ var box=$('#obdDeviceList');box.textContent='';
+ if(!Array.isArray(devices)||!devices.length){box.textContent='No hay adaptadores vinculados. Vincula tu ELM327 desde Ajustes Android.';return}
+ devices.forEach(function(d){var b=document.createElement('button');b.className='btn-secondary';b.textContent=String(d.name||'Adaptador')+' · '+String(d.address||'');b.onclick=function(){if(nativeReady){window.Rush.connectObd(String(d.address));toast('Conectando...')}else toast('Prueba disponible en Android')};box.appendChild(b)});
+};
+$('#scanObd').onclick=function(){if(nativeReady)window.Rush.requestObdDevices();else toast('La conexión OBD requiere Android y ELM327 Bluetooth')};
+$('#disconnectObd').onclick=function(){if(nativeReady)window.Rush.disconnectObd();else toast('Sin conexión')};
+window.rushMediaState=function(playing,title,app){if(typeof playing==='boolean'){mediaPlaying=playing;text('#mediaTrack',(title||app||'Música')+(playing?' · reproduciendo':' · en pausa'));var icon=$('#mediaPlayIcon');icon.setAttribute('href',playing?'#i-pause':'#i-play')}else{text('#mediaTrack','Activa el permiso multimedia desde Acerca de')}};
+document.querySelectorAll('[data-media]').forEach(function(btn){btn.onclick=function(){if(nativeReady)window.Rush.media(btn.getAttribute('data-media'));else toast('Control multimedia disponible en Android')}});
+$('#mediaPermission').onclick=function(){if(nativeReady)window.Rush.requestMediaAccess();else toast('Disponible en Android')};
+$('#enableHome').onclick=function(){openApp('enableHome')};
+$('#openSettings').onclick=function(){openModal('Configuración Rush Launcher','<p>Accesos y configuración. Los datos OBD muestran solo lecturas reales.</p><div class="dialog-actions"><button class="btn-primary" id="dlgGps">Activar GPS</button><button class="btn-secondary" id="dlgMedia">Acceso multimedia</button><button class="btn-secondary" id="dlgAndroid">Ajustes Android</button><button class="btn-secondary" id="dlgExit">Inicio original</button></div>');$('#dlgGps').onclick=function(){closeModal();askGps()};$('#dlgMedia').onclick=function(){closeModal();if(nativeReady)window.Rush.requestMediaAccess()};$('#dlgAndroid').onclick=function(){closeModal();openApp('settings')};$('#dlgExit').onclick=function(){closeModal();openApp('exit')}};
+if(nativeReady){try{window.Rush.ready()}catch(e){}}
+})();
+</script>
+</body></html>
