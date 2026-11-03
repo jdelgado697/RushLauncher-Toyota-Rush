@@ -9,6 +9,11 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.media.AudioManager;
+import android.media.MediaMetadata;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
+import android.bluetooth.BluetoothAdapter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -34,6 +39,14 @@ import java.util.List;
 public class MainActivity extends Activity implements LocationListener {
 
     private static final int LOCATION_REQUEST_CODE = 1101;
+    private static final int BLUETOOTH_REQUEST_CODE = 1102;
+    private ObdReader obdReader;
+    private final Runnable mediaRefresh = new Runnable() {
+        @Override public void run() {
+            refreshMediaState();
+            mainHandler.postDelayed(this, 1100L);
+        }
+    };
     private WebView webView;
     private LocationManager locationManager;
     private boolean pageLoaded = false;
@@ -47,6 +60,14 @@ public class MainActivity extends Activity implements LocationListener {
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
+        obdReader = new ObdReader(new ObdReader.Listener() {
+            @Override public void onStatus(String status) {
+                javascript("window.rushObdStatus(" + JSONObject.quote(status) + ");");
+            }
+            @Override public void onData(int speed, int rpm, int coolant) {
+                javascript("window.rushObdData(" + speed + "," + rpm + "," + coolant + ");");
+            }
+        });
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF050B19);
         WebSettings settings = webView.getSettings();
@@ -221,7 +242,108 @@ public class MainActivity extends Activity implements LocationListener {
         finish();
     }
 
+    private MediaController spotifySession() {
+        MediaSessionManager msm =
+                (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
+        if (msm == null) return null;
+        try {
+            List<MediaController> sessions = msm.getActiveSessions(
+                    new ComponentName(this, MediaAccessListener.class));
+            MediaController first = null;
+            for (MediaController session : sessions) {
+                if (first == null) first = session;
+                if ("com.spotify.music".equals(session.getPackageName())) return session;
+            }
+            return first;
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private void refreshMediaState() {
+        if (!pageLoaded) return;
+        MediaController controller = spotifySession();
+        if (controller == null) {
+            javascript("window.rushMediaState(null, '', '');");
+            return;
+        }
+        PlaybackState state = controller.getPlaybackState();
+        String playing = state == null ? "null"
+                : (state.getState() == PlaybackState.STATE_PLAYING ? "true" : "false");
+        MediaMetadata metadata = controller.getMetadata();
+        String title = metadata == null ? "" :
+                metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
+        String app = "com.spotify.music".equals(controller.getPackageName())
+                ? "Spotify" : "Reproductor";
+        javascript("window.rushMediaState(" + playing + ","
+                + JSONObject.quote(title == null ? "" : title) + ","
+                + JSONObject.quote(app) + ");");
+    }
+
+    private void openMediaAccessSettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+        } catch (Exception ex) {
+            message("Permite acceso a notificaciones desde Ajustes de Android.");
+        }
+    }
+
+    @SuppressWarnings("MissingPermission")
+    private boolean bluetoothAvailable() {
+        if (Build.VERSION.SDK_INT >= 31
+                && checkSelfPermission("android.permission.BLUETOOTH_CONNECT")
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] {"android.permission.BLUETOOTH_CONNECT"},
+                    BLUETOOTH_REQUEST_CODE);
+            javascript("window.rushObdStatus('Autoriza dispositivos cercanos para OBD-II');");
+            return false;
+        }
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter == null || !adapter.isEnabled()) {
+            javascript("window.rushObdStatus('Activa Bluetooth y vincula un ELM327 desde Ajustes');");
+            return false;
+        }
+        return true;
+    }
+
+    private void showPairedObd() {
+        if (!bluetoothAvailable()) return;
+        try {
+            javascript("window.rushObdDevices("
+                    + obdReader.pairedDevices().toString() + ");");
+        } catch (SecurityException ignored) {
+            javascript("window.rushObdStatus('Bluetooth sin permisos');");
+        }
+    }
+
+    private void openBluetoothSettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
+        } catch (Exception ex) {
+            message("Abre Bluetooth desde Ajustes Android");
+        }
+    }
+
     private void mediaKey(String command) {
+        MediaController controller = spotifySession();
+        if (controller != null) {
+            PlaybackState state = controller.getPlaybackState();
+            MediaController.TransportControls controls = controller.getTransportControls();
+            if (controls != null) {
+                switch (command) {
+                    case "previous": controls.skipToPrevious(); break;
+                    case "next": controls.skipToNext(); break;
+                    case "toggle":
+                        if (state != null && state.getState() == PlaybackState.STATE_PLAYING)
+                            controls.pause();
+                        else controls.play();
+                        break;
+                    default: return;
+                }
+                mainHandler.postDelayed(this::refreshMediaState, 450L);
+                return;
+            }
+        }
         int code;
         switch (command) {
             case "previous": code = KeyEvent.KEYCODE_MEDIA_PREVIOUS; break;
@@ -275,6 +397,10 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == BLUETOOTH_REQUEST_CODE) {
+            showPairedObd();
+            return;
+        }
         if (requestCode == LOCATION_REQUEST_CODE) {
             boolean granted = false;
             for (int result : results) {
@@ -304,6 +430,7 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onPause() {
         super.onPause();
+        mainHandler.removeCallbacks(mediaRefresh);
         if (locationManager != null) {
             try { locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
         }
@@ -312,11 +439,15 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
+        mainHandler.removeCallbacks(mediaRefresh);
+        mainHandler.post(mediaRefresh);
         if (pageLoaded && locationManager != null) startGps();
     }
 
     @Override
     protected void onDestroy() {
+        mainHandler.removeCallbacks(mediaRefresh);
+        if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
             webView.removeJavascriptInterface("Rush");
             webView.destroy();
@@ -340,6 +471,21 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> startGps());
+        }
+        @JavascriptInterface public void requestMediaAccess() {
+            runUi(() -> openMediaAccessSettings());
+        }
+        @JavascriptInterface public void requestObdDevices() {
+            runUi(() -> showPairedObd());
+        }
+        @JavascriptInterface public void connectObd(String mac) {
+            runUi(() -> { if (bluetoothAvailable()) obdReader.connect(mac); });
+        }
+        @JavascriptInterface public void disconnectObd() {
+            runUi(() -> obdReader.disconnect());
+        }
+        @JavascriptInterface public void bluetoothSettings() {
+            runUi(() -> openBluetoothSettings());
         }
     }
 }
