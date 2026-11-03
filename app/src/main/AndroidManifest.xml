@@ -3,6 +3,9 @@
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Bluetooth Classic: solo adaptadores OBD-II ya vinculados. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <!-- Allows discovery of apps exposed in Android's launcher, even on Android 11+. -->
@@ -33,6 +36,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- El usuario debe permitir acceso a notificaciones desde Ajustes de Android. -->
+        <service android:name=".MediaAccessListener"
+            android:label="Rush Launcher · controles multimedia"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- Disabled until the user explicitly enables it in Rush Launcher settings. -->
         <activity-alias
             android:name=".HomeAlias"
