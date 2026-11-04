@@ -36,15 +36,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- El usuario debe permitir acceso a notificaciones desde Ajustes de Android. -->
-        <service android:name=".MediaAccessListener"
-            android:label="Rush Launcher · controles multimedia"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
         <!-- Disabled until the user explicitly enables it in Rush Launcher settings. -->
         <activity-alias
             android:name=".HomeAlias"
