@@ -9,10 +9,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.media.AudioManager;
-import android.media.MediaMetadata;
-import android.media.session.MediaController;
-import android.media.session.MediaSessionManager;
-import android.media.session.PlaybackState;
 import android.bluetooth.BluetoothAdapter;
 import android.os.Build;
 import android.os.Bundle;
@@ -41,12 +37,6 @@ public class MainActivity extends Activity implements LocationListener {
     private static final int LOCATION_REQUEST_CODE = 1101;
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
     private ObdReader obdReader;
-    private final Runnable mediaRefresh = new Runnable() {
-        @Override public void run() {
-            refreshMediaState();
-            mainHandler.postDelayed(this, 1100L);
-        }
-    };
     private WebView webView;
     private LocationManager locationManager;
     private boolean pageLoaded = false;
@@ -245,52 +235,6 @@ public class MainActivity extends Activity implements LocationListener {
         finish();
     }
 
-    private MediaController spotifySession() {
-        MediaSessionManager msm =
-                (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
-        if (msm == null) return null;
-        try {
-            List<MediaController> sessions = msm.getActiveSessions(
-                    new ComponentName(this, MediaAccessListener.class));
-            MediaController first = null;
-            for (MediaController session : sessions) {
-                if (first == null) first = session;
-                if ("com.spotify.music".equals(session.getPackageName())) return session;
-            }
-            return first;
-        } catch (SecurityException ignored) {
-            return null;
-        }
-    }
-
-    private void refreshMediaState() {
-        if (!pageLoaded) return;
-        MediaController controller = spotifySession();
-        if (controller == null) {
-            javascript("window.rushMediaState(null, '', '');");
-            return;
-        }
-        PlaybackState state = controller.getPlaybackState();
-        String playing = state == null ? "null"
-                : (state.getState() == PlaybackState.STATE_PLAYING ? "true" : "false");
-        MediaMetadata metadata = controller.getMetadata();
-        String title = metadata == null ? "" :
-                metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
-        String app = "com.spotify.music".equals(controller.getPackageName())
-                ? "Spotify" : "Reproductor";
-        javascript("window.rushMediaState(" + playing + ","
-                + JSONObject.quote(title == null ? "" : title) + ","
-                + JSONObject.quote(app) + ");");
-    }
-
-    private void openMediaAccessSettings() {
-        try {
-            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
-        } catch (Exception ex) {
-            message("Permite acceso a notificaciones desde Ajustes de Android.");
-        }
-    }
-
     @SuppressWarnings("MissingPermission")
     private boolean bluetoothAvailable() {
         if (Build.VERSION.SDK_INT >= 31
@@ -328,25 +272,6 @@ public class MainActivity extends Activity implements LocationListener {
     }
 
     private void mediaKey(String command) {
-        MediaController controller = spotifySession();
-        if (controller != null) {
-            PlaybackState state = controller.getPlaybackState();
-            MediaController.TransportControls controls = controller.getTransportControls();
-            if (controls != null) {
-                switch (command) {
-                    case "previous": controls.skipToPrevious(); break;
-                    case "next": controls.skipToNext(); break;
-                    case "toggle":
-                        if (state != null && state.getState() == PlaybackState.STATE_PLAYING)
-                            controls.pause();
-                        else controls.play();
-                        break;
-                    default: return;
-                }
-                mainHandler.postDelayed(this::refreshMediaState, 450L);
-                return;
-            }
-        }
         int code;
         switch (command) {
             case "previous": code = KeyEvent.KEYCODE_MEDIA_PREVIOUS; break;
@@ -433,7 +358,6 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onPause() {
         super.onPause();
-        mainHandler.removeCallbacks(mediaRefresh);
         if (locationManager != null) {
             try { locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
         }
@@ -442,14 +366,11 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
-        mainHandler.removeCallbacks(mediaRefresh);
-        mainHandler.post(mediaRefresh);
         if (pageLoaded && locationManager != null) startGps();
     }
 
     @Override
     protected void onDestroy() {
-        mainHandler.removeCallbacks(mediaRefresh);
         if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
             webView.removeJavascriptInterface("Rush");
@@ -474,9 +395,6 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> startGps());
-        }
-        @JavascriptInterface public void requestMediaAccess() {
-            runUi(() -> openMediaAccessSettings());
         }
         @JavascriptInterface public void requestObdDevices() {
             runUi(() -> showPairedObd());
