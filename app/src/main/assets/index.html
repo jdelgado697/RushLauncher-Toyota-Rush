@@ -76,7 +76,7 @@
    </button>
    <div class="player panel">
     <button class="album" data-open="spotify" aria-label="Abrir reproductor"><svg class="icon"><use href="#i-music"/></svg></button>
-    <div style="min-width:0"><div class="player-title">Música</div><div class="player-track" id="mediaTrack">Reproductor sin sincronizar</div>
+    <div style="min-width:0"><div class="player-title">Música</div><div class="player-track" id="mediaTrack">Control básico · abre Spotify para reproducir</div>
       <div class="player-controls">
        <button class="round" data-media="previous" aria-label="Anterior"><svg class="icon"><use href="#i-prev"/></svg></button>
        <button class="round primary" data-media="toggle" id="mediaToggle" aria-label="Reproducir o pausar"><svg class="icon"><use id="mediaPlayIcon" href="#i-play"/></svg></button>
@@ -145,7 +145,6 @@
   <div class="about-card panel"><div class="eyebrow">TOYOTA RUSH · XLI 2021</div><h2>Rush Launcher <span style="color:#719e22">2.0</span></h2><p>Diseño claro para la pantalla original de tu Toyota mediante Carlinkit TBox Lite S. Waze, AutoKit, Spotify, YouTube y Netflix como accesos directos.</p><p>La radio FM y la cámara siguen siendo funciones independientes del sistema Toyota.</p></div>
   <div class="about-card panel"><div class="eyebrow">CONFIGURACIÓN</div>
    <div class="actions-wrap">
-    <button class="btn-secondary" id="mediaPermission">Permiso multimedia</button>
     <button class="btn-secondary" id="enableHome">Elegir inicio</button>
     <button class="btn-secondary" data-open="settings">Ajustes Android</button>
     <button class="btn-secondary" data-open="exit">Volver al inicio original</button>
@@ -217,11 +216,10 @@ window.rushObdDevices=function(devices){
 };
 $('#scanObd').onclick=function(){if(nativeReady)window.Rush.requestObdDevices();else toast('La conexión OBD requiere Android y ELM327 Bluetooth')};
 $('#disconnectObd').onclick=function(){if(nativeReady)window.Rush.disconnectObd();else toast('Sin conexión')};
-window.rushMediaState=function(playing,title,app){if(typeof playing==='boolean'){mediaPlaying=playing;text('#mediaTrack',(title||app||'Música')+(playing?' · reproduciendo':' · en pausa'));var icon=$('#mediaPlayIcon');icon.setAttribute('href',playing?'#i-pause':'#i-play')}else{text('#mediaTrack','Activa el permiso multimedia desde Acerca de')}};
+window.rushMediaState=function(playing,title,app){if(typeof playing==='boolean'){mediaPlaying=playing;text('#mediaTrack',(title||app||'Música')+(playing?' · reproduciendo':' · en pausa'));var icon=$('#mediaPlayIcon');icon.setAttribute('href',playing?'#i-pause':'#i-play')}else{text('#mediaTrack','Control básico · abre Spotify para reproducir')}};
 document.querySelectorAll('[data-media]').forEach(function(btn){btn.onclick=function(){if(nativeReady)window.Rush.media(btn.getAttribute('data-media'));else toast('Control multimedia disponible en Android')}});
-$('#mediaPermission').onclick=function(){if(nativeReady)window.Rush.requestMediaAccess();else toast('Disponible en Android')};
 $('#enableHome').onclick=function(){openApp('enableHome')};
-$('#openSettings').onclick=function(){openModal('Configuración Rush Launcher','<p>Accesos y configuración. Los datos OBD muestran solo lecturas reales.</p><div class="dialog-actions"><button class="btn-primary" id="dlgGps">Activar GPS</button><button class="btn-secondary" id="dlgMedia">Acceso multimedia</button><button class="btn-secondary" id="dlgAndroid">Ajustes Android</button><button class="btn-secondary" id="dlgExit">Inicio original</button></div>');$('#dlgGps').onclick=function(){closeModal();askGps()};$('#dlgMedia').onclick=function(){closeModal();if(nativeReady)window.Rush.requestMediaAccess()};$('#dlgAndroid').onclick=function(){closeModal();openApp('settings')};$('#dlgExit').onclick=function(){closeModal();openApp('exit')}};
+$('#openSettings').onclick=function(){openModal('Configuración Rush Launcher','<p>Accesos y configuración. Los datos OBD muestran solo lecturas reales.</p><div class="dialog-actions"><button class="btn-primary" id="dlgGps">Activar GPS</button><button class="btn-secondary" id="dlgAndroid">Ajustes Android</button><button class="btn-secondary" id="dlgExit">Inicio original</button></div>');$('#dlgGps').onclick=function(){closeModal();askGps()};$('#dlgAndroid').onclick=function(){closeModal();openApp('settings')};$('#dlgExit').onclick=function(){closeModal();openApp('exit')}};
 if(nativeReady){try{window.Rush.ready()}catch(e){}}
 })();
 </script>
