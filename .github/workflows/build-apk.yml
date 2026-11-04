@@ -49,6 +49,8 @@ jobs:
           Path("/tmp/rush-ui-inline.js").write_text("\\n".join(scripts), encoding="utf-8")
           PY
           node --check /tmp/rush-ui-inline.js
+          node --check app/src/main/assets/rush360.js
+          test -f app/src/main/assets/rush360.js
 
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
