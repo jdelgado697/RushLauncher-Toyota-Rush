@@ -25,6 +25,7 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.util.List;
 
@@ -155,6 +156,60 @@ public class MainActivity extends Activity implements LocationListener {
             }
         }
         message("No se encontro AutoKit. Regresa al inicio del TBox para abrirlo.");
+    }
+
+    /**
+     * Lista únicamente apps con pantalla de inicio (MAIN/LAUNCHER).
+     * Sin QUERY_ALL_PACKAGES ni acceso a datos sensibles.
+     */
+    private List<android.content.pm.ResolveInfo> launcherApps() {
+        Intent query = new Intent(Intent.ACTION_MAIN);
+        query.addCategory(Intent.CATEGORY_LAUNCHER);
+        return getPackageManager().queryIntentActivities(query, 0);
+    }
+
+    private void sendInstalledApps() {
+        JSONArray result = new JSONArray();
+        try {
+            List<android.content.pm.ResolveInfo> apps = launcherApps();
+            java.util.Collections.sort(apps, (a, b) -> {
+                CharSequence first = a.loadLabel(getPackageManager());
+                CharSequence second = b.loadLabel(getPackageManager());
+                return String.valueOf(first).compareToIgnoreCase(String.valueOf(second));
+            });
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (android.content.pm.ResolveInfo app : apps) {
+                if (app.activityInfo == null) continue;
+                String pkg = app.activityInfo.packageName;
+                if (pkg == null || pkg.equals(getPackageName()) || !seen.add(pkg)) continue;
+                JSONObject obj = new JSONObject();
+                String label = String.valueOf(app.loadLabel(getPackageManager()));
+                obj.put("name", label.isEmpty() ? pkg : label);
+                obj.put("package", pkg);
+                result.put(obj);
+            }
+        } catch (Exception e) {
+            message("No se pudo consultar el listado de aplicaciones");
+        }
+        javascript("window.rushInstalledApps(" + result.toString() + ");");
+    }
+
+    private void openInstalledApp(String pkg) {
+        if (pkg == null || pkg.isEmpty()) return;
+        // Comprobar que el paquete aparece entre los lanzadores accesibles.
+        for (android.content.pm.ResolveInfo app : launcherApps()) {
+            if (app.activityInfo == null || !pkg.equals(app.activityInfo.packageName)) continue;
+            Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.addCategory(Intent.CATEGORY_LAUNCHER);
+            intent.setClassName(app.activityInfo.packageName, app.activityInfo.name);
+            try {
+                startActivity(intent);
+                return;
+            } catch (Exception e) {
+                break;
+            }
+        }
+        message("No se pudo abrir la aplicación seleccionada");
     }
 
     private void openMaps() {
@@ -391,6 +446,12 @@ public class MainActivity extends Activity implements LocationListener {
 
     private final class RushBridge {
         @JavascriptInterface public void ready() { /* Ya se abrio la pantalla local. */ }
+        @JavascriptInterface public void listApps() {
+            runUi(() -> sendInstalledApps());
+        }
+        @JavascriptInterface public void launchApp(String packageName) {
+            runUi(() -> openInstalledApp(packageName));
+        }
         @JavascriptInterface public void open(String action) {
             runUi(() -> openRoute(action));
         }
