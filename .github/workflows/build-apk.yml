@@ -54,6 +54,10 @@ jobs:
           node --check app/src/main/assets/rush_turntable.js
           grep -q 'id="rushViewHome"' app/src/main/assets/index.html
           grep -q 'id="rushViewGarage"' app/src/main/assets/index.html
+          grep -q 'id="openApps"' app/src/main/assets/index.html
+          grep -q 'window.rushInstalledApps' app/src/main/assets/index.html
+          grep -q 'public void listApps()' app/src/main/java/cl/rush/launcher/MainActivity.java
+          if grep -q '<button data-open="waze"' app/src/main/assets/index.html; then echo 'Waze duplicado en accesos'; exit 1; fi
 
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
