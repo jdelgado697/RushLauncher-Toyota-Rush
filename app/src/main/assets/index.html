@@ -20,24 +20,11 @@
 @media(max-width:860px){.shell{padding:8px 10px;grid-template-rows:34px minmax(0,1fr) 51px;gap:8px}.section-title{font-size:17px}.clock{font-size:22px}.panel{border-radius:16px}.hero-title{font-size:20px}.hero-label{font-size:9px}.hero-visual{right:3%;height:54%;width:84%}.ministat strong{font-size:16px}.map-footer strong{font-size:17px}.player{padding:8px;grid-template-columns:40px 1fr;gap:7px}.album{width:40px;height:40px;border-radius:12px}.player-title{font-size:14px}.player-controls{margin-top:2px}.round{width:29px;height:29px}.round.primary{width:35px;height:35px}.quick button{font-size:9px;height:29px}.dashboard-grid{gap:8px}.metrics{gap:6px}.metric{padding:6px}.metric-value{font-size:17px}.metric-label{font-size:9px}.gauge-ring{border-width:9px}.gauge-num{font-size:28px}.connection-left,.connection-right{padding:13px}.connection-left h2{font-size:16px}.garage-hero{padding:9px;gap:7px}.garage-hero h2{font-size:17px}.garage-cards{gap:8px}.garage-card{padding:9px}.garage-card strong{font-size:13px}.garage-card .soft-detail{font-size:10px}.garage-card .big-placeholder{font-size:17px}}
 @media(max-height:400px){.shell{grid-template-rows:28px minmax(0,1fr) 43px;gap:5px}.header{height:28px}.hero-visual{top:22%;height:52%}.quick button{height:25px}.metrics{gap:4px}.metric{padding:4px}.gauge-num{font-size:23px}}
 
-/* Visor 360° offline, toque/arrastre y modo ampliado. */
-.rush360-stage{position:relative;display:block;overflow:hidden;background:radial-gradient(ellipse at 45% 25%,#f9fbff 0%,#dce7f3 76%,#c9d7e6 100%)!important}
-.rush360-stage::after{content:none!important}
-.rush360-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-.rush360-canvas:active{cursor:grabbing}
-.rush360-open{position:absolute;z-index:5;bottom:5px;right:6px;display:flex;align-items:center;gap:3px;border-radius:13px;background:#eaf5ffed;color:#355576;padding:3px 7px;font-size:10px;font-weight:850;box-shadow:2px 3px 7px #9fadc180,-2px -2px 7px #fff}
-.rush360-open span{font-size:8px;font-weight:650}
-.garage-360{width:100%;height:100%;min-height:0;border-radius:14px;box-shadow:inset 2px 2px 6px #c1cbda,inset -2px -2px 7px #fff}
-.rush360-overlay[hidden]{display:none!important}
-.rush360-overlay{position:fixed;z-index:110;inset:0;display:grid;place-items:center;background:#182331bf;padding:14px}
-.rush360-dialog{width:min(93vw,740px);height:min(88vh,445px);min-height:255px;border-radius:22px;display:grid;grid-template-rows:42px minmax(0,1fr) 47px;background:radial-gradient(ellipse at 45% 19%,#f7fbff,#d4e3f2 82%);box-shadow:0 20px 46px #0d142750;overflow:hidden}
-.rush360-toolbar,.rush360-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px}
-.rush360-title{font-size:15px;font-weight:850;color:#2f3c50}
-.rush360-hint{font-size:10px;color:#697c90;text-align:center}
-.rush360-action{font-size:11px;border-radius:17px;padding:7px 12px;background:#ebf3fc;box-shadow:3px 4px 8px #aebbc9,-3px -3px 8px #fff;color:#344254;font-weight:800}
-.rush360-controls .rush360-action:first-child{background:#bafa43}
-.rush360-full{position:relative;width:100%;height:100%;min-height:0;touch-action:none}
-@media(max-height:400px){.rush360-dialog{height:94vh;grid-template-rows:33px minmax(0,1fr) 34px}.rush360-toolbar,.rush360-controls{padding:3px 10px}}
+/* Foto fija del Toyota Rush, sin visor giratorio. */
+.hero-visual img,.garage-hero .car-mini{display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+.hero-visual{background:#eef3f9}
+.hero-visual img{opacity:1}
+@media(max-width:860px){.hero-visual{top:25%;height:55%}}
 </style>
 </head>
 <body>
@@ -77,11 +64,8 @@
  <div class="row-home">
   <div class="hero panel">
    <div class="hero-label">MI VEHÍCULO</div><div class="hero-title">Toyota Rush</div><div class="hero-sub">2021 · XLI · 4×2</div><div class="accent-line"></div>
-   <div class="hero-badges"><div class="ministat"><strong id="homeSpeed">—</strong>km/h GPS</div><div class="ministat"><strong id="homeRpm">—</strong>RPM OBD</div></div>
-   <div class="hero-visual rush360-stage">
-    <canvas class="rush360-canvas" id="rush360Home" aria-label="Toyota Rush 3D, arrastra para girar el vehículo 360 grados" tabindex="0"></canvas>
-    <button class="rush360-open" data-rush360-open type="button" aria-label="Ampliar visor de vehículo en 360 grados">360° <span>Ampliar</span></button>
-   </div>
+   <div class="hero-badges"><button type="button" class="ministat" id="gpsHomeButton" aria-label="Activar o comprobar GPS"><strong id="homeSpeed">—</strong>km/h <span style="display:block">GPS / OBD</span></button><div class="ministat"><strong id="homeRpm">—</strong>RPM OBD</div></div>
+   <div class="hero-visual"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco, vista de tres cuartos" /></div>
    <div class="quick">
     <button data-open="waze"><svg class="icon waze"><use href="#i-pin"/></svg>Waze</button>
     <button data-open="youtube"><svg class="icon yt"><use href="#i-yt"/></svg>YouTube</button>
@@ -111,7 +95,7 @@
 </section>
 <section id="page-dashboard" class="pane" aria-label="Tablero">
  <div class="dashboard-grid">
-  <div class="gauge-card panel"><span class="gauge-name"><svg class="icon"><use href="#i-speed"/></svg>VELOCIDAD</span><div class="gauge-ring"><span class="gauge-num" id="dashSpeed">—</span><span class="gauge-unit">km/h</span></div><button class="btn-secondary" id="gpsActivate">Activar GPS</button></div>
+  <div class="gauge-card panel"><span class="gauge-name"><svg class="icon"><use href="#i-speed"/></svg>VELOCIDAD</span><div class="gauge-ring"><span class="gauge-num" id="dashSpeed">—</span><span class="gauge-unit">km/h</span></div><button class="btn-secondary" id="gpsActivate">Comprobar GPS</button></div>
   <div class="metrics">
    <div class="metric panel"><svg class="icon"><use href="#i-leaf"/></svg><span class="metric-value">—</span><span class="metric-label">Consumo*</span></div>
    <div class="metric panel"><svg class="icon"><use href="#i-thermo"/></svg><span class="metric-value" id="dashCoolant">—</span><span class="metric-label">Refrigerante °C</span></div>
@@ -125,7 +109,7 @@
    <button class="metric metric-bottom span2 panel" data-view="connection" style="text-align:left"><svg class="icon"><use href="#i-bluetooth"/></svg><span class="metric-value">OBD2 · Conectar</span><span class="metric-label" id="dashObdState">Sin conexión</span></button>
    <button class="metric metric-bottom panel" data-view="about" style="text-align:left"><svg class="icon"><use href="#i-info"/></svg><span class="metric-value">Datos reales</span><span class="metric-label">* Sin lectura disponible</span></button>
   </div>
-  <div class="gauge-card panel"><span class="gauge-name"><svg class="icon"><use href="#i-rpm"/></svg>RPM</span><div class="gauge-ring"><span class="gauge-num" id="dashRpm">—</span><span class="gauge-unit">x1000 rpm</span></div><span class="hint" style="text-align:center">Requiere OBD2</span></div>
+  <div class="gauge-card panel"><span class="gauge-name"><svg class="icon"><use href="#i-rpm"/></svg>RPM</span><div class="gauge-ring"><span class="gauge-num" id="dashRpm">—</span><span class="gauge-unit">x1000 rpm</span></div><span class="hint" style="text-align:center">RPM: requiere ELM327 conectado</span></div>
  </div>
 </section>
 <section id="page-connection" class="pane" aria-label="Conexión">
@@ -151,10 +135,7 @@
  <div class="garage-layout">
   <div class="garage-hero panel">
    <div><div class="eyebrow">MI VEHÍCULO</div><h2>Toyota Rush</h2><div class="hero-sub">2021 XLI · 4×2 · Chile</div><div class="accent-line"></div></div>
-   <div class="garage-360 rush360-stage">
-    <canvas class="rush360-canvas" id="rush360Garage" aria-label="Vista 3D del Toyota Rush, desliza para rotar" tabindex="0"></canvas>
-    <button class="rush360-open" data-rush360-open type="button" aria-label="Ampliar visor 360 grados en Garaje">360° <span>Ampliar</span></button>
-   </div>
+   <img class="car-mini" src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/>
    <div class="garage-plate"><div class="plate-label">PATENTE · REGISTRO LOCAL</div><div class="plate-number" id="plateText">Sin configurar</div><button class="btn-secondary" id="editPlate">Editar patente</button></div>
   </div>
   <div class="garage-cards">
@@ -167,7 +148,7 @@
 </section>
 <section id="page-about" class="pane" aria-label="Acerca de">
  <div class="about-layout">
-  <div class="about-card panel"><div class="eyebrow">TOYOTA RUSH · XLI 2021</div><h2>Rush Launcher <span style="color:#719e22">2.1</span></h2><p>Diseño claro para la pantalla original de tu Toyota mediante Carlinkit TBox Lite S. Incluye un visor 360° interactivo (modelo 3D ilustrativo), Waze, AutoKit, Spotify, YouTube y Netflix.</p><p>La radio FM y la cámara siguen siendo funciones independientes del sistema Toyota.</p></div>
+  <div class="about-card panel"><div class="eyebrow">TOYOTA RUSH · XLI 2021</div><h2>Rush Launcher <span style="color:#719e22">2.2</span></h2><p>Diseño claro para la pantalla original de tu Toyota mediante Carlinkit TBox Lite S. Incluye una imagen identificativa del Toyota Rush y accesos a Waze, AutoKit, Spotify, YouTube y Netflix.</p><p>La radio FM y la cámara siguen siendo funciones independientes del sistema Toyota.</p></div>
   <div class="about-card panel"><div class="eyebrow">CONFIGURACIÓN</div>
    <div class="actions-wrap">
     <button class="btn-secondary" id="enableHome">Elegir inicio</button>
@@ -187,13 +168,6 @@
 </div>
 <div class="overlay" id="modal" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><button class="close" id="closeModal" aria-label="Cerrar">×</button><h2 id="dialogTitle" class="dialog-title">Ajustes</h2><div id="dialogBody"></div></div></div>
 <div id="toast" class="toast" hidden></div>
-<div id="rush360Overlay" class="rush360-overlay" hidden role="dialog" aria-modal="true" aria-label="Modelo Toyota Rush 360 grados">
- <div class="rush360-dialog">
-   <div class="rush360-toolbar"><div class="rush360-title">Toyota Rush 2021 · Visor 360°</div><button class="rush360-action" id="rush360Close" type="button">Cerrar ✕</button></div>
-   <div class="rush360-full"><canvas id="rush360Full" class="rush360-canvas" aria-label="Arrastra el modelo 3D para verlo desde todos los ángulos"></canvas></div>
-   <div class="rush360-controls"><button class="rush360-action" id="rush360Auto" type="button" aria-pressed="false">Pausar giro</button><span class="rush360-hint">Arrastra para girar · Modelo 3D ilustrativo</span><button class="rush360-action" id="rush360Reset" type="button">Restablecer</button></div>
- </div>
-</div>
 <script>
 (function(){
 'use strict';
@@ -236,6 +210,7 @@ function editService(){
 $('#serviceButton').addEventListener('click',editService);
 function askGps(){if(nativeReady)window.Rush.askGps();else toast('Los datos GPS requieren Android')}
 $('#gpsActivate').addEventListener('click',askGps);
+$('#gpsHomeButton').addEventListener('click',askGps);
 window.rushGpsStatus=function(s){text('#gpsStatus','GPS: '+s);if(!/conectado|buscando señal/i.test(s)){lastGps=null;renderSpeed()}};
 function renderSpeed(){var x=lastObd&&lastObd.speed>=0?lastObd.speed:lastGps;text('#homeSpeed',x===null||x===undefined?'—':Math.max(0,Math.round(x)));text('#dashSpeed',x===null||x===undefined?'—':Math.max(0,Math.round(x)))}
 window.rushGpsData=function(speed,heading){lastGps=typeof speed==='number'&&isFinite(speed)?Math.max(0,speed):null;renderSpeed();text('#gpsStatus','GPS conectado · rumbo '+(typeof heading==='number'&&isFinite(heading)?Math.round(heading)+'°':'no disponible'))};
@@ -255,5 +230,4 @@ $('#openSettings').onclick=function(){openModal('Configuración Rush Launcher','
 if(nativeReady){try{window.Rush.ready()}catch(e){}}
 })();
 </script>
-<script src="rush360.js"></script>
 </body></html>
