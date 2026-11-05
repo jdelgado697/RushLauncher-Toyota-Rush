@@ -1,4 +1,4 @@
-# Rush Launcher 2.4.0 · Toyota Rush 2021 XLI
+# Rush Launcher 2.5.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -35,3 +35,10 @@ Inicio y Garaje ofrecen un visor por **ocho imágenes de referencia del Toyota R
 - **Apps:** acceso directo que muestra todas las apps **que Android expone como lanzables (MAIN/LAUNCHER)**. Los programas y servicios del sistema sin icono de inicio no aparecen. Las entradas se pueden buscar y tocar para abrir, sin permiso \`QUERY_ALL_PACKAGES\`.
 - **Waze** permanece únicamente en el panel de navegación y se eliminó de la barra de accesos. Los demás accesos mantienen su función.
 - **GPS/OBD:** sin cambios; las RPM y sensores no disponibles siguen sin inventar valores.
+
+## Cambios v2.5.0 · Imagen fija y Spotify
+- Se retiró la animación del vehículo, incluido el código del visor. Inicio y Garaje muestran una imagen fija de `rush_hero.jpg` del Toyota Rush.
+- En Inicio, el panel Spotify permite enviar las teclas multimedia estándar de Android: anterior, reproducir/pausar y siguiente, dirigidas al reproductor activo. Debes iniciar Spotify previamente; no se garantiza que Android dirija los controles a Spotify si hay otro reproductor activo.
+- Se añadieron los datos de **canción, artista, álbum y estado** mediante los broadcasts de Spotify `com.spotify.music.metadatachanged` y `com.spotify.music.playbackstatechanged`. Estos eventos son opcionales y Spotify puede no emitirlos. Según la documentación de Spotify, el usuario debe activar **Device Broadcast Status** si la opción existe en su versión de la aplicación. Cuando los eventos no están disponibles, el launcher informa que la canción no está sincronizada y no inventa información.
+- Esta edición **no solicita acceso a notificaciones ni permisos de control privilegiado**, para no reproducir el bloqueo de Play Protect que ocurrió en versiones anteriores.
+- El botón Apps, Waze únicamente en el mapa y el tablero OBD/GPS se mantienen.
