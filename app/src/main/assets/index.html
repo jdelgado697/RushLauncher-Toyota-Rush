@@ -26,32 +26,21 @@
 .hero-visual img{opacity:1}
 @media(max-width:860px){.hero-visual{top:25%;height:55%}}
 
-/* Visor giratorio por fotogramas, sin icono ni botón 360°. */
-.rush-view{position:relative;overflow:hidden;background:#e7edf6}
-.rush-view img{display:block;width:100%;height:100%;object-fit:contain}
-.rush-view-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;cursor:grab;touch-action:none;outline-offset:-4px}
-.rush-view-canvas:active{cursor:grabbing}
-.rush-view-help{pointer-events:none;position:absolute;right:7px;bottom:6px;padding:3px 7px;border-radius:12px;background:#eef5fae8;color:#54718b;font-size:9px;font-weight:800}
-.rush-view-garage{height:100%;min-height:0;width:100%;border-radius:15px;box-shadow:inset 1px 1px 4px #c8d1df}
-.rush-view-garage img{width:100%;height:100%;object-fit:cover}
-@media(max-width:860px){.rush-view-help{font-size:8px;right:3px;bottom:3px}}
 
-/* Cajón de aplicaciones locales; accesos grandes para 800x480. */
-.app-drawer[hidden]{display:none!important}
-.app-drawer{position:fixed;z-index:80;inset:0;background:rgba(27,37,50,.40);display:grid;place-items:center;padding:10px}
-.app-sheet{width:min(94vw,770px);height:min(94vh,448px);display:flex;flex-direction:column;gap:9px;min-height:0;padding:12px 15px 15px;border-radius:22px;background:#e9eff7;box-shadow:0 16px 48px #1c253e90}
-.app-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
-.app-toolbar strong{font-size:21px;font-weight:850;letter-spacing:-.6px}
-.app-count{font-size:10px;color:#697b91;font-weight:700}
-.app-exit{padding:8px 14px;border-radius:16px;background:#dae3ef;font-weight:800;font-size:12px}
-.app-search{font-size:13px;width:100%;padding:9px 13px;border-radius:14px;background:#f6f9fc;border:1px solid #d8e1ed;flex-shrink:0;outline-offset:2px}
-.app-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));grid-auto-rows:min-content;align-content:start;gap:10px;padding:4px 5px 8px}
-.app-entry{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:6px;min-height:84px;border-radius:15px;padding:8px 6px;box-shadow:3px 4px 9px #c5cfdd,-3px -3px 9px #fff;background:#e8eef6}
-.app-entry:active{background:#d8e6f5}
-.app-symbol{display:grid;place-items:center;flex-shrink:0;width:38px;height:38px;border-radius:13px;color:#335276;font-size:15px;font-weight:900;background:linear-gradient(145deg,#f6f9ff,#cfdbeb);box-shadow:inset 1px 1px 2px #fff,2px 3px 5px #c0cede}
-.app-title{max-width:100%;font-size:11px;font-weight:750;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app-empty{grid-column:1/-1;color:#6b788a;font-size:12px;text-align:center;padding:25px 10px}
-@media(max-height:390px){.app-sheet{padding:8px 11px;gap:5px}.app-toolbar strong{font-size:17px}.app-search{padding:6px 10px}.app-entry{min-height:68px}.app-symbol{width:29px;height:29px}.app-list{gap:5px}}
+/* Fotografía fija del Toyota Rush, sin modelos ni animación del vehículo. */
+.hero-visual img,.garage-hero .car-mini{display:block;width:100%;height:100%;object-fit:contain;object-position:center;opacity:1}
+.hero-visual{background:#edf3f9}
+.player{grid-template-columns:43px 1fr;gap:8px;padding:11px;align-items:center}
+.player .album{width:40px;height:40px;border-radius:14px}
+.player-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.spotify-heading{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.spotify-heading strong{font-size:13px;font-weight:850;color:#236044}
+.spotify-help{border-radius:12px;background:#e1eaf5;color:#647a91;font-size:10px;font-weight:800;padding:3px 7px}
+#mediaTitle{font-size:14px;font-weight:850;line-height:1.18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mediaArtist{font-size:10px;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mediaStatus{font-size:9px;color:#8795a5}
+.player-controls{margin-top:1px;gap:7px}
+@media(max-width:860px){.player{padding:7px;grid-template-columns:33px 1fr;gap:6px}.player .album{width:33px;height:33px}.spotify-heading strong{font-size:11px}#mediaTitle{font-size:12px}#mediaArtist{font-size:9px}.spotify-help{font-size:8px;padding:2px 5px}.player-controls{gap:6px}.player-controls .round{width:27px;height:27px}.player-controls .round.primary{width:33px;height:33px}}
 </style>
 </head>
 <body>
@@ -93,7 +82,7 @@
   <div class="hero panel">
    <div class="hero-label">MI VEHÍCULO</div><div class="hero-title">Toyota Rush</div><div class="hero-sub">2021 · XLI · 4×2</div><div class="accent-line"></div>
    <div class="hero-badges"><button type="button" class="ministat" id="gpsHomeButton" aria-label="Activar o comprobar GPS"><strong id="homeSpeed">—</strong>km/h <span style="display:block">GPS / OBD</span></button><div class="ministat"><strong id="homeRpm">—</strong>RPM OBD</div></div>
-   <div class="hero-visual rush-view"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/><canvas id="rushViewHome" class="rush-view-canvas" role="img" aria-label="Vistas giratorias del Toyota Rush 2021. Desliza para girar" tabindex="0"></canvas><span class="rush-view-help">Desliza para girar</span></div>
+   <div class="hero-visual"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/></div>
    <div class="quick">
     <button id="openApps" type="button" aria-label="Ver todas las aplicaciones instaladas"><svg class="icon"><use href="#i-apps"/></svg>Apps</button>
     <button data-open="youtube"><svg class="icon yt"><use href="#i-yt"/></svg>YouTube</button>
@@ -109,12 +98,16 @@
      <span class="map-footer"><span><strong>Tu ruta</strong><br/><span class="hint">Abrir navegación en Waze</span></span><span class="pill">Abrir</span></span>
    </button>
    <div class="player panel">
-    <button class="album" data-open="spotify" aria-label="Abrir reproductor"><svg class="icon"><use href="#i-music"/></svg></button>
-    <div style="min-width:0"><div class="player-title">Música</div><div class="player-track" id="mediaTrack">Control básico · abre Spotify para reproducir</div>
+    <button class="album" data-open="spotify" aria-label="Abrir Spotify"><svg class="icon"><use href="#i-music"/></svg></button>
+    <div class="player-info">
+      <div class="spotify-heading"><strong>Spotify</strong><button id="spotifyHelp" class="spotify-help" type="button" aria-label="Cómo mostrar la música de Spotify">Configurar</button></div>
+      <div id="mediaTitle" aria-live="polite">Canción sin sincronizar</div>
+      <div id="mediaArtist">Abre Spotify para reproducir</div>
+      <div id="mediaStatus">Esperando datos de Spotify</div>
       <div class="player-controls">
-       <button class="round" data-media="previous" aria-label="Anterior"><svg class="icon"><use href="#i-prev"/></svg></button>
+       <button class="round" data-media="previous" aria-label="Canción anterior"><svg class="icon"><use href="#i-prev"/></svg></button>
        <button class="round primary" data-media="toggle" id="mediaToggle" aria-label="Reproducir o pausar"><svg class="icon"><use id="mediaPlayIcon" href="#i-play"/></svg></button>
-       <button class="round" data-media="next" aria-label="Siguiente"><svg class="icon"><use href="#i-next"/></svg></button>
+       <button class="round" data-media="next" aria-label="Siguiente canción"><svg class="icon"><use href="#i-next"/></svg></button>
       </div>
     </div>
    </div>
@@ -163,7 +156,7 @@
  <div class="garage-layout">
   <div class="garage-hero panel">
    <div><div class="eyebrow">MI VEHÍCULO</div><h2>Toyota Rush</h2><div class="hero-sub">2021 XLI · 4×2 · Chile</div><div class="accent-line"></div></div>
-   <div class="rush-view rush-view-garage"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/><canvas id="rushViewGarage" class="rush-view-canvas" role="img" aria-label="Toyota Rush 2021 visto desde ocho ángulos" tabindex="0"></canvas></div>
+   <img class="car-mini" src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/>
    <div class="garage-plate"><div class="plate-label">PATENTE · REGISTRO LOCAL</div><div class="plate-number" id="plateText">Sin configurar</div><button class="btn-secondary" id="editPlate">Editar patente</button></div>
   </div>
   <div class="garage-cards">
@@ -210,7 +203,7 @@
 (function(){
 'use strict';
 var nativeReady=!!(window.Rush&&typeof window.Rush.open==='function'),$=function(s){return document.querySelector(s);};
-var mod=$('#modal'),toastTimer,mediaPlaying=null,lastGps=null,lastObd=null;
+var mod=$('#modal'),toastTimer,lastGps=null,lastObd=null;
 var plate=(localStorage.getItem('rush_plate')||'').slice(0,15),service=null;
 try{service=JSON.parse(localStorage.getItem('rush_service')||'null')}catch(e){}
 function text(sel,val){var el=$(sel);if(el)el.textContent=String(val)}
@@ -317,12 +310,39 @@ window.rushObdDevices=function(devices){
 };
 $('#scanObd').onclick=function(){if(nativeReady)window.Rush.requestObdDevices();else toast('La conexión OBD requiere Android y ELM327 Bluetooth')};
 $('#disconnectObd').onclick=function(){if(nativeReady)window.Rush.disconnectObd();else toast('Sin conexión')};
-window.rushMediaState=function(playing,title,app){if(typeof playing==='boolean'){mediaPlaying=playing;text('#mediaTrack',(title||app||'Música')+(playing?' · reproduciendo':' · en pausa'));var icon=$('#mediaPlayIcon');icon.setAttribute('href',playing?'#i-pause':'#i-play')}else{text('#mediaTrack','Control básico · abre Spotify para reproducir')}};
-document.querySelectorAll('[data-media]').forEach(function(btn){btn.onclick=function(){if(nativeReady)window.Rush.media(btn.getAttribute('data-media'));else toast('Control multimedia disponible en Android')}});
+window.rushSpotifyState=function(state){
+ if(!state||!state.hasData){
+  text('#mediaTitle','Canción sin sincronizar');
+  text('#mediaArtist','Abre Spotify para reproducir');
+  text('#mediaStatus','Activa “Device Broadcast Status” en Spotify si está disponible');
+  $('#mediaPlayIcon').setAttribute('href','#i-play');
+  $('#mediaToggle').setAttribute('aria-label','Reproducir o pausar');
+  return;
+ }
+ text('#mediaTitle',state.track||'Música en Spotify');
+ text('#mediaArtist',state.artist||(state.album||'Artista no disponible'));
+ var playing=typeof state.playing==='boolean'?state.playing:null;
+ text('#mediaStatus',playing===null?'Estado de reproducción no disponible':(playing?'Reproduciendo':'En pausa'));
+ $('#mediaPlayIcon').setAttribute('href',playing?'#i-pause':'#i-play');
+ $('#mediaToggle').setAttribute('aria-label',playing?'Pausar Spotify':'Reproducir Spotify');
+};
+document.querySelectorAll('[data-media]').forEach(function(btn){
+ btn.onclick=function(){
+  if(nativeReady)window.Rush.media(btn.getAttribute('data-media'));
+  else toast('Los controles de Spotify requieren Android');
+ };
+});
+$('#spotifyHelp').onclick=function(){
+ openModal('Datos y controles de Spotify',
+  '<p>Los botones de reproducción, pausa y cambio de canción envían comandos al reproductor activo de Android. Abre Spotify y empieza a reproducir una canción antes de usarlos.</p>'+
+  '<p>Para mostrar título, artista y estado, abre <strong>Spotify → Configuración</strong> y busca <strong>Device Broadcast Status</strong> o <strong>Estado de transmisión del dispositivo</strong>. Actívalo si aparece. Algunas versiones de Spotify no incluyen esta opción.</p>'+
+  '<p>Rush Launcher no solicita acceso a notificaciones. Si Spotify no comparte datos, se mostrará “Canción sin sincronizar”.</p>'+
+  '<div class="dialog-actions"><button id="helpOpenSpotify" class="btn-primary">Abrir Spotify</button></div>');
+ $('#helpOpenSpotify').onclick=function(){closeModal();openApp('spotify')};
+};
 $('#enableHome').onclick=function(){openApp('enableHome')};
 $('#openSettings').onclick=function(){openModal('Configuración Rush Launcher','<p>Accesos y configuración. Los datos OBD muestran solo lecturas reales.</p><div class="dialog-actions"><button class="btn-primary" id="dlgGps">Activar GPS</button><button class="btn-secondary" id="dlgAndroid">Ajustes Android</button><button class="btn-secondary" id="dlgExit">Inicio original</button></div>');$('#dlgGps').onclick=function(){closeModal();askGps()};$('#dlgAndroid').onclick=function(){closeModal();openApp('settings')};$('#dlgExit').onclick=function(){closeModal();openApp('exit')}};
 if(nativeReady){try{window.Rush.ready()}catch(e){}}
 })();
 </script>
-<script src="rush_turntable.js"></script>
 </body></html>
