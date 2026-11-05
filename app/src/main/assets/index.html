@@ -35,10 +35,28 @@
 .rush-view-garage{height:100%;min-height:0;width:100%;border-radius:15px;box-shadow:inset 1px 1px 4px #c8d1df}
 .rush-view-garage img{width:100%;height:100%;object-fit:cover}
 @media(max-width:860px){.rush-view-help{font-size:8px;right:3px;bottom:3px}}
+
+/* Cajón de aplicaciones locales; accesos grandes para 800x480. */
+.app-drawer[hidden]{display:none!important}
+.app-drawer{position:fixed;z-index:80;inset:0;background:rgba(27,37,50,.40);display:grid;place-items:center;padding:10px}
+.app-sheet{width:min(94vw,770px);height:min(94vh,448px);display:flex;flex-direction:column;gap:9px;min-height:0;padding:12px 15px 15px;border-radius:22px;background:#e9eff7;box-shadow:0 16px 48px #1c253e90}
+.app-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
+.app-toolbar strong{font-size:21px;font-weight:850;letter-spacing:-.6px}
+.app-count{font-size:10px;color:#697b91;font-weight:700}
+.app-exit{padding:8px 14px;border-radius:16px;background:#dae3ef;font-weight:800;font-size:12px}
+.app-search{font-size:13px;width:100%;padding:9px 13px;border-radius:14px;background:#f6f9fc;border:1px solid #d8e1ed;flex-shrink:0;outline-offset:2px}
+.app-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));grid-auto-rows:min-content;align-content:start;gap:10px;padding:4px 5px 8px}
+.app-entry{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:6px;min-height:84px;border-radius:15px;padding:8px 6px;box-shadow:3px 4px 9px #c5cfdd,-3px -3px 9px #fff;background:#e8eef6}
+.app-entry:active{background:#d8e6f5}
+.app-symbol{display:grid;place-items:center;flex-shrink:0;width:38px;height:38px;border-radius:13px;color:#335276;font-size:15px;font-weight:900;background:linear-gradient(145deg,#f6f9ff,#cfdbeb);box-shadow:inset 1px 1px 2px #fff,2px 3px 5px #c0cede}
+.app-title{max-width:100%;font-size:11px;font-weight:750;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-empty{grid-column:1/-1;color:#6b788a;font-size:12px;text-align:center;padding:25px 10px}
+@media(max-height:390px){.app-sheet{padding:8px 11px;gap:5px}.app-toolbar strong{font-size:17px}.app-search{padding:6px 10px}.app-entry{min-height:68px}.app-symbol{width:29px;height:29px}.app-list{gap:5px}}
 </style>
 </head>
 <body>
 <svg class="icons" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-apps" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.3"/><rect x="14" y="3" width="7" height="7" rx="1.3"/><rect x="3" y="14" width="7" height="7" rx="1.3"/><rect x="14" y="14" width="7" height="7" rx="1.3"/></symbol>
 <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v11H3zM9 21v-7h6v7"/></symbol>
 <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M6 17V9m6 8V4m6 13v-6"/></symbol>
 <symbol id="i-connection" viewBox="0 0 24 24"><path d="M2 13h4l3-7 5 13 3-6h5"/></symbol>
@@ -77,7 +95,7 @@
    <div class="hero-badges"><button type="button" class="ministat" id="gpsHomeButton" aria-label="Activar o comprobar GPS"><strong id="homeSpeed">—</strong>km/h <span style="display:block">GPS / OBD</span></button><div class="ministat"><strong id="homeRpm">—</strong>RPM OBD</div></div>
    <div class="hero-visual rush-view"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/><canvas id="rushViewHome" class="rush-view-canvas" role="img" aria-label="Vistas giratorias del Toyota Rush 2021. Desliza para girar" tabindex="0"></canvas><span class="rush-view-help">Desliza para girar</span></div>
    <div class="quick">
-    <button data-open="waze"><svg class="icon waze"><use href="#i-pin"/></svg>Waze</button>
+    <button id="openApps" type="button" aria-label="Ver todas las aplicaciones instaladas"><svg class="icon"><use href="#i-apps"/></svg>Apps</button>
     <button data-open="youtube"><svg class="icon yt"><use href="#i-yt"/></svg>YouTube</button>
     <button data-open="netflix"><span class="netflix">N</span>Netflix</button>
     <button data-open="spotify"><svg class="icon"><use href="#i-music"/></svg>Spotify</button>
@@ -177,6 +195,16 @@
 </nav>
 </div>
 <div class="overlay" id="modal" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><button class="close" id="closeModal" aria-label="Cerrar">×</button><h2 id="dialogTitle" class="dialog-title">Ajustes</h2><div id="dialogBody"></div></div></div>
+<div id="appsOverlay" class="app-drawer" hidden>
+ <section class="app-sheet" role="dialog" aria-modal="true" aria-labelledby="appsHeading">
+  <header class="app-toolbar">
+   <div><strong id="appsHeading">Aplicaciones</strong> <span class="app-count" id="appsCount">Cargando…</span></div>
+   <button class="app-exit" id="closeApps" type="button">Cerrar ✕</button>
+  </header>
+  <input id="appsSearch" class="app-search" type="search" placeholder="Buscar aplicaciones" aria-label="Buscar aplicaciones instaladas" autocomplete="off"/>
+  <div id="appsList" class="app-list"><span class="app-empty">Consultando aplicaciones del dispositivo…</span></div>
+ </section>
+</div>
 <div id="toast" class="toast" hidden></div>
 <script>
 (function(){
@@ -198,6 +226,62 @@ function switchView(v){
 document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){switchView(b.getAttribute('data-view'))})});
 function openApp(app){if(nativeReady){window.Rush.open(app);return}toast('Vista previa: abrir '+app+' requiere Android')}
 document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){openApp(b.getAttribute('data-open'))})});
+
+var installedApps=[],appsOverlay=$('#appsOverlay');
+function closeAppsPanel(){appsOverlay.hidden=true}
+function appIconLabel(name){
+ var words=String(name||'').trim().split(/\s+/);
+ if(words.length>=2)return (words[0][0]+words[1][0]).toUpperCase();
+ return String(name||'?').slice(0,2).toUpperCase();
+}
+function renderInstalledApps(){
+ var list=$('#appsList'),search=$('#appsSearch').value.trim().toLocaleLowerCase();
+ list.textContent='';
+ var entries=installedApps.filter(function(a){return a.name.toLocaleLowerCase().indexOf(search)>-1});
+ text('#appsCount',entries.length+' de '+installedApps.length+' apps');
+ if(!entries.length){
+  var empty=document.createElement('span');empty.className='app-empty';
+  empty.textContent=installedApps.length?'Sin resultados':'No hay aplicaciones disponibles. Comprueba el inicio Android del TBox.';
+  list.appendChild(empty);return;
+ }
+ entries.forEach(function(item){
+   var button=document.createElement('button');button.type='button';button.className='app-entry';
+   button.setAttribute('aria-label','Abrir '+item.name);
+   var glyph=document.createElement('span');glyph.className='app-symbol';glyph.textContent=appIconLabel(item.name);
+   var label=document.createElement('span');label.className='app-title';label.textContent=item.name;
+   button.appendChild(glyph);button.appendChild(label);
+   button.addEventListener('click',function(){
+     if(nativeReady&&typeof window.Rush.launchApp==='function'){
+       closeAppsPanel();window.Rush.launchApp(item.package);
+     }else toast('Disponible al instalarlo en Android');
+   });
+   list.appendChild(button);
+ });
+}
+window.rushInstalledApps=function(items){
+ installedApps=(Array.isArray(items)?items:[]).filter(function(a){
+   return a&&typeof a.name==='string'&&typeof a.package==='string';
+ }).sort(function(a,b){return a.name.localeCompare(b.name,'es')});
+ renderInstalledApps();
+};
+$('#openApps').addEventListener('click',function(){
+ appsOverlay.hidden=false;
+ $('#appsSearch').value='';
+ text('#appsCount','Buscando…');
+ $('#appsList').textContent='Consultando aplicaciones…';
+ if(nativeReady&&typeof window.Rush.listApps==='function'){
+   window.Rush.listApps();
+ }else{
+   installedApps=[];
+   text('#appsCount','Modo vista previa');
+   $('#appsList').textContent='El listado de apps se obtiene del TBox Android.';
+ }
+});
+$('#closeApps').addEventListener('click',closeAppsPanel);
+appsOverlay.addEventListener('click',function(e){if(e.target===appsOverlay)closeAppsPanel()});
+$('#appsSearch').addEventListener('input',renderInstalledApps);
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&!appsOverlay.hidden)closeAppsPanel()});
+
 function openModal(title,body){text('#dialogTitle',title);$('#dialogBody').innerHTML=body;mod.hidden=false}
 function closeModal(){mod.hidden=true;$('#dialogBody').textContent=''}
 $('#closeModal').addEventListener('click',closeModal);mod.addEventListener('click',function(e){if(e.target===mod)closeModal()});
