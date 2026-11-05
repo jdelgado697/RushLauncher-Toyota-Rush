@@ -50,10 +50,12 @@ jobs:
           PY
           node --check /tmp/rush-ui-inline.js
           test -f app/src/main/assets/rush_hero.jpg
-          test -s app/src/main/assets/rush_turntable.webp
-          node --check app/src/main/assets/rush_turntable.js
-          grep -q 'id="rushViewHome"' app/src/main/assets/index.html
-          grep -q 'id="rushViewGarage"' app/src/main/assets/index.html
+          test -s app/src/main/assets/rush_hero.jpg
+          if grep -q 'id="rushViewHome"\|id="rushViewGarage"\|rush_turntable.js' app/src/main/assets/index.html; then echo 'Giro 360 aun activo'; exit 1; fi
+          grep -q 'id="mediaTitle"' app/src/main/assets/index.html
+          grep -q 'id="mediaArtist"' app/src/main/assets/index.html
+          grep -q 'window.rushSpotifyState' app/src/main/assets/index.html
+          grep -q 'SPOTIFY_METADATA' app/src/main/java/cl/rush/launcher/MainActivity.java
           grep -q 'id="openApps"' app/src/main/assets/index.html
           grep -q 'window.rushInstalledApps' app/src/main/assets/index.html
           grep -q 'public void listApps()' app/src/main/java/cl/rush/launcher/MainActivity.java
