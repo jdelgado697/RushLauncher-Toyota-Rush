@@ -3,6 +3,9 @@ package cl.rush.launcher;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -43,6 +46,65 @@ public class MainActivity extends Activity implements LocationListener {
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    // Spotify ofrece emisiones opt-in sin acceso a notificaciones ni datos privados.
+    private static final String SPOTIFY_METADATA = "com.spotify.music.metadatachanged";
+    private static final String SPOTIFY_PLAYBACK = "com.spotify.music.playbackstatechanged";
+    private String spotifyTrack = "";
+    private String spotifyArtist = "";
+    private String spotifyAlbum = "";
+    private Boolean spotifyPlaying = null;
+    private boolean spotifyReceiverRegistered = false;
+
+    private final BroadcastReceiver spotifyReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent == null || intent.getAction() == null) return;
+            long eventTime = intent.getLongExtra("timeSent", 0);
+            if (eventTime != 0 && Math.abs(System.currentTimeMillis() - eventTime) > 120000L) {
+                // Evitar mostrar notificaciones pegajosas antiguas como reproducción actual.
+                return;
+            }
+            String action = intent.getAction();
+            if (SPOTIFY_METADATA.equals(action)) {
+                spotifyTrack = intent.getStringExtra("track") == null ? "" : intent.getStringExtra("track");
+                spotifyArtist = intent.getStringExtra("artist") == null ? "" : intent.getStringExtra("artist");
+                spotifyAlbum = intent.getStringExtra("album") == null ? "" : intent.getStringExtra("album");
+            } else if (SPOTIFY_PLAYBACK.equals(action)) {
+                spotifyPlaying = intent.getBooleanExtra("playing", false);
+            } else return;
+            sendSpotifyState();
+        }
+    };
+
+    private void registerSpotifyReceiver() {
+        if (spotifyReceiverRegistered) return;
+        try {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(SPOTIFY_METADATA);
+            filter.addAction(SPOTIFY_PLAYBACK);
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(spotifyReceiver, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(spotifyReceiver, filter);
+            }
+            spotifyReceiverRegistered = true;
+        } catch (RuntimeException ignored) {
+            spotifyReceiverRegistered = false;
+        }
+    }
+
+    private void sendSpotifyState() {
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("track", spotifyTrack);
+            payload.put("artist", spotifyArtist);
+            payload.put("album", spotifyAlbum);
+            payload.put("playing", spotifyPlaying == null ? JSONObject.NULL : spotifyPlaying.booleanValue());
+            payload.put("hasData", !spotifyTrack.isEmpty() || spotifyPlaying != null);
+        } catch (Exception ignored) { }
+        javascript("window.rushSpotifyState(" + payload.toString() + ");");
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,6 +113,7 @@ public class MainActivity extends Activity implements LocationListener {
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
+        registerSpotifyReceiver();
         obdReader = new ObdReader(new ObdReader.Listener() {
             @Override public void onStatus(String status) {
                 javascript("window.rushObdStatus(" + JSONObject.quote(status) + ");");
@@ -77,6 +140,7 @@ public class MainActivity extends Activity implements LocationListener {
                 // Solicita permiso de ubicación al iniciar la app y empieza a
                 // leer el GPS automáticamente, si el TBox dispone de proveedor.
                 startGps();
+                sendSpotifyState();
             }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -333,13 +397,22 @@ public class MainActivity extends Activity implements LocationListener {
         switch (command) {
             case "previous": code = KeyEvent.KEYCODE_MEDIA_PREVIOUS; break;
             case "next": code = KeyEvent.KEYCODE_MEDIA_NEXT; break;
-            case "toggle": code = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE; break;
+            case "toggle":
+                code = spotifyPlaying == null ? KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                        : (spotifyPlaying ? KeyEvent.KEYCODE_MEDIA_PAUSE : KeyEvent.KEYCODE_MEDIA_PLAY);
+                break;
             default: return;
         }
         AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
-        if (audio != null) {
+        if (audio == null) {
+            message("El sistema Android no permite controlar la música");
+            return;
+        }
+        try {
             audio.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));
             audio.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, code));
+        } catch (RuntimeException ex) {
+            message("Abre Spotify e inicia la reproducción desde allí");
         }
     }
 
@@ -425,11 +498,15 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
-        if (pageLoaded) startGps();
+        if (pageLoaded) { startGps(); sendSpotifyState(); }
     }
 
     @Override
     protected void onDestroy() {
+        if (spotifyReceiverRegistered) {
+            try { unregisterReceiver(spotifyReceiver); } catch (RuntimeException ignored) { }
+            spotifyReceiverRegistered = false;
+        }
         if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
             webView.removeJavascriptInterface("Rush");
@@ -445,7 +522,9 @@ public class MainActivity extends Activity implements LocationListener {
     }
 
     private final class RushBridge {
-        @JavascriptInterface public void ready() { /* Ya se abrio la pantalla local. */ }
+        @JavascriptInterface public void ready() {
+            runUi(() -> sendSpotifyState());
+        }
         @JavascriptInterface public void listApps() {
             runUi(() -> sendInstalledApps());
         }
