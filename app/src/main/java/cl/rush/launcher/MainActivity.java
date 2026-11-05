@@ -73,7 +73,9 @@ public class MainActivity extends Activity implements LocationListener {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageLoaded = true;
-                sendGpsStatus("Toca para activar GPS");
+                // Solicita permiso de ubicación al iniciar la app y empieza a
+                // leer el GPS automáticamente, si el TBox dispone de proveedor.
+                startGps();
             }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -310,6 +312,8 @@ public class MainActivity extends Activity implements LocationListener {
         }
         boolean started = false;
         try {
+            // Evita registros de ubicación duplicados al volver de Ajustes/Waze.
+            locationManager.removeUpdates(this);
             if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 1f, this);
                 started = true;
@@ -366,7 +370,7 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
-        if (pageLoaded && locationManager != null) startGps();
+        if (pageLoaded) startGps();
     }
 
     @Override
