@@ -1,4 +1,4 @@
-# Rush Launcher 2.3.0 · Toyota Rush 2021 XLI
+# Rush Launcher 2.4.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -29,3 +29,9 @@ Se eliminó la figura 3D ilustrativa y los controles 360°. Inicio y Garaje mues
 
 ## Versión 2.3 — Vistas giratorias Toyota Rush 2021
 Inicio y Garaje ofrecen un visor por **ocho imágenes de referencia del Toyota Rush 2021 blanco** con desplazamiento táctil y giro automático. Se incluyen dentro de la APK, por lo que no requieren conexión a internet ni permisos extra. No son fotos del vehículo del propietario ni un escaneo 3D preciso del modelo XLI; la transición es por ángulos (45° por cuadro) y no debe confundirse con render 3D continuo. No muestra datos de velocidad ni RPM sin señales reales. Sin icono 360 en pantalla; arrastra directamente el auto para explorarlo.
+
+## Cambios v2.4.0 — Giro más continuo y aplicaciones
+- **Visor Toyota Rush:** la animación ahora dibuja con \`requestAnimationFrame\` y mezcla continuamente dos de las ocho vistas disponibles; mantiene arrastre táctil fluido, control por flechas y giro automático. **No crea geometría 3D real**: la transición entre ocho imágenes puede producir superposiciones visuales. Para rotación verdaderamente precisa se requiere una malla 3D adecuada del Toyota Rush 2021 o muchos más fotogramas coherentes.
+- **Apps:** acceso directo que muestra todas las apps **que Android expone como lanzables (MAIN/LAUNCHER)**. Los programas y servicios del sistema sin icono de inicio no aparecen. Las entradas se pueden buscar y tocar para abrir, sin permiso \`QUERY_ALL_PACKAGES\`.
+- **Waze** permanece únicamente en el panel de navegación y se eliminó de la barra de accesos. Los demás accesos mantienen su función.
+- **GPS/OBD:** sin cambios; las RPM y sensores no disponibles siguen sin inventar valores.
