@@ -50,7 +50,10 @@ jobs:
           PY
           node --check /tmp/rush-ui-inline.js
           test -f app/src/main/assets/rush_hero.jpg
-          if grep -q 'id="rush360Home"' app/src/main/assets/index.html; then echo 'Error: visor 360 aun visible'; exit 1; fi
+          test -s app/src/main/assets/rush_turntable.webp
+          node --check app/src/main/assets/rush_turntable.js
+          grep -q 'id="rushViewHome"' app/src/main/assets/index.html
+          grep -q 'id="rushViewGarage"' app/src/main/assets/index.html
 
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
