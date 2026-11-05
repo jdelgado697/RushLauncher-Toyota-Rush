@@ -25,6 +25,16 @@
 .hero-visual{background:#eef3f9}
 .hero-visual img{opacity:1}
 @media(max-width:860px){.hero-visual{top:25%;height:55%}}
+
+/* Visor giratorio por fotogramas, sin icono ni botón 360°. */
+.rush-view{position:relative;overflow:hidden;background:#e7edf6}
+.rush-view img{display:block;width:100%;height:100%;object-fit:contain}
+.rush-view-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;cursor:grab;touch-action:none;outline-offset:-4px}
+.rush-view-canvas:active{cursor:grabbing}
+.rush-view-help{pointer-events:none;position:absolute;right:7px;bottom:6px;padding:3px 7px;border-radius:12px;background:#eef5fae8;color:#54718b;font-size:9px;font-weight:800}
+.rush-view-garage{height:100%;min-height:0;width:100%;border-radius:15px;box-shadow:inset 1px 1px 4px #c8d1df}
+.rush-view-garage img{width:100%;height:100%;object-fit:cover}
+@media(max-width:860px){.rush-view-help{font-size:8px;right:3px;bottom:3px}}
 </style>
 </head>
 <body>
@@ -65,7 +75,7 @@
   <div class="hero panel">
    <div class="hero-label">MI VEHÍCULO</div><div class="hero-title">Toyota Rush</div><div class="hero-sub">2021 · XLI · 4×2</div><div class="accent-line"></div>
    <div class="hero-badges"><button type="button" class="ministat" id="gpsHomeButton" aria-label="Activar o comprobar GPS"><strong id="homeSpeed">—</strong>km/h <span style="display:block">GPS / OBD</span></button><div class="ministat"><strong id="homeRpm">—</strong>RPM OBD</div></div>
-   <div class="hero-visual"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco, vista de tres cuartos" /></div>
+   <div class="hero-visual rush-view"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/><canvas id="rushViewHome" class="rush-view-canvas" role="img" aria-label="Vistas giratorias del Toyota Rush 2021. Desliza para girar" tabindex="0"></canvas><span class="rush-view-help">Desliza para girar</span></div>
    <div class="quick">
     <button data-open="waze"><svg class="icon waze"><use href="#i-pin"/></svg>Waze</button>
     <button data-open="youtube"><svg class="icon yt"><use href="#i-yt"/></svg>YouTube</button>
@@ -135,7 +145,7 @@
  <div class="garage-layout">
   <div class="garage-hero panel">
    <div><div class="eyebrow">MI VEHÍCULO</div><h2>Toyota Rush</h2><div class="hero-sub">2021 XLI · 4×2 · Chile</div><div class="accent-line"></div></div>
-   <img class="car-mini" src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/>
+   <div class="rush-view rush-view-garage"><img src="rush_hero.jpg" alt="Toyota Rush 2021 XLI blanco"/><canvas id="rushViewGarage" class="rush-view-canvas" role="img" aria-label="Toyota Rush 2021 visto desde ocho ángulos" tabindex="0"></canvas></div>
    <div class="garage-plate"><div class="plate-label">PATENTE · REGISTRO LOCAL</div><div class="plate-number" id="plateText">Sin configurar</div><button class="btn-secondary" id="editPlate">Editar patente</button></div>
   </div>
   <div class="garage-cards">
@@ -148,7 +158,7 @@
 </section>
 <section id="page-about" class="pane" aria-label="Acerca de">
  <div class="about-layout">
-  <div class="about-card panel"><div class="eyebrow">TOYOTA RUSH · XLI 2021</div><h2>Rush Launcher <span style="color:#719e22">2.2</span></h2><p>Diseño claro para la pantalla original de tu Toyota mediante Carlinkit TBox Lite S. Incluye una imagen identificativa del Toyota Rush y accesos a Waze, AutoKit, Spotify, YouTube y Netflix.</p><p>La radio FM y la cámara siguen siendo funciones independientes del sistema Toyota.</p></div>
+  <div class="about-card panel"><div class="eyebrow">TOYOTA RUSH · XLI 2021</div><h2>Rush Launcher <span style="color:#719e22">2.3</span></h2><p>Diseño claro para la pantalla original de tu Toyota mediante Carlinkit TBox Lite S. Incluye un visor táctil con ocho vistas giratorias del Toyota Rush 2021 (imágenes de referencia), además de Waze, AutoKit, Spotify, YouTube y Netflix.</p><p>La radio FM y la cámara siguen siendo funciones independientes del sistema Toyota.</p></div>
   <div class="about-card panel"><div class="eyebrow">CONFIGURACIÓN</div>
    <div class="actions-wrap">
     <button class="btn-secondary" id="enableHome">Elegir inicio</button>
@@ -230,4 +240,5 @@ $('#openSettings').onclick=function(){openModal('Configuración Rush Launcher','
 if(nativeReady){try{window.Rush.ready()}catch(e){}}
 })();
 </script>
+<script src="rush_turntable.js"></script>
 </body></html>
