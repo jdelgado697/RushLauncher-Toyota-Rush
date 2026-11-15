@@ -1,4 +1,4 @@
-# Rush Launcher 3.7.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.7.1 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -163,3 +163,8 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 - Se mantiene el orden alfabético dentro de cada sección, la búsqueda global, los iconos oficiales obtenidos del dispositivo y el acceso a las aplicaciones.
 - En dispositivos pequeños las secciones comparten un contenedor desplazable; los títulos identifican los grupos y solo se muestran secciones con resultados.
 - No se añaden permisos, no se modifica Spotify ni el mapa GPS, ni se altera la pantalla principal. La compilación incluye pruebas deterministas de clasificación.
+
+## Rush Launcher 3.7.1 — Xuper al inicio
+- Dentro de Streaming y video, todas las aplicaciones instaladas cuyo nombre o paquete las identifica como Xuper (incluyendo Xuper TV y Xuper Play) aparecen primero, ordenadas alfabéticamente entre sí.
+- Después quedan YouTube, Netflix, Paramount+ y las demás aplicaciones de vídeo por orden alfabético; luego se muestran Música y audio y Otras aplicaciones.
+- No se instala ni modifica Xuper. Se conservan los íconos obtenidos desde Android, el filtro, Spotify, las carátulas y el mapa GPS.
