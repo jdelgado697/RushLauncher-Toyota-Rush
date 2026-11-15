@@ -205,6 +205,9 @@ jobs:
           assert.strictEqual(groups.group({name:'YouTube',package:'com.google.android.youtube'}),'video');
           assert.strictEqual(groups.group({name:'Paramount+',package:'com.cbs.app'}),'video');
           assert.strictEqual(groups.group({name:'Prime Video',package:'com.amazon.avod.thirdpartyclient'}),'video');
+          assert.strictEqual(groups.group({name:'Fanatiz',package:'com.smartboxtv.nunchee.fanatiz'}),'video');
+          assert.strictEqual(groups.group({name:'Basquet Pass',package:'com.adc.basquetpass'}),'video');
+          assert.strictEqual(groups.group({name:'Básquet Pass',package:'app.desconocida'}),'video');
           assert.strictEqual(groups.group({name:'Spotify',package:'com.spotify.music'}),'audio');
           assert.strictEqual(groups.group({name:'YouTube Music',package:'com.google.android.apps.youtube.music'}),'audio');
           assert.strictEqual(groups.group({name:'Google Maps',package:'com.google.android.apps.maps'}),'other');
@@ -216,10 +219,12 @@ jobs:
             {name:'Xuper Play',package:'com.xuper.play'},
             {name:'Spotify',package:'com.spotify.music'},
             {name:'Netflix',package:'com.netflix.mediaclient'},
-            {name:'Paramount+',package:'com.cbs.app'}
+            {name:'Paramount+',package:'com.cbs.app'},
+            {name:'Fanatiz',package:'com.smartboxtv.nunchee.fanatiz'},
+            {name:'Basquet Pass',package:'com.adc.basquetpass'}
           ];
           const categorized = groups.categorize(sample);
-          assert.strictEqual(categorized.video.map(x=>x.name).join(','),'Xuper Play,Xuper TV,Netflix,Paramount+,YouTube');
+          assert.strictEqual(categorized.video.map(x=>x.name).join(','),'Xuper Play,Xuper TV,Basquet Pass,Fanatiz,Netflix,Paramount+,YouTube');
           assert.strictEqual(categorized.audio.map(x=>x.name).join(','),'Spotify');
           assert.strictEqual(categorized.other.map(x=>x.name).join(','),'Google Maps');
           const query = 'netflix';
