@@ -62,7 +62,7 @@ function draw(){
     img=document.createElement('img');
     img.className='map-tile';img.width=TILE;img.height=TILE;img.alt='';
     img.decoding='async';img.loading='eager';img.draggable=false;
-    img.onload=function(){loadedTiles++;};
+    img.onload=function(){loadedTiles++;requestDraw()};
     img.onerror=function(){
      failedTiles++;
      if(loadedTiles===0&&failedTiles>2){
