@@ -1,4 +1,4 @@
-# Rush Launcher 2.5.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.0.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -42,3 +42,19 @@ Inicio y Garaje ofrecen un visor por **ocho imágenes de referencia del Toyota R
 - Se añadieron los datos de **canción, artista, álbum y estado** mediante los broadcasts de Spotify `com.spotify.music.metadatachanged` y `com.spotify.music.playbackstatechanged`. Estos eventos son opcionales y Spotify puede no emitirlos. Según la documentación de Spotify, el usuario debe activar **Device Broadcast Status** si la opción existe en su versión de la aplicación. Cuando los eventos no están disponibles, el launcher informa que la canción no está sincronizada y no inventa información.
 - Esta edición **no solicita acceso a notificaciones ni permisos de control privilegiado**, para no reproducir el bloqueo de Play Protect que ocurrió en versiones anteriores.
 - El botón Apps, Waze únicamente en el mapa y el tablero OBD/GPS se mantienen.
+
+## Rush Launcher 3.0.0 — interfaz día y noche
+Se reemplaza el menú de cinco tarjetas por una pantalla premium adaptada a 800×480 y tablet:
+- **Día/noche:** automático según hora local de Android, o claro/oscuro manual desde Ajustes.
+- **Toyota Rush 2021 XLI:** imagen fija local \`rush_hero.jpg\`; no hay giro 360 ni se utiliza una imagen de RAV4.
+- **Mapa:** vista **ilustrativa**, no navegación en vivo. Abre Waze directamente, y el botón Mapas también abre Waze. No muestra rutas ficticias.
+- **Spotify:** play/pausa, anterior/siguiente mediante teclas multimedia de Android. Canción, artista y estado únicamente si Spotify emite los broadcasts opcionales; no necesita acceso a notificaciones ni implica control exclusivo de Spotify.
+- **Clima:** consultas reales Open-Meteo después de pulsar "Activar clima". Requiere ubicación y conexión a internet. La ubicación se comparte con Open-Meteo; el usuario puede desactivar la función. Nunca se simulan temperaturas.
+- **Apps:** buscador y listado de apps Android que exponen actividad de inicio, con acceso a YouTube, Netflix y otras apps instaladas.
+- **OBD2:** búsqueda de adaptadores Bluetooth Classic ELM327 ya vinculados; lecturas reales de velocidad, RPM y refrigerante según soporte ECU. Se abre desde el indicador OBD o Ajustes.
+- **Radio FM:** mantiene un acceso explicativo; el sintonizador y la cámara pertenecen a la radio original Toyota y no se pueden controlar desde esta APK.
+- **AutoKit y Bluetooth:** acceso nativo a la aplicación Android y a sus ajustes, cuando sean compatibles.
+- El launcher original del TBox permanece como alternativa y no se instala por defecto. No modifica el firmware del automóvil.
+
+### Privacidad, seguridad y limitaciones
+Se usan permisos de localización, Bluetooth según versión y de internet (para la consulta voluntaria del clima). **Sin** servicio de acceso a notificaciones, sin superposiciones de accesibilidad, sin control de la ECU. Las aplicaciones de video deben usarse con el automóvil estacionado. El APK debug no cuenta con firma de publicación de Play Store y podría activar las advertencias habituales del dispositivo.
