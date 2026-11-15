@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher'
         minSdk 26
         targetSdk 32
-        versionCode 21
-        versionName '3.7.0'
+        versionCode 22
+        versionName '3.7.1'
     }
 
     compileOptions {
