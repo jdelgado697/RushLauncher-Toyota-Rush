@@ -93,7 +93,7 @@ jobs:
           assert 'MAX_CACHED_TILES=20' in mapjs
           assert 'MIN_CENTER_METERS=32' in mapjs
           assert 'CENTER_INTERVAL=2500' in mapjs
-          assert 'img.style.display=\'none\'' in mapjs
+          assert "entry[1].style.display='none'" in mapjs
           assert 'id="chooseDefaultHome"' in html
           assert 'id="homeStatus"' in html
           assert "app('enableHome')" in js
