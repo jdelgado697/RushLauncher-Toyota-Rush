@@ -102,6 +102,15 @@
 .apps-sections .app-choice{min-width:0;min-height:84px;padding:5px 3px}
 .apps-sections .app-choice:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:860px){.apps-sections{max-height:65vh;gap:10px}.apps-sections .appgrid{grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}.apps-section-title{font-size:12px}.apps-sections .app-choice{min-height:78px;font-size:10px}}
+
+/* 3.8: fotografía gris completa, sin recorte SVG ni máscara radial */
+.cararea{padding:2px 8px 17px;overflow:hidden}
+.carphoto{display:block;width:100%;height:100%;max-height:100%;max-width:100%;object-fit:contain;object-position:center center;mask-image:none!important;-webkit-mask-image:none!important;border-radius:0;filter:drop-shadow(0 10px 12px rgba(10,20,45,.25))}
+:root[data-theme=dark] .carphoto{filter:drop-shadow(0 11px 16px rgba(0,0,0,.57))}
+.car-label{bottom:0;left:8px}
+.car-badges{bottom:0;right:2px}
+.map-tile{will-change:auto}
+.realmap{contain:layout paint}
 </style>
 </head>
 <body>
@@ -145,10 +154,7 @@
  </section>
  <div class="rightarea">
   <section class="cararea" aria-label="Mi Toyota Rush">
-   <svg class="carphoto" viewBox="0 0 427 228" role="img" aria-label="Toyota Rush 2021 XLI blanco">
-     <defs><clipPath id="rushClip"><path d="M419 99 L404 78 L409 69 L390 38 L367 28 L323 20 L307 20 L290 26 L292 19 L234 20 L178 28 L154 42 L130 61 L122 60 L109 67 L109 76 L70 85 L46 101 L42 112 L29 125 L28 149 L30 150 L32 175 L28 183 L54 187 L61 191 L154 194 L228 185 L243 186 L245 204 L250 216 L254 217 L256 213 L257 219 L262 219 L271 207 L275 182 L293 182 L317 176 L325 179 L338 177 L353 181 L362 178 L390 178 L391 180 L394 175 L393 184 L399 186 L405 173 L402 163 L404 162 L404 149 L420 144 Z"/><ellipse cx="265" cy="193" rx="18" ry="31"/><ellipse cx="397" cy="170" rx="13" ry="27"/></clipPath></defs>
-     <image href="rush_hero.jpg" x="0" y="0" width="427" height="228" clip-path="url(#rushClip)"/>
-   </svg>
+   <img id="rushVehicle" class="carphoto" src="rush_gray.webp" alt="Toyota Rush 2021 XLI gris, vehículo completo" decoding="async" loading="eager" />
    <div class="car-label">Mi Toyota Rush · 2021 XLI</div>
    <div class="car-badges"><button type="button" data-action="obd" id="obdInfo">OBD sin conectar</button><button type="button" data-action="obd" id="speedBadge">— km/h</button></div>
   </section>
@@ -197,13 +203,22 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 3.0</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 3.8</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
   <div class="set-line"><h3>Clima</h3><p class="muted">Al activar el clima, se envía tu ubicación a Open-Meteo para consultar el pronóstico. Puedes desactivarlo desde el panel.</p></div>
-  <div class="set-line"><h3>Inicio original</h3><button type="button" class="actionbtn" id="returnOriginal">Regresar al inicio del TBox</button></div>
+  <div class="set-line">
+   <h3>Launcher predeterminado del TBox</h3>
+   <p class="muted">Rush Launcher puede ser tu pantalla de inicio de Android. Al seleccionar esta opción, Android te permitirá elegirlo si el fabricante del TBox lo autoriza. No modifica el inicio de la radio Toyota ni el sistema del vehículo.</p>
+   <p class="muted" id="homeStatus">Todavía no se ha seleccionado como inicio predeterminado.</p>
+   <div class="tile-buttons">
+    <button type="button" class="actionbtn highlight" id="chooseDefaultHome">Elegir Rush Launcher como inicio</button>
+    <button type="button" class="actionbtn" id="returnOriginal">Restaurar inicio original del TBox</button>
+   </div>
+   <p class="muted">Prueba antes el mapa, Spotify y el botón de restauración. Algunos firmwares Carlinkit bloquean esta elección.</p>
+  </div>
  </div>
 </div>
 <div class="scrim" id="obdPanel" hidden>
