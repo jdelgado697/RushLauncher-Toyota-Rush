@@ -31,6 +31,13 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 import java.util.List;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Rush Launcher: interfaz local sobre Android WebView en TBox Lite S.
@@ -45,6 +52,12 @@ public class MainActivity extends Activity implements LocationListener {
     private LocationManager locationManager;
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
+    private volatile long lastWeatherRequest = 0L;
+    private volatile double lastWeatherLat = 999.0;
+    private volatile double lastWeatherLon = 999.0;
+    private volatile String lastWeatherPayload = "";
+
 
     // Spotify ofrece emisiones opt-in sin acceso a notificaciones ni datos privados.
     private static final String SPOTIFY_METADATA = "com.spotify.music.metadatachanged";
@@ -416,6 +429,68 @@ public class MainActivity extends Activity implements LocationListener {
         }
     }
 
+    /**
+     * Clima únicamente a petición del usuario. Se comparte la ubicación
+     * aproximada con Open-Meteo (HTTPS), sin registrarla en el dispositivo.
+     * Se reutiliza el resultado durante 15 minutos cerca de la misma posición.
+     */
+    private void fetchWeather(double lat, double lon) {
+        if (!Double.isFinite(lat) || !Double.isFinite(lon)
+                || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+            javascript("window.rushWeather({ok:false,message:'Ubicación inválida'});");
+            return;
+        }
+        if (!lastWeatherPayload.isEmpty()
+                && System.currentTimeMillis() - lastWeatherRequest < 900000L
+                && Math.abs(lat - lastWeatherLat) < .07
+                && Math.abs(lon - lastWeatherLon) < .07) {
+            javascript("window.rushWeather(" + lastWeatherPayload + ");");
+            return;
+        }
+        weatherExecutor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                String endpoint = "https://api.open-meteo.com/v1/forecast"
+                        + "?latitude=" + lat + "&longitude=" + lon
+                        + "&current=temperature_2m,weather_code,is_day"
+                        + "&daily=temperature_2m_max,temperature_2m_min"
+                        + "&forecast_days=1&timezone=auto";
+                connection = (HttpURLConnection) new URL(endpoint).openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(6500);
+                connection.setReadTimeout(6500);
+                connection.setUseCaches(true);
+                if (connection.getResponseCode() != 200) {
+                    throw new java.io.IOException("HTTP " + connection.getResponseCode());
+                }
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                try (InputStream input = connection.getInputStream()) {
+                    byte[] buffer = new byte[2048];
+                    int count;
+                    while ((count = input.read(buffer)) >= 0) {
+                        output.write(buffer, 0, count);
+                        if (output.size() > 65536) throw new java.io.IOException("Respuesta demasiado grande");
+                    }
+                }
+                JSONObject data = new JSONObject(new String(output.toByteArray(), StandardCharsets.UTF_8));
+                JSONObject result = new JSONObject();
+                result.put("ok", true);
+                result.put("current", data.getJSONObject("current"));
+                result.put("daily", data.getJSONObject("daily"));
+                String payload = result.toString();
+                lastWeatherPayload = payload;
+                lastWeatherRequest = System.currentTimeMillis();
+                lastWeatherLat = lat;
+                lastWeatherLon = lon;
+                javascript("window.rushWeather(" + payload + ");");
+            } catch (Exception e) {
+                javascript("window.rushWeather({ok:false,message:'Clima no disponible. Comprueba internet y GPS'});");
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
+
     private void startGps() {
         boolean fine = Build.VERSION.SDK_INT < Build.VERSION_CODES.M
                 || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -478,6 +553,8 @@ public class MainActivity extends Activity implements LocationListener {
         String heading = location.hasBearing()
                 ? String.valueOf(location.getBearing()) : "null";
         javascript("window.rushGpsData(" + speed + "," + heading + ");");
+        javascript("window.rushPosition(" + location.getLatitude() + ","
+                + location.getLongitude() + "," + location.getAccuracy() + ");");
     }
 
     @Override public void onProviderEnabled(String provider) { sendGpsStatus("Buscando señal GPS…"); }
@@ -507,6 +584,7 @@ public class MainActivity extends Activity implements LocationListener {
             try { unregisterReceiver(spotifyReceiver); } catch (RuntimeException ignored) { }
             spotifyReceiverRegistered = false;
         }
+        weatherExecutor.shutdownNow();
         if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
             webView.removeJavascriptInterface("Rush");
@@ -539,6 +617,9 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> startGps());
+        }
+        @JavascriptInterface public void getWeather(double latitude, double longitude) {
+            runUi(() -> fetchWeather(latitude, longitude));
         }
         @JavascriptInterface public void requestObdDevices() {
             runUi(() -> showPairedObd());
