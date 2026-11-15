@@ -34,7 +34,7 @@ import javax.crypto.spec.GCMParameterSpec;
 /**
  * Spotify Connect control via Spotify's official Web API / OAuth PKCE.
  *
- * No NotificationListenerService, AccessibilityService, passwords,
+ * No privileged permission services, passwords,
  * client secrets or private media APIs. Tokens never enter WebView JS.
  * Refresh tokens and pending OAuth verifiers are encrypted at rest using
  * Android Keystore AES-GCM. Requires a Spotify developer Client ID and
