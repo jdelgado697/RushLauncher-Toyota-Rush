@@ -207,7 +207,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/3.1.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/3.8.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -219,6 +219,7 @@ public class MainActivity extends Activity implements LocationListener {
                 // leer el GPS automáticamente, si el TBox dispone de proveedor.
                 startGps();
                 sendSpotifyState();
+                sendHomeState();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
             }
             @Override
@@ -591,12 +592,37 @@ public class MainActivity extends Activity implements LocationListener {
                 PackageManager.DONT_KILL_APP);
     }
 
+    private boolean isDefaultHome() {
+        try {
+            Intent home = new Intent(Intent.ACTION_MAIN);
+            home.addCategory(Intent.CATEGORY_HOME);
+            android.content.pm.ResolveInfo resolved =
+                    getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
+            return resolved != null && resolved.activityInfo != null
+                    && getPackageName().equals(resolved.activityInfo.packageName)
+                    && resolved.activityInfo.name.endsWith("HomeAlias");
+        } catch (Exception ignored) { return false; }
+    }
+
+    private void sendHomeState() {
+        boolean available = false;
+        try {
+            int enabled = getPackageManager().getComponentEnabledSetting(
+                new ComponentName(this, "cl.rush.launcher.HomeAlias"));
+            available = enabled == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+        } catch (Exception ignored) { }
+        javascript("window.rushHomeState({available:" + available
+                + ",selected:" + isDefaultHome() + "});");
+    }
+
     private void enableHomeOption() {
         try {
             setHomeOption(true);
+            sendHomeState();
+            // Android muestra la elección si el firmware soporta apps HOME.
             startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));
         } catch (Exception ex) {
-            message("Configura la aplicacion de inicio desde Ajustes Android");
+            message("El firmware del TBox no ofrece la selección de inicio. No se modificó el sistema Toyota.");
         }
     }
 
@@ -836,7 +862,7 @@ public class MainActivity extends Activity implements LocationListener {
     protected void onResume() {
         super.onResume();
         if (spotifyConnect != null) spotifyConnect.resume();
-        if (pageLoaded) { startGps(); sendSpotifyState(); sendDockIcons(); }
+        if (pageLoaded) { startGps(); sendSpotifyState(); sendDockIcons(); sendHomeState(); }
     }
 
     @Override
@@ -867,6 +893,10 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     public void onBackPressed() {
+        if (isDefaultHome()) {
+            message("Inicio activo: usa Ajustes > Restaurar inicio original para salir.");
+            return;
+        }
         exitToOriginalHome();
     }
 
