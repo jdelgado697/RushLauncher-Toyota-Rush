@@ -58,6 +58,9 @@ public class MainActivity extends Activity implements LocationListener {
     private SpotifyArtworkFetcher spotifyArtwork;
     private WebView webView;
     private LocationManager locationManager;
+    // Filtros de antigüedad y prioridad GPS para no alternar con red imprecisa.
+    private long lastFixElapsedNs = 0L;
+    private long lastAccurateGpsNs = 0L;
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
@@ -786,11 +789,11 @@ public class MainActivity extends Activity implements LocationListener {
             // Evita registros de ubicación duplicados al volver de Ajustes/Waze.
             locationManager.removeUpdates(this);
             if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 1f, this);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500L, 0f, this);
                 started = true;
             }
             if ((fine || coarse) && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 1f, this);
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1200L, 0f, this);
                 started = true;
             }
             // Una ubicación reciente permite mostrar el mapa al abrir el TBox.
@@ -804,7 +807,7 @@ public class MainActivity extends Activity implements LocationListener {
                 if (fromNetwork != null && (recent == null
                         || fromNetwork.getTime() > recent.getTime())) recent = fromNetwork;
             }
-            if (recent != null && System.currentTimeMillis() - recent.getTime() < 120000L
+            if (recent != null && System.currentTimeMillis() - recent.getTime() < 15000L
                     && recent.getTime() <= System.currentTimeMillis() + 5000L
                     && (!recent.hasAccuracy() || recent.getAccuracy() < 500f)) {
                 onLocationChanged(recent);
@@ -832,13 +835,31 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     public void onLocationChanged(Location location) {
+        if (location == null) return;
+        // No mostrar una localización almacenada/antigua como si fuese en vivo.
+        long elapsedNs = location.getElapsedRealtimeNanos();
+        long nowNs = android.os.SystemClock.elapsedRealtimeNanos();
+        if (elapsedNs <= 0L || elapsedNs > nowNs + 1000000000L
+                || nowNs - elapsedNs > 12000000000L
+                || elapsedNs <= lastFixElapsedNs) return;
+        // Cuando hay GPS reciente y preciso, evitar saltos de red/Wi-Fi.
+        if (LocationManager.NETWORK_PROVIDER.equals(location.getProvider())
+                && lastAccurateGpsNs > 0L
+                && nowNs - lastAccurateGpsNs < 5000000000L) return;
+        if (LocationManager.GPS_PROVIDER.equals(location.getProvider())
+                && location.hasAccuracy() && location.getAccuracy() <= 65f) {
+            lastAccurateGpsNs = elapsedNs;
+        }
+        lastFixElapsedNs = elapsedNs;
         String speed = location.hasSpeed()
                 ? String.valueOf(Math.max(0, location.getSpeed() * 3.6f)) : "null";
         String heading = location.hasBearing()
                 ? String.valueOf(location.getBearing()) : "null";
-        javascript("window.rushGpsData(" + speed + "," + heading + ");");
-        javascript("window.rushPosition(" + location.getLatitude() + ","
-                + location.getLongitude() + "," + location.getAccuracy() + ");");
+        float acc = location.hasAccuracy() ? location.getAccuracy() : -1f;
+        // Un solo envío al WebView por punto: menos salto en CPU del TBox.
+        javascript("window.rushGpsData(" + speed + "," + heading + ");"
+                + "window.rushPosition(" + location.getLatitude() + ","
+                + location.getLongitude() + "," + acc + ");");
     }
 
     @Override public void onProviderEnabled(String provider) { sendGpsStatus("Buscando señal GPS…"); }
