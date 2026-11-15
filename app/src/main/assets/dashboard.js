@@ -5,7 +5,7 @@ var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
 try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'auto',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'auto',weather:false}};
-var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
+var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
 function app(action){if(nativeApp)window.Rush.open(action);else notice('Disponible al instalar en Android')}
@@ -166,22 +166,106 @@ window.rushWeather=function(data){
    algunos Spotify ofrecen broadcasts, pero no existe acceso a sesiones globales. */
 function renderMusic(info){
  var s=info&&info.hasData?info:null;
+ var api=!!(s&&s.source==='api');
+ var cover=$('musicCover')||null;
+ var album=document.querySelector('.album');
+ if(!cover&&album){
+  cover=document.createElement('img');
+  cover.id='musicCover';
+  cover.className='rush-cover';
+  cover.alt='Carátula del álbum de Spotify';
+  album.appendChild(cover);
+ }
+ var url=api&&typeof s.cover==='string'?s.cover:'';
+ var allowed=/^https:\/\/(?:i|mosaic)\.scdn\.co\/[a-zA-Z0-9/_-]+$/.test(url);
+ if(cover)cover.hidden=!allowed;
+ if(album)album.classList.toggle('spotify-cover',allowed);
+ if(allowed&&cover)cover.src=url;
+ if(!allowed&&cover)cover.removeAttribute('src');
  state.currentPlayback=s;
  if(s&&s.package&&validAppIcon(s.icon))state.appIcons[s.package]=s.icon;
  setMusicIcon(s);
  write('songTitle',s?(s.track||'Reproducción activa'):'Sin datos de música');
  write('songArtist',s?(s.artist||'Artista no disponible'):'Inicia Spotify en el TBox');
- write('songState',s?(s.playing===true?'Reproduciendo':s.playing===false?'En pausa':'Estado no disponible'):'Los datos de Spotify dependen de su compatibilidad');
+ write('songState',s?(s.playing===true?'Reproduciendo':s.playing===false?'En pausa':'Estado no disponible'):(state.spotifyConnected?'Sin reproducción activa en Spotify':'Conecta Spotify para datos reales'));
  write('musicToggle',s&&s.playing?'Ⅱ':'▶');
  write('mediaBrand',s?(s.app||'Spotify'):'Música');
  $('musicToggle').setAttribute('aria-label',s&&s.playing?'Pausar música':'Reproducir música');
+ var progress=$('musicProgress');
+ var duration=api?Number(s.duration)||0:0;
+ var position=api?Number(s.position)||0:0;
+ show($('mediaProgressRow'),duration>0);
+ if(duration>0){
+  progress.max=String(duration);
+  if(document.activeElement!==progress)progress.value=String(Math.min(Math.max(position,0),duration));
+  write('musicTime',spotifyTime(position)+' / '+spotifyTime(duration));
+ }
+}
+function spotifyTime(ms){
+ var seconds=Math.max(0,Math.floor((Number(ms)||0)/1000));
+ return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
 }
 window.rushSpotifyState=function(info){
  state.spotify=info;
- renderMusic(info);
+ if(!state.spotifyConnected)renderMusic(info);
+};
+window.rushSpotifyConnectState=function(result){
+ state.spotifyConnected=!!(result&&result.connected);
+ state.spotifyConfigured=!!(result&&result.configured);
+ write('spotifyConnectStatus',result&&result.message?result.message:'Estado de Spotify desconocido');
+ if(!state.spotifyConnected){
+  renderMusic(state.spotify);
+  write('mediaBrand','Música');
+ }else{
+  write('mediaBrand','Spotify');
+  if(!state.currentPlayback||state.currentPlayback.source!=='api')
+   write('songState','Spotify conectado · consultando reproducción…');
+ }
+};
+window.rushSpotifyApiPlayback=function(data){
+ if(!state.spotifyConnected)return;
+ if(!data||!data.hasData){
+  renderMusic(null);
+  write('mediaBrand','Spotify');
+  write('songTitle','Sin canción activa');
+  write('songArtist',data&&data.message?data.message:'Reproduce una canción en Spotify');
+  write('songState','Conectado · sin reproducción');
+ }else{
+  renderMusic(data);
+  if(data.device)write('songState',(data.playing?'Reproduciendo':'En pausa')+' en '+data.device);
+ }
 };
 Array.prototype.forEach.call(document.querySelectorAll('[data-media]'),function(b){
- b.addEventListener('click',function(){if(nativeApp)window.Rush.media(b.getAttribute('data-media'));else notice('Requiere Android')})
+ b.addEventListener('click',function(){
+  if(!nativeApp){notice('Requiere Android');return}
+  var cmd=b.getAttribute('data-media');
+  if(state.spotifyConnected&&typeof window.Rush.spotifyControl==='function')window.Rush.spotifyControl(cmd);
+  else window.Rush.media(cmd);
+ });
+});
+$('musicProgress').addEventListener('change',function(){
+ if(nativeApp&&state.spotifyConnected&&typeof window.Rush.spotifySeek==='function')
+  window.Rush.spotifySeek(Math.round(Number(this.value)||0));
+});
+$('spotifySaveClientId').addEventListener('click',function(){
+ var id=$('spotifyClientId').value.trim();
+ if(!/^[A-Za-z0-9]{32}$/.test(id)){notice('Client ID debe tener 32 caracteres');return}
+ if(nativeApp)window.Rush.spotifyClientId(id);
+ else notice('Configura el Client ID en el TBox');
+ $('spotifyClientId').value='';
+});
+$('spotifyLogin').addEventListener('click',function(){
+ if(nativeApp)window.Rush.spotifyConnect();
+ else notice('Spotify requiere aplicación Android');
+});
+$('spotifyDisconnect').addEventListener('click',function(){
+ if(nativeApp)window.Rush.spotifyDisconnect();
+});
+$('spotifyRefresh').addEventListener('click',function(){
+ if(nativeApp)window.Rush.spotifyRefresh();
+});
+$('spotifyDevelopers').addEventListener('click',function(){
+ if(nativeApp)window.Rush.spotifyDevelopers();
 });
 $('musicHelp').addEventListener('click',function(){openOverlay('musicPanel')});
 $('startRoute').addEventListener('click',function(){
