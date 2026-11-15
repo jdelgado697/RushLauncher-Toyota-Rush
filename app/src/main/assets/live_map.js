@@ -1,4 +1,4 @@
-/* Rush Launcher 3.8 — mapa GPS ligero para Android Box 800x480.
+/* Rush Launcher 3.9 — seguimiento GPS continuo para Android Box 800x480.
  * OpenStreetMap raster: solo teselas visibles; sin precarga ni descargas masivas.
  * Sin biblioteca remota, sin rutas simuladas, siempre muestra atribución.
  * https://operations.osmfoundation.org/policies/tiles/
@@ -13,7 +13,7 @@ var subtitle=document.getElementById('mapSubtitle');
 var note=document.getElementById('locationStatus');
 if(!host||!layer||!marker)return;
 var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
-var lastRecenteringAt=0, CENTER_INTERVAL=2500, MIN_CENTER_METERS=32, lastMarkerXY=null;
+var PAN_DURATION_MS=380, MIN_FOLLOW_METERS=1.0, followAnimation=0;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
 var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=12,MAX_CACHED_TILES=20;
 var drawPending=false,lastStatus='Esperando ubicación GPS';
@@ -30,7 +30,7 @@ function reverse(x,y,z){
 }
 function status(value){lastStatus=String(value||'GPS no disponible');if(!position)message.textContent=lastStatus}
 function requestDraw(){if(drawPending)return;drawPending=true;requestAnimationFrame(function(){drawPending=false;draw()})}
-function setCenter(lat,lon){if(!Number.isFinite(lat)||!Number.isFinite(lon))return;center={lat:clamp(lat,-MAX_LAT,MAX_LAT),lon:wrapLon(lon)};lastRecenteringAt=Date.now();requestDraw()}
+function setCenter(lat,lon){if(!Number.isFinite(lat)||!Number.isFinite(lon))return;followAnimation++;center={lat:clamp(lat,-MAX_LAT,MAX_LAT),lon:wrapLon(lon)};requestDraw()}
 function metersBetween(a,b){
  if(!a||!b)return Infinity;
  var radians=Math.PI/180;
@@ -38,8 +38,33 @@ function metersBetween(a,b){
  var dlon=(a.lon-b.lon)*111320*Math.cos(a.lat*radians);
  return Math.sqrt(dlat*dlat+dlon*dlon);
 }
+// Cada lectura GPS mueve el mapa; se interpola únicamente la vista
+// hacia las coordenadas confirmadas, nunca la ubicación del dispositivo.
+function followTo(lat,lon){
+ if(!following||!Number.isFinite(lat)||!Number.isFinite(lon))return;
+ if(!center){setCenter(lat,lon);return;}
+ var d=metersBetween(center,{lat:lat,lon:lon});
+ if(d<MIN_FOLLOW_METERS)return;
+ if(d>250){setCenter(lat,lon);return;}
+ var token=++followAnimation;
+ var from=mercator(center.lat,center.lon,zoom),to=mercator(lat,lon,zoom);
+ var world=TILE*Math.pow(2,zoom),dx=to.x-from.x;
+ if(dx>world/2)dx-=world;
+ if(dx<-world/2)dx+=world;
+ var dy=to.y-from.y,start=performance.now();
+ function frame(now){
+  if(token!==followAnimation||!following)return;
+  var t=clamp((now-start)/PAN_DURATION_MS,0,1);
+  var eased=t*(2-t);
+  center=reverse(from.x+dx*eased,from.y+dy*eased,zoom);
+  requestDraw();
+  if(t<1)requestAnimationFrame(frame);
+ }
+ requestAnimationFrame(frame);
+}
 function moveBy(dx,dy){
  if(!center)return;
+ followAnimation++;
  var world=mercator(center.lat,center.lon,zoom);
  var next=reverse(world.x-dx,world.y-dy,zoom);
  center=next;requestDraw();
@@ -127,9 +152,8 @@ function updatePosition(lat,lon,acc){
  position={lat:lat,lon:lon};
  accuracy=Number.isFinite(acc)?Math.max(0,acc):null;
  if(!center){setCenter(lat,lon)}
- else if(following&&metersBetween(center,position)>=MIN_CENTER_METERS
-       &&Date.now()-lastRecenteringAt>=CENTER_INTERVAL){setCenter(lat,lon)}
- else if(!previous||metersBetween(previous,position)>4){requestDraw()}
+ else if(following){followTo(lat,lon);requestDraw()}
+ else if(!previous||metersBetween(previous,position)>1){requestDraw()}
  if(!loadedTiles){message.textContent='Cargando calles reales…'}
 }
 function recenter(){
@@ -192,7 +216,7 @@ window.RushLiveMap={
  updateHeading:function(h){heading=Number.isFinite(h)?h:null;requestDraw()},
  setStatus:status,
  recenter:recenter,
- getState:function(){return {position:position,center:center,zoom:zoom,following:following,tiles:tiles.size}}
+ getState:function(){return {position:position,center:center,zoom:zoom,following:following,tiles:tiles.size,panMs:PAN_DURATION_MS}}
 };
 status('Esperando ubicación GPS real…');
 })();
