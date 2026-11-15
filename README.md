@@ -1,4 +1,4 @@
-# Rush Launcher 3.0.1 · Toyota Rush 2021 XLI
+# Rush Launcher 3.1.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -61,3 +61,10 @@ Se usan permisos de localización, Bluetooth según versión y de internet (para
 
 ### Ajustes visuales v3.0.1
 La imagen fija del Toyota Rush usa recorte SVG sobre fotografía local para integrarse con fondos diurnos y nocturnos sin un rectángulo oscuro. El mapa ilustrativo se atenúa de noche; no se muestran condiciones climáticas inventadas cuando el pronóstico está desactivado.
+
+## Mapa real GPS · v3.1.0
+- Sustituye el plano **ilustrativo** por cartografía interactiva real con teselas `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, atribución permanente **© OpenStreetMap contributors**.
+- La posición del coche procede exclusivamente del GPS o proveedor de ubicación del Android Box, nunca de una ubicación inventada. Si no hay señal, se muestra un aviso y no se dibuja una ruta ni un marcador ficticio. Si Android dispone de una posición guardada de menos de 2 minutos y precisión razonable, la muestra al iniciar.
+- **Funciones:** arrastre del mapa, zoom con + y –, gesto de pellizcar, marcador del vehículo y orientación de rumbo si existe, botón para recentrar y seguimiento automático mientras no se desplace manualmente el mapa. Para iniciar rutas y navegación guiada se abre **Waze** desde el botón inferior.
+- Requiere **acceso a internet y permisos de localización** para los datos actuales. Enviar teselas desde la zona del mapa implica solicitudes de red a los servidores de OSM (ver su política de privacidad). No se ofrecen mapas sin conexión, descargas masivas ni precarga. Las imágenes usan caché normal del WebView y User-Agent identificable.
+- No incorpora Google Maps SDK ni exige clave de Google. La visualización del mapa y el geoposicionamiento deben verificarse en el Carlinkit TBox Lite S real; compilar Android no prueba recepción satelital.
