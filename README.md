@@ -1,4 +1,4 @@
-# Rush Launcher 3.3.1 · Toyota Rush 2021 XLI
+# Rush Launcher 3.4.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -108,3 +108,23 @@ En un Carlinkit TBox Lite S, la versión 3.3 fue bloqueada con el aviso «Aplica
 - El workflow inspecciona el manifiesto final del APK generado para impedir que reaparezcan servicios sensibles.
 - Play Protect puede seguir advirtiendo por otros motivos (APK debug, reputación, firmas o política del dispositivo). No se aconseja deshabilitar ni eludir Play Protect. La compilación no demuestra aprobación de Play Protect en un equipo físico.
 - Si el paquete se instaló previamente con otra clave de firma, Android puede exigir desinstalar la versión antigua (se perderían datos locales). No forzar instalaciones bloqueadas.
+
+
+## Rush Launcher 3.4.0 · Spotify Connect real sin permisos sensibles
+Esta versión usa la API oficial de Spotify para mostrar canción, artista, álbum, duración, dispositivo y carátula, y para realizar play/pausa, anterior, siguiente y seek. Incluye un navegador de autorización OAuth 2.0 Authorization Code + PKCE, sin contraseña ni client secret en el APK. El token de actualización se cifra en Android Keystore AES-256-GCM y se guarda en preferencias privadas; el access token se mantiene únicamente en memoria. No usa servicios de notificaciones, accesibilidad, lectura de mensajes ni medios privilegiados.
+
+### Configuración única en el TBox (vehículo estacionado)
+1. La aplicación que autoriza el uso de Spotify debe estar registrada en https://developer.spotify.com/dashboard bajo tu cuenta de desarrollador.
+2. Copia su **Client ID** (nunca el Client Secret).
+3. En su configuración, añade **exactamente** la URI de retorno \`rushlauncherxli://spotify/callback\`.
+4. Si tu aplicación está en modo desarrollo, agrega tu usuario de Spotify a la lista de usuarios permitidos (máximo según límites de Spotify) y asegúrate de que la cuenta del desarrollador tenga Spotify Premium.
+5. En Rush Launcher: Música (ⓘ) > escribir Client ID > Guardar > Conectar Spotify. Se abre el navegador para autorizar y retorna a Rush Launcher.
+6. Abre Spotify en el Android Box o usa Spotify Connect y comienza a escuchar música. El panel de Inicio se actualiza automáticamente con intervalos de 16 segundos, y el botón «Actualizar canción» fuerza una consulta respetando los límites.
+7. Al desconectar se revoca el acceso local (se borra el token cifrado). Para revocarlo en Spotify también, visita la página de aplicaciones conectadas de tu cuenta.
+
+### Límites
+- Solo funciona con **autorización real**, cuenta y API habilitadas y conexión a internet. Las operaciones de playback requieren **Spotify Premium** y un dispositivo Spotify Connect activo. No inventa metadatos ni garantiza datos en sistemas Spotify muy antiguos.
+- Si no configuras Spotify for Developers, los botones multimedia Android de versiones anteriores siguen siendo el respaldo y el título/artista solo se mostrarán si Spotify los difunde opcionalmente.
+- No se pueden asegurar las decisiones de Google Play Protect desde el APK: se revisa el manifiesto para que no incluya los servicios sensibles que provocaron el riesgo anterior; la prueba final la realiza el dispositivo.
+- No existe bypass de Play Protect, root, accesibilidad, overlays ni permisos invasivos. La seguridad del sistema permanece activada.
+- Estado y errores se muestran dentro del panel Spotify. La aplicación maneja 401, 403, 404 y 429; las cuotas y las reglas de Spotify pueden variar.
