@@ -1,4 +1,4 @@
-# Rush Launcher 3.1.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.2.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -68,3 +68,20 @@ La imagen fija del Toyota Rush usa recorte SVG sobre fotografía local para inte
 - **Funciones:** arrastre del mapa, zoom con + y –, gesto de pellizcar, marcador del vehículo y orientación de rumbo si existe, botón para recentrar y seguimiento automático mientras no se desplace manualmente el mapa. Para iniciar rutas y navegación guiada se abre **Waze** desde el botón inferior.
 - Requiere **acceso a internet y permisos de localización** para los datos actuales. Enviar teselas desde la zona del mapa implica solicitudes de red a los servidores de OSM (ver su política de privacidad). No se ofrecen mapas sin conexión, descargas masivas ni precarga. Las imágenes usan caché normal del WebView y User-Agent identificable.
 - No incorpora Google Maps SDK ni exige clave de Google. La visualización del mapa y el geoposicionamiento deben verificarse en el Carlinkit TBox Lite S real; compilar Android no prueba recepción satelital.
+
+## Cambios v3.2.0: navegación sin Waze y música realmente integrada
+### Mapas
+- Se conserva el mapa en vivo OpenStreetMap de Inicio con GPS del TBox.
+- **Navegar** y el botón inferior **Mapas** abren un cuadro para escribir un destino.
+- Se abre Google Maps instalado si está disponible; en caso contrario se abre la dirección web de Google Maps en un navegador Android. Para ver el mapa general busca Maps/Maps Go, Organic Maps, OsmAnd o HERE WeGo. Navegación guiada no se ejecuta dentro de Rush Launcher, sino en una app/navegador compatible.
+- La navegación no depende de Waze, que algunas versiones de Carlinkit TBox Lite S no admiten.
+### Música
+- Se mantiene el mecanismo sin permisos de broadcasts de Spotify como respaldo.
+- La vía principal para mostrar **canción, artista, álbum, estado, duración y posición** es ahora \`MediaSessionManager\` de Android; solo si el usuario autoriza **Acceso a notificaciones** para Rush Launcher en Ajustes. Se prefiere Spotify; si no está, otro reproductor Android con sesión multimedia.
+- El servicio \`PlaybackAccessService\` implementa \`NotificationListenerService\` pero **no inspecciona, registra, almacena ni comparte notificaciones**; el permiso se emplea exclusivamente para consultar \`MediaSessionManager.getActiveSessions()\`. Puedes revocarlo desde Ajustes. Esta autorización puede generar advertencias de seguridad, especialmente con APK instaladas manualmente: no se recomienda desactivar Play Protect.
+- Play/pausa, siguiente, anterior y desplazamiento en el tiempo usan \`MediaController.TransportControls\`, con respaldo de teclas multimedia Android cuando no se concede acceso.
+- **Spotify debe estar instalado y reproduciendo música en el propio TBox**, no únicamente en el teléfono dentro de CarPlay/Android Auto. Si está ausente, el botón intenta abrir Spotify Web en un navegador, donde el control externo puede no funcionar.
+- No hay API privada, automatización de pantalla, permisos de accesibilidad, controles del auto ni DRM modificado.
+### Pruebas
+- El workflow de GitHub compila APK debug y valida las conexiones UI/nativas.
+- Verificar en el TBox el permiso de sesión multimedia, que el reproductor está visible, que el botón de mapa externo encuentra navegador compatible y que la reproducción real muestra información. Compilar no certifica funcionamiento en el hardware.
