@@ -17,10 +17,6 @@ import android.graphics.drawable.Drawable;
 import android.util.Base64;
 import android.util.LruCache;
 import android.media.AudioManager;
-import android.media.MediaMetadata;
-import android.media.session.MediaController;
-import android.media.session.MediaSessionManager;
-import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.bluetooth.BluetoothAdapter;
 import android.os.Build;
@@ -70,18 +66,6 @@ public class MainActivity extends Activity implements LocationListener {
     private volatile double lastWeatherLat = 999.0;
     private volatile double lastWeatherLon = 999.0;
     private volatile String lastWeatherPayload = "";
-    private MediaController currentMediaController;
-    private boolean mediaPolling = false;
-    private String currentMediaPackage = "";
-    private final Runnable mediaPoller = new Runnable() {
-        @Override public void run() {
-            if (!mediaPolling) return;
-            refreshMediaSession();
-            mainHandler.postDelayed(this, 2100L);
-        }
-    };
-
-
     // Spotify ofrece emisiones opt-in sin acceso a notificaciones ni datos privados.
     private static final String SPOTIFY_METADATA = "com.spotify.music.metadatachanged";
     private static final String SPOTIFY_PLAYBACK = "com.spotify.music.playbackstatechanged";
@@ -126,125 +110,6 @@ public class MainActivity extends Activity implements LocationListener {
             spotifyReceiverRegistered = true;
         } catch (RuntimeException ignored) {
             spotifyReceiverRegistered = false;
-        }
-    }
-
-    private ComponentName playbackComponent() {
-        return new ComponentName(this, PlaybackAccessService.class);
-    }
-
-    private boolean isPlaybackAccessEnabled() {
-        try {
-            String enabled = Settings.Secure.getString(
-                    getContentResolver(), "enabled_notification_listeners");
-            if (enabled == null) return false;
-            String component = playbackComponent().flattenToString();
-            String shortComponent = playbackComponent().flattenToShortString();
-            for (String item : enabled.split(":")) {
-                if (item.equals(component) || item.equals(shortComponent)) return true;
-            }
-        } catch (Exception ignored) { }
-        return false;
-    }
-
-    private String readMetadata(MediaMetadata metadata, String key) {
-        if (metadata == null) return "";
-        CharSequence text = metadata.getText(key);
-        return text == null ? "" : text.toString();
-    }
-
-    private void refreshMediaSession() {
-        boolean access = isPlaybackAccessEnabled();
-        javascript("window.rushMediaAccess(" + access + ");");
-        if (!access) {
-            currentMediaController = null;
-            currentMediaPackage = "";
-            // Cuando no hay permisos, conservamos los broadcasts opcionales de Spotify.
-            sendSpotifyState();
-            return;
-        }
-        try {
-            MediaSessionManager manager = (MediaSessionManager)
-                    getSystemService(Context.MEDIA_SESSION_SERVICE);
-            List<MediaController> sessions = manager == null ? null :
-                    manager.getActiveSessions(playbackComponent());
-            MediaController selected = null;
-            if (sessions != null) {
-                // Preferir Spotify; si no está, usar otro reproductor activo.
-                for (MediaController session : sessions) {
-                    if ("com.spotify.music".equals(session.getPackageName())) {
-                        selected = session;
-                        break;
-                    }
-                }
-                if (selected == null) {
-                    for (MediaController session : sessions) {
-                        PlaybackState st = session.getPlaybackState();
-                        if (st != null && st.getState() == PlaybackState.STATE_PLAYING) {
-                            selected = session; break;
-                        }
-                    }
-                }
-                if (selected == null && !sessions.isEmpty()) selected = sessions.get(0);
-            }
-            currentMediaController = selected;
-            if (selected == null) {
-                currentMediaPackage = "";
-                javascript("window.rushActivePlayback({hasData:false,access:true});");
-                return;
-            }
-            currentMediaPackage = selected.getPackageName();
-            MediaMetadata metadata = selected.getMetadata();
-            PlaybackState playback = selected.getPlaybackState();
-            JSONObject info = new JSONObject();
-            info.put("hasData", true);
-            info.put("access", true);
-            info.put("source", "session");
-            info.put("package", currentMediaPackage);
-            info.put("app", "com.spotify.music".equals(currentMediaPackage)
-                    ? "Spotify" : "Reproductor Android");
-            // Mostrar también el ícono real de otros reproductores, no solo Spotify.
-            android.content.pm.ResolveInfo activeApp =
-                    findLauncherApp(launcherApps(), currentMediaPackage);
-            if (activeApp != null) {
-                String image = pngIcon(activeApp);
-                if (!image.isEmpty()) info.put("icon", image);
-                CharSequence title = activeApp.loadLabel(getPackageManager());
-                if (title != null) info.put("app", title.toString());
-            }
-            info.put("track", readMetadata(metadata, MediaMetadata.METADATA_KEY_TITLE));
-            info.put("artist", readMetadata(metadata, MediaMetadata.METADATA_KEY_ARTIST));
-            info.put("album", readMetadata(metadata, MediaMetadata.METADATA_KEY_ALBUM));
-            info.put("playing", playback != null && playback.getState() == PlaybackState.STATE_PLAYING);
-            info.put("duration", metadata == null ? 0 : metadata.getLong(MediaMetadata.METADATA_KEY_DURATION));
-            info.put("position", playback == null ? 0 : Math.max(0, playback.getPosition()));
-            info.put("canSeek", playback != null && (playback.getActions()
-                    & PlaybackState.ACTION_SEEK_TO) != 0);
-            javascript("window.rushActivePlayback(" + info.toString() + ");");
-        } catch (SecurityException ex) {
-            currentMediaController = null;
-            javascript("window.rushMediaAccess(false);");
-        } catch (Exception ex) {
-            currentMediaController = null;
-            javascript("window.rushActivePlayback({hasData:false,access:true});");
-        }
-    }
-
-    private void showPlaybackSettings() {
-        try {
-            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
-        } catch (Exception ex) {
-            message("Abre Ajustes Android y busca Acceso a notificaciones");
-        }
-    }
-
-    private void seekMedia(long positionMs) {
-        if (positionMs < 0 || positionMs > 86400000L) return;
-        if (isPlaybackAccessEnabled() && currentMediaController != null) {
-            try {
-                currentMediaController.getTransportControls().seekTo(positionMs);
-                refreshMediaSession();
-            } catch (Exception ex) { message("Este reproductor no permite adelantar"); }
         }
     }
 
@@ -707,24 +572,6 @@ public class MainActivity extends Activity implements LocationListener {
     }
 
     private void mediaKey(String command) {
-        if (isPlaybackAccessEnabled() && currentMediaController != null) {
-            try {
-                MediaController.TransportControls control = currentMediaController.getTransportControls();
-                switch (command) {
-                    case "previous": control.skipToPrevious(); break;
-                    case "next": control.skipToNext(); break;
-                    case "toggle":
-                        PlaybackState state = currentMediaController.getPlaybackState();
-                        if (state != null && state.getState() == PlaybackState.STATE_PLAYING) {
-                            control.pause();
-                        } else control.play();
-                        break;
-                    default: return;
-                }
-                mainHandler.postDelayed(() -> refreshMediaSession(), 400);
-                return;
-            } catch (Exception ignored) { /* Compatibilidad con teclas multimedia. */ }
-        }
         int code;
         switch (command) {
             case "previous": code = KeyEvent.KEYCODE_MEDIA_PREVIOUS; break;
@@ -901,8 +748,6 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onPause() {
-        mediaPolling = false;
-        mainHandler.removeCallbacks(mediaPoller);
         super.onPause();
         if (locationManager != null) {
             try { locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
@@ -912,16 +757,11 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
-        mediaPolling = true;
-        mainHandler.removeCallbacks(mediaPoller);
-        mainHandler.post(mediaPoller);
         if (pageLoaded) { startGps(); sendSpotifyState(); sendDockIcons(); }
     }
 
     @Override
     protected void onDestroy() {
-        mediaPolling = false;
-        mainHandler.removeCallbacks(mediaPoller);
         if (spotifyReceiverRegistered) {
             try { unregisterReceiver(spotifyReceiver); } catch (RuntimeException ignored) { }
             spotifyReceiverRegistered = false;
@@ -946,18 +786,8 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public void ready() {
             runUi(() -> {
                 sendSpotifyState();
-                refreshMediaSession();
                 sendDockIcons();
             });
-        }
-        @JavascriptInterface public void requestMediaAccess() {
-            runUi(() -> showPlaybackSettings());
-        }
-        @JavascriptInterface public void refreshMedia() {
-            runUi(() -> refreshMediaSession());
-        }
-        @JavascriptInterface public void seekMedia(long milliseconds) {
-            runUi(() -> MainActivity.this.seekMedia(milliseconds));
         }
         @JavascriptInterface public void listApps() {
             runUi(() -> sendInstalledApps());
