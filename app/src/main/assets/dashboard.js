@@ -7,7 +7,7 @@ var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
 try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'auto',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'auto',weather:false}};
-var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,apps:[],weatherAsked:0};
+var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,mediaAccess:false,mediaSession:false,apps:[],weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
 function app(action){if(nativeApp)window.Rush.open(action);else notice('Disponible al instalar en Android')}
@@ -36,6 +36,7 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(
 Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){p.addEventListener('click',function(ev){if(ev.target===p)show(p,false)})});
 Array.prototype.forEach.call(document.querySelectorAll('[data-action]'),function(b){b.addEventListener('click',function(){var action=b.getAttribute('data-action');
  if(action==='apps'){openOverlay('appsPanel');return}
+ if(action==='route'){openOverlay('routePanel');return}
  if(action==='settings'){openOverlay('settingsPanel');return}
  if(action==='obd'){openOverlay('obdPanel');loadDevices();return}
  if(action==='map'){app('waze');return}
@@ -163,19 +164,74 @@ window.rushWeather=function(data){
  if(!state.weather&&data&&data.message)write('weatherRange',String(data.message).slice(0,70));
  updateWeather();
 };
+function mmss(ms){ms=Math.max(0,Math.floor(Number(ms)||0));return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')}
+function renderMusic(s){
+ var has=!!(s&&s.hasData);
+ var fromSession=has&&s.source==='session';
+ var duration=Number(s&&s.duration)||0,position=Number(s&&s.position)||0;
+ write('songTitle',has?(s.track||'Reproductor activo'):'Sin canción detectada');
+ write('songArtist',has?(s.artist||s.album||'Artista no disponible'):'Inicia música en el TBox');
+ write('songState',has?(s.playing?'Reproduciendo':(s.playing===false?'En pausa':'Estado no disponible')):(state.mediaAccess?'Ninguna reproducción activa':'Vincula música para ver canciones'));
+ write('musicToggle',has&&s.playing?'Ⅱ':'▶');
+ write('mediaBrand',has?(s.app||'Música'):'Música');
+ $('musicToggle').setAttribute('aria-label',has&&s.playing?'Pausar música':'Reproducir música');
+ var progress=$('musicProgress');
+ show($('mediaPermission'),!state.mediaAccess);
+ show($('mediaProgressRow'),fromSession&&duration>0);
+ if(fromSession&&duration>0){
+   progress.max=String(Math.max(1,duration));
+   if(!progress.matches(':active'))progress.value=String(Math.min(Math.max(0,position),duration));
+   progress.disabled=!s.canSeek;
+   write('musicTime',mmss(position)+' / '+mmss(duration));
+ }
+}
+window.rushMediaAccess=function(granted){
+ state.mediaAccess=!!granted;
+ write('mediaAccessStatus',state.mediaAccess?'Acceso multimedia autorizado':'Sin acceso multimedia: pulsa Autorizar');
+ if(!state.mediaAccess){state.mediaSession=false;renderMusic(state.spotify)}
+ else{show($('mediaPermission'),false)}
+};
+window.rushActivePlayback=function(s){
+ if(!state.mediaAccess)return;
+ state.mediaSession=!!(s&&s.hasData);
+ renderMusic(s);
+};
 window.rushSpotifyState=function(s){
  state.spotify=s;
- var has=s&&s.hasData;
- write('songTitle',has?(s.track||'Música en Spotify'):'Sin datos de Spotify');
- write('songArtist',has?(s.artist||'Artista no disponible'):'Abre Spotify para reproducir');
- write('songState',has?(typeof s.playing==='boolean'?(s.playing?'Reproduciendo':'En pausa'):'Estado no disponible'):'Metadatos no disponibles');
- write('musicToggle',has&&s.playing?'Ⅱ':'▶');
- $('musicToggle').setAttribute('aria-label',has&&s.playing?'Pausar música':'Reproducir música');
+ if(!state.mediaAccess)renderMusic(s);
 };
+$('mediaPermission').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.requestMediaAccess==='function')window.Rush.requestMediaAccess();
+ else notice('Acceso multimedia disponible en Android');
+});
+$('enableMediaAccess').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.requestMediaAccess==='function')window.Rush.requestMediaAccess();
+ else notice('Disponible en el TBox');
+});
+$('mediaRefresh').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.refreshMedia==='function')window.Rush.refreshMedia();
+});
+$('musicProgress').addEventListener('change',function(){
+ if(state.mediaAccess&&nativeApp&&typeof window.Rush.seekMedia==='function')
+   window.Rush.seekMedia(Math.round(Number(this.value)||0));
+});
 Array.prototype.forEach.call(document.querySelectorAll('[data-media]'),function(b){
  b.addEventListener('click',function(){if(nativeApp)window.Rush.media(b.getAttribute('data-media'));else notice('Requiere Android')})
 });
 $('musicHelp').addEventListener('click',function(){openOverlay('musicPanel')});
+$('startRoute').addEventListener('click',function(){
+ var value=$('routeDestination').value.trim();
+ if(!value){notice('Escribe un destino para iniciar ruta');return}
+ if(nativeApp&&typeof window.Rush.navigate==='function')window.Rush.navigate(value);
+ else notice('La navegación requiere Android');
+});
+$('justMap').addEventListener('click',function(){
+ closeOverlay('routePanel');
+ app('maps');
+});
+$('routeDestination').addEventListener('keydown',function(ev){
+ if(ev.key==='Enter'){$('startRoute').click();ev.preventDefault()}
+});
 function iconFor(name){
  var n=String(name||'').trim().split(/\s+/);
  return n.length>1?(n[0][0]+n[1][0]).toUpperCase():String(name||'?').slice(0,2).toUpperCase();
@@ -205,5 +261,6 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')Array.protot
 window.addEventListener('focus',function(){if(nativeApp)window.Rush.ready()});
 updateTime();updateWeather();renderMetrics();
 setInterval(updateTime,30000);
+renderMusic(null);
 if(nativeApp){window.Rush.ready();window.Rush.askGps();}
 })();
