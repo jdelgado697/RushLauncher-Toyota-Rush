@@ -1,4 +1,4 @@
-/* Rush Launcher 3.1 — mapa GPS real con teselas OSM.
+/* Rush Launcher 3.8 — mapa GPS ligero para Android Box 800x480.
  * OpenStreetMap raster: solo teselas visibles; sin precarga ni descargas masivas.
  * Sin biblioteca remota, sin rutas simuladas, siempre muestra atribución.
  * https://operations.osmfoundation.org/policies/tiles/
@@ -12,9 +12,10 @@ var message=document.getElementById('mapWaiting');
 var subtitle=document.getElementById('mapSubtitle');
 var note=document.getElementById('locationStatus');
 if(!host||!layer||!marker)return;
-var zoom=15, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
+var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
+var lastRecenteringAt=0, CENTER_INTERVAL=2500, MIN_CENTER_METERS=32, lastMarkerXY=null;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
-var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=40;
+var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=12,MAX_CACHED_TILES=20;
 var drawPending=false,lastStatus='Esperando ubicación GPS';
 var osmtile='https://tile.openstreetmap.org/';
 function clamp(x,min,max){return Math.min(Math.max(x,min),max)}
@@ -29,7 +30,14 @@ function reverse(x,y,z){
 }
 function status(value){lastStatus=String(value||'GPS no disponible');if(!position)message.textContent=lastStatus}
 function requestDraw(){if(drawPending)return;drawPending=true;requestAnimationFrame(function(){drawPending=false;draw()})}
-function setCenter(lat,lon){if(!Number.isFinite(lat)||!Number.isFinite(lon))return;center={lat:clamp(lat,-MAX_LAT,MAX_LAT),lon:wrapLon(lon)};requestDraw()}
+function setCenter(lat,lon){if(!Number.isFinite(lat)||!Number.isFinite(lon))return;center={lat:clamp(lat,-MAX_LAT,MAX_LAT),lon:wrapLon(lon)};lastRecenteringAt=Date.now();requestDraw()}
+function metersBetween(a,b){
+ if(!a||!b)return Infinity;
+ var radians=Math.PI/180;
+ var dlat=(a.lat-b.lat)*111320;
+ var dlon=(a.lon-b.lon)*111320*Math.cos(a.lat*radians);
+ return Math.sqrt(dlat*dlat+dlon*dlon);
+}
 function moveBy(dx,dy){
  if(!center)return;
  var world=mercator(center.lat,center.lon,zoom);
@@ -51,10 +59,10 @@ function draw(){
  var startX=world.x-w/2,startY=world.y-h/2;
  var xMin=Math.floor(startX/TILE),yMin=Math.max(0,Math.floor(startY/TILE));
  var xMax=Math.floor((startX+w-1)/TILE),yMax=Math.min(Math.pow(2,zoom)-1,Math.floor((startY+h-1)/TILE));
- var keep=new Set(),needed=0;
+ var keep=new Set(),needed=0,changed=false;
  for(var y=yMin;y<=yMax;y++){
   for(var x=xMin;x<=xMax;x++){
-   if(needed++>MAX_TILES)break;
+   if(needed++>=MAX_TILES)break;
    var tx=((x%Math.pow(2,zoom))+Math.pow(2,zoom))%Math.pow(2,zoom);
    var id=tileName(zoom,tx,y);keep.add(id);
    var img=tiles.get(id);
@@ -62,7 +70,10 @@ function draw(){
     img=document.createElement('img');
     img.className='map-tile';img.width=TILE;img.height=TILE;img.alt='';
     img.decoding='async';img.loading='eager';img.draggable=false;
-    img.onload=function(){loadedTiles++;requestDraw()};
+    img.onload=function(){
+     loadedTiles++;
+     if(position&&message)message.hidden=true;
+    };
     img.onerror=function(){
      failedTiles++;
      if(loadedTiles===0&&failedTiles>2){
@@ -73,12 +84,21 @@ function draw(){
     img.src=osmtile+zoom+'/'+tx+'/'+y+'.png';
     layer.appendChild(img);tiles.set(id,img);
    }
+   img.style.display='block';
    img.style.left=Math.round(x*TILE-startX)+'px';
    img.style.top=Math.round(y*TILE-startY)+'px';
   }
  }
+ // No descargar una tesela de nuevo en cuanto el GPS oscila al cambiar de calle:
+ // conservar solo un anillo pequeño de las ya vistas, sin precargar nuevas.
  for(var entry of tiles){
-  if(!keep.has(entry[0])){entry[1].remove();tiles.delete(entry[0])}
+  if(!keep.has(entry[0]))entry[1].style.display='none';
+ }
+ if(tiles.size>MAX_CACHED_TILES){
+  for(var old of tiles){
+   if(tiles.size<=MAX_CACHED_TILES)break;
+   if(!keep.has(old[0])){old[1].remove();tiles.delete(old[0])}
+  }
  }
  if(position){
   var point=mercator(position.lat,position.lon,zoom);
@@ -103,10 +123,13 @@ function draw(){
 }
 function updatePosition(lat,lon,acc){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
+ var previous=position;
  position={lat:lat,lon:lon};
  accuracy=Number.isFinite(acc)?Math.max(0,acc):null;
- if(!center||following)setCenter(lat,lon);
- else requestDraw();
+ if(!center){setCenter(lat,lon)}
+ else if(following&&metersBetween(center,position)>=MIN_CENTER_METERS
+       &&Date.now()-lastRecenteringAt>=CENTER_INTERVAL){setCenter(lat,lon)}
+ else if(!previous||metersBetween(previous,position)>4){requestDraw()}
  if(!loadedTiles){message.textContent='Cargando calles reales…'}
 }
 function recenter(){
