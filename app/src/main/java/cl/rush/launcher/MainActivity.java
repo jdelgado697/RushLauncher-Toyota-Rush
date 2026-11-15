@@ -422,22 +422,66 @@ public class MainActivity extends Activity implements LocationListener {
         message("No se pudo abrir la aplicación seleccionada");
     }
 
-    private void openMaps() {
+    /**
+     * Navegación sin depender de Waze.
+     * Google Maps instalado -> navegador instalado -> sitio Maps mediante ACTION_VIEW.
+     * Los servicios web de rutas requieren internet.
+     */
+    private void openSpotifyWeb() {
         try {
-            launchPackage("com.waze", "Waze");
-        } catch (Exception ignored) {
-            message("Waze no esta disponible");
+            Intent site = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://open.spotify.com/"));
+            site.addCategory(Intent.CATEGORY_BROWSABLE);
+            startActivity(site);
+            message("Spotify no está instalado. Abriendo versión web; el control externo puede no funcionar.");
+        } catch (Exception ex) {
+            message("Spotify no está disponible. Comprueba las apps instaladas.");
+        }
+    }
+
+    private void openMaps(String destination) {
+        String dest = destination == null ? "" : destination.trim();
+        if (dest.length() > 180) dest = dest.substring(0, 180);
+        if (dest.isEmpty()) {
+            String[] candidates = {
+                    "com.google.android.apps.maps",
+                    "com.google.android.apps.mapslite",
+                    "app.organicmaps",
+                    "net.osmand",
+                    "com.here.app.maps"
+            };
+            for (String pkg : candidates) {
+                Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
+                if (intent == null) continue;
+                try { startActivity(intent); return; }
+                catch (Exception ignored) { }
+            }
+        }
+        try {
+            String url = dest.isEmpty() ? "https://www.google.com/maps" :
+                    "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="
+                    + java.net.URLEncoder.encode(dest, "UTF-8");
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception ex) {
+            message("No hay navegador o Maps compatible. Abre Apps para buscar otro.");
         }
     }
 
     private void openRoute(String action) {
         switch (action) {
             case "spotify":
-                launchPackage("com.spotify.music", "Spotify");
+                Intent installedSpotify = getPackageManager().getLaunchIntentForPackage("com.spotify.music");
+                if (installedSpotify != null) {
+                    try { startActivity(installedSpotify); }
+                    catch (Exception ex) { openSpotifyWeb(); }
+                } else openSpotifyWeb();
                 break;
             case "maps":
             case "waze":
-                openMaps();
+                openMaps("");
                 break;
             case "youtube":
                 launchPackage("com.google.android.youtube", "YouTube");
@@ -800,6 +844,9 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void media(String action) {
             runUi(() -> mediaKey(action));
+        }
+        @JavascriptInterface public void navigate(String destination) {
+            runUi(() -> openMaps(destination));
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> startGps());
