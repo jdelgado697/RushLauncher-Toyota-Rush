@@ -392,20 +392,67 @@ function iconFor(name){
  var n=String(name||'').trim().split(/\s+/);
  return n.length>1?(n[0][0]+n[1][0]).toUpperCase():String(name||'?').slice(0,2).toUpperCase();
 }
+function makeAppButton(item){
+ var button=document.createElement('button');
+ button.type='button';
+ button.className='app-choice';
+ button.setAttribute('aria-label','Abrir '+item.name);
+ var icon=document.createElement('span');
+ icon.className='app-mini';
+ icon.textContent=iconFor(item.name);
+ if(validAppIcon(item.icon)){icon.textContent='';setRealLogo(icon,item.icon)}
+ var title=document.createElement('span');
+ title.textContent=item.name;
+ button.appendChild(icon);
+ button.appendChild(title);
+ button.addEventListener('click',function(){
+  closeOverlay('appsPanel');
+  if(nativeApp)window.Rush.launchApp(item.package);
+ });
+ return button;
+}
 function paintApps(){
- var root=$('appsList');root.textContent='';
- var filter=$('appsSearch').value.toLocaleLowerCase();
- var items=state.apps.filter(function(a){return a.name.toLocaleLowerCase().includes(filter)});
+ var root=$('appsList');
+ root.textContent='';
+ var filter=String($('appsSearch').value||'').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase().trim();
+ var items=state.apps.filter(function(app){
+  var name=String(app.name||'').normalize('NFD')
+   .replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();
+  return name.includes(filter);
+ });
  write('appsCount',items.length+' aplicaciones');
- if(!items.length){root.textContent='No se encontraron aplicaciones visibles en Android.';return}
- items.forEach(function(item){
-  var b=document.createElement('button');b.type='button';b.className='app-choice';
-  var icon=document.createElement('span');icon.className='app-mini';icon.textContent=iconFor(item.name);
-  if(validAppIcon(item.icon)){icon.textContent='';setRealLogo(icon,item.icon)}
-  var title=document.createElement('span');title.textContent=item.name;
-  b.appendChild(icon);b.appendChild(title);
-  b.addEventListener('click',function(){closeOverlay('appsPanel');if(nativeApp)window.Rush.launchApp(item.package)});
-  root.appendChild(b);
+ if(!items.length){
+  var empty=document.createElement('p');
+  empty.className='muted';
+  empty.textContent='No se encontraron aplicaciones instaladas con ese nombre.';
+  root.appendChild(empty);
+  return;
+ }
+ // Streaming/vídeo arriba, audio después; todas las demás al final.
+ var catalog=window.RushAppCategories;
+ var groups=catalog.categorize(items);
+ catalog.sections.forEach(function(section){
+  var apps=groups[section.id];
+  if(!apps||!apps.length)return;
+  var container=document.createElement('section');
+  container.className='apps-section';
+  container.setAttribute('aria-label',section.title);
+  var heading=document.createElement('h3');
+  heading.className='apps-section-title';
+  var name=document.createElement('span');
+  name.textContent=section.title;
+  var count=document.createElement('small');
+  count.className='apps-section-count';
+  count.textContent=apps.length+' apps';
+  heading.appendChild(name);
+  heading.appendChild(count);
+  var grid=document.createElement('div');
+  grid.className='appgrid';
+  apps.forEach(function(item){grid.appendChild(makeAppButton(item))});
+  container.appendChild(heading);
+  container.appendChild(grid);
+  root.appendChild(container);
  });
 }
 window.rushInstalledApps=function(items){
