@@ -1,13 +1,11 @@
-/* Rush Launcher 3.0 · pantalla única día/noche, sin permisos sensibles.
-   El mapa es ilustrativo. Waze se abre como aplicación externa.
-   La meteorología requiere consentimiento y ubicación GPS reales. */
+/* Rush Launcher 3.3 · iconos originales de las aplicaciones instaladas; mapa GPS real y música Android. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
 try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'auto',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'auto',weather:false}};
-var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,mediaAccess:false,mediaSession:false,apps:[],weatherAsked:0};
+var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,mediaAccess:false,mediaSession:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
 function app(action){if(nativeApp)window.Rush.open(action);else notice('Disponible al instalar en Android')}
@@ -166,6 +164,8 @@ window.rushWeather=function(data){
 };
 function mmss(ms){ms=Math.max(0,Math.floor(Number(ms)||0));return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')}
 function renderMusic(s){
+ state.currentPlayback=(s&&s.hasData)?s:null;
+ setMusicIcon(state.currentPlayback);
  var has=!!(s&&s.hasData);
  var fromSession=has&&s.source==='session';
  var duration=Number(s&&s.duration)||0,position=Number(s&&s.position)||0;
@@ -232,6 +232,61 @@ $('justMap').addEventListener('click',function(){
 $('routeDestination').addEventListener('keydown',function(ev){
  if(ev.key==='Enter'){$('startRoute').click();ev.preventDefault()}
 });
+
+/** URL local generado desde PackageManager de Android; nunca logos descargados. */
+function validAppIcon(uri){
+ return typeof uri==='string'&&uri.startsWith('data:image/png;base64,')&&
+        uri.length<130000&&/^[A-Za-z0-9+/=]+$/.test(uri.slice(22));
+}
+function setRealLogo(slot,uri){
+ if(!slot)return;
+ var img=slot.querySelector('img.rush-app-icon');
+ if(!validAppIcon(uri)){
+  if(img)img.remove();
+  slot.classList.remove('real-icon');
+  return;
+ }
+ if(!img){
+  img=document.createElement('img');
+  img.className='rush-app-icon';
+  img.alt='';
+  img.draggable=false;
+  img.setAttribute('aria-hidden','true');
+  slot.appendChild(img);
+ }
+ img.src=uri;
+ img.onerror=function(){this.remove();slot.classList.remove('real-icon')};
+ slot.classList.add('real-icon');
+}
+function setMusicIcon(media){
+ var p=media&&media.package?media.package:'com.spotify.music';
+ setRealLogo(document.querySelector('.album'),state.appIcons[p]||'');
+}
+window.rushDockApps=function(apps){
+ var available=Array.isArray(apps)?apps:[];
+ var defaults={route:'Mapas',spotify:'Spotify',autokit:'AutoKit'};
+ state.dockApps={};
+ Object.keys(defaults).forEach(function(action){
+  var button=document.querySelector('.dockbtn[data-action="'+action+'"]');
+  if(!button)return;
+  setRealLogo(button.querySelector('.dockicon'),'');
+  var caption=button.querySelector('.dock-label');
+  if(caption)caption.textContent=defaults[action];
+ });
+ available.forEach(function(a){
+  if(!a||!a.action||!a.package||!validAppIcon(a.icon))return;
+  if(!Object.prototype.hasOwnProperty.call(defaults,a.action))return;
+  var button=document.querySelector('.dockbtn[data-action="'+a.action+'"]');
+  if(!button)return;
+  state.appIcons[a.package]=a.icon;
+  state.dockApps[a.action]=a.package;
+  setRealLogo(button.querySelector('.dockicon'),a.icon);
+  var caption=button.querySelector('.dock-label');
+  if(caption)caption.textContent=String(a.name||defaults[a.action]).slice(0,28);
+ });
+ setMusicIcon(state.currentPlayback);
+};
+
 function iconFor(name){
  var n=String(name||'').trim().split(/\s+/);
  return n.length>1?(n[0][0]+n[1][0]).toUpperCase():String(name||'?').slice(0,2).toUpperCase();
@@ -245,6 +300,7 @@ function paintApps(){
  items.forEach(function(item){
   var b=document.createElement('button');b.type='button';b.className='app-choice';
   var icon=document.createElement('span');icon.className='app-mini';icon.textContent=iconFor(item.name);
+  if(validAppIcon(item.icon)){icon.textContent='';setRealLogo(icon,item.icon)}
   var title=document.createElement('span');title.textContent=item.name;
   b.appendChild(icon);b.appendChild(title);
   b.addEventListener('click',function(){closeOverlay('appsPanel');if(nativeApp)window.Rush.launchApp(item.package)});
@@ -254,6 +310,8 @@ function paintApps(){
 window.rushInstalledApps=function(items){
  state.apps=Array.isArray(items)?items.filter(function(x){return x&&typeof x.name==='string'&&typeof x.package==='string'}):[];
  state.apps.sort(function(a,b){return a.name.localeCompare(b.name,'es')});
+ state.apps.forEach(function(a){if(validAppIcon(a.icon))state.appIcons[a.package]=a.icon});
+ setMusicIcon(state.currentPlayback);
  paintApps();
 };
 $('appsSearch').addEventListener('input',paintApps);
