@@ -1,4 +1,4 @@
-# Rush Launcher 3.0.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.0.1 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -58,3 +58,6 @@ Se reemplaza el menú de cinco tarjetas por una pantalla premium adaptada a 800�
 
 ### Privacidad, seguridad y limitaciones
 Se usan permisos de localización, Bluetooth según versión y de internet (para la consulta voluntaria del clima). **Sin** servicio de acceso a notificaciones, sin superposiciones de accesibilidad, sin control de la ECU. Las aplicaciones de video deben usarse con el automóvil estacionado. El APK debug no cuenta con firma de publicación de Play Store y podría activar las advertencias habituales del dispositivo.
+
+### Ajustes visuales v3.0.1
+La imagen fija del Toyota Rush usa recorte SVG sobre fotografía local para integrarse con fondos diurnos y nocturnos sin un rectángulo oscuro. El mapa ilustrativo se atenúa de noche; no se muestran condiciones climáticas inventadas cuando el pronóstico está desactivado.
