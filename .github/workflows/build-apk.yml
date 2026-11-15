@@ -60,6 +60,19 @@ jobs:
           assert 'data-action="route"' in html
           assert 'Abrir Waze' not in html
           assert 'window.rushActivePlayback' in js
+          assert 'window.rushDockApps' in js
+          assert 'setRealLogo(icon,item.icon)' in js
+          assert 'class="dock-label"' in html
+          assert '.dockicon.real-icon' in html
+          assert 'id="appsList"' in html
+          assert 'pngIcon(android.content.pm.ResolveInfo info)' in native
+          assert 'info.loadIcon(getPackageManager())' in native
+          assert 'window.rushInstalledApps(' in native
+          assert 'window.rushDockApps(' in native
+          assert 'info.put("icon", image)' in native
+          assert 'iconExecutor.execute' in native
+          assert 'QUERY_ALL_PACKAGES' not in manifest
+          assert 'android.permission.QUERY_ALL_PACKAGES' not in manifest
           assert 'window.rushMediaAccess' in js
           assert 'window.Rush.navigate' in js
           assert 'window.Rush.seekMedia' in js
