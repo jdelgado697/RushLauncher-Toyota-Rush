@@ -176,12 +176,33 @@ function renderMusic(info){
   cover.alt='Carátula del álbum de Spotify';
   album.appendChild(cover);
  }
- var url=api&&typeof s.cover==='string'?s.cover:'';
- var allowed=/^https:\/\/(?:i|mosaic)\.scdn\.co\/[a-zA-Z0-9/_-]+$/.test(url);
- if(cover)cover.hidden=!allowed;
- if(album)album.classList.toggle('spotify-cover',allowed);
- if(allowed&&cover)cover.src=url;
- if(!allowed&&cover)cover.removeAttribute('src');
+ // La carátula llega tanto por la API autenticada como por oEmbed público
+ // asociado al id de la pista en los broadcasts Android de Spotify.
+ var url=s&&typeof s.cover==='string'?s.cover:'';
+ var allowed=/^https:\/\/(?:(?:i|mosaic)\.scdn\.co|image-cdn-[a-z0-9-]+\.spotifycdn\.com)\/[a-zA-Z0-9/_-]+$/.test(url);
+ if(cover&&album){
+  if(allowed){
+   cover.onerror=function(){
+    if(this.getAttribute('src')!==url)return;
+    this.hidden=true;
+    album.classList.remove('spotify-cover');
+   };
+   cover.onload=function(){
+    if(this.getAttribute('src')!==url)return;
+    this.hidden=false;
+    album.classList.add('spotify-cover');
+   };
+   if(cover.getAttribute('src')!==url){
+    cover.hidden=true;
+    album.classList.remove('spotify-cover');
+    cover.src=url;
+   }
+  }else{
+   cover.hidden=true;
+   cover.removeAttribute('src');
+   album.classList.remove('spotify-cover');
+  }
+ }
  state.currentPlayback=s;
  if(s&&s.package&&validAppIcon(s.icon))state.appIcons[s.package]=s.icon;
  setMusicIcon(s);
