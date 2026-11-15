@@ -1,4 +1,4 @@
-# Rush Launcher 3.7.1 · Toyota Rush 2021 XLI
+# Rush Launcher 3.8.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -168,3 +168,10 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 - Dentro de Streaming y video, todas las aplicaciones instaladas cuyo nombre o paquete las identifica como Xuper (incluyendo Xuper TV y Xuper Play) aparecen primero, ordenadas alfabéticamente entre sí.
 - Después quedan YouTube, Netflix, Paramount+ y las demás aplicaciones de vídeo por orden alfabético; luego se muestran Música y audio y Otras aplicaciones.
 - No se instala ni modifica Xuper. Se conservan los íconos obtenidos desde Android, el filtro, Spotify, las carátulas y el mapa GPS.
+
+## Rush Launcher 3.8.0 — mapa ligero, vehículo gris completo y HOME opcional
+- **Mapa más ligero para TBox Lite S:** vista inicial zoom 14, hasta 12 teselas visibles y caché en pantalla de 20 teselas cargadas, sin precarga de zonas. El seguimiento mueve el centro cuando cambian al menos 32 m y transcurren 2,5 segundos, mientras la ubicación real continúa actualizándose. Evita recomputaciones cuando el GPS oscila y evita solicitar continuamente las mismas teselas. El WebView respeta HTTP cache y mantiene User-Agent identificable, el texto obligatorio «© OpenStreetMap contributors» y su API oficial. Sigue requiriendo internet; la velocidad real depende del proveedor de mapas, cobertura móvil y hardware.
+- **Imagen nueva:** el asset local `rush_gray.webp` contiene un Toyota Rush 2021 XLI gris en vista completa, generado como representación ilustrativa y no como fotografía certificada del vehículo. Se reemplazó el SVG con máscara que recortaba el auto. La imagen no necesita internet.
+- **Inicio predeterminado:** en Ajustes se muestra «Elegir Rush Launcher como inicio». Activa el alias `HomeAlias` y abre `Settings.ACTION_HOME_SETTINGS`; si el firmware lo permite, el usuario debe escoger Rush Launcher manualmente. Al pulsar Atrás mientras Rush es HOME, no se deshabilita por accidente. El botón «Restaurar inicio original del TBox» deshabilita HomeAlias y regresa a Home Android. No fuerza cambios de firmware ni afecta cámara, radio o la unidad de Toyota.
+- **Límites:** los firmwares de Carlinkit pueden restringir el rol HOME. Si los ajustes de Inicio no ofrecen Rush, es una limitación del TBox; no utilizar root, permisos de accesibilidad ni desactivar Play Protect.
+- **Seguridad:** la APK no añade permisos invasivos. Las funciones de Spotify, carátulas, aplicaciones ordenadas (Xuper primero) y datos OBD permanecen. Descarga en repositorio Actions; instalar con vehículo detenido y con Play Protect activado.
