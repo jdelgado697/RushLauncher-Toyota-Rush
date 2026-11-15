@@ -203,6 +203,15 @@ public class MainActivity extends Activity implements LocationListener {
             info.put("package", currentMediaPackage);
             info.put("app", "com.spotify.music".equals(currentMediaPackage)
                     ? "Spotify" : "Reproductor Android");
+            // Mostrar también el ícono real de otros reproductores, no solo Spotify.
+            android.content.pm.ResolveInfo activeApp =
+                    findLauncherApp(launcherApps(), currentMediaPackage);
+            if (activeApp != null) {
+                String image = pngIcon(activeApp);
+                if (!image.isEmpty()) info.put("icon", image);
+                CharSequence title = activeApp.loadLabel(getPackageManager());
+                if (title != null) info.put("app", title.toString());
+            }
             info.put("track", readMetadata(metadata, MediaMetadata.METADATA_KEY_TITLE));
             info.put("artist", readMetadata(metadata, MediaMetadata.METADATA_KEY_ARTIST));
             info.put("album", readMetadata(metadata, MediaMetadata.METADATA_KEY_ALBUM));
