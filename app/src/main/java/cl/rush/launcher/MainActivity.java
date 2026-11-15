@@ -144,6 +144,12 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setAllowContentAccess(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setBlockNetworkImage(false);
+        // Identificación de la app y caché estándar para los mosaicos OSM.
+        settings.setUserAgentString(settings.getUserAgentString()
+                + " RushLauncher/3.1.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -524,6 +530,22 @@ public class MainActivity extends Activity implements LocationListener {
             if ((fine || coarse) && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 1f, this);
                 started = true;
+            }
+            // Una ubicación reciente permite mostrar el mapa al abrir el TBox.
+            // Nunca usar una ubicación antigua como si fuera la posición actual.
+            Location recent = null;
+            if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                recent = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            }
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                Location fromNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (fromNetwork != null && (recent == null
+                        || fromNetwork.getTime() > recent.getTime())) recent = fromNetwork;
+            }
+            if (recent != null && System.currentTimeMillis() - recent.getTime() < 120000L
+                    && recent.getTime() <= System.currentTimeMillis() + 5000L
+                    && (!recent.hasAccuracy() || recent.getAccuracy() < 500f)) {
+                onLocationChanged(recent);
             }
         } catch (SecurityException ignored) { }
         sendGpsStatus(started ? "Buscando señal GPS…" : "Sin proveedor GPS activo");
