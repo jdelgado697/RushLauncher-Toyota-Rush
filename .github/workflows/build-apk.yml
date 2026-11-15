@@ -118,6 +118,21 @@ jobs:
           assert 'getIntExtra("playbackPosition", 0)' in native
           assert 'spotify:playlist:' in native
           assert 'spotifyPlaylist' in native
+          artwork=Path("app/src/main/java/cl/rush/launcher/SpotifyArtworkFetcher.java").read_text(encoding="utf-8")
+          assert 'open.spotify.com/oembed?url=' in artwork
+          assert 'thumbnail_url' in artwork
+          assert 'spotify:(track|episode):' in artwork
+          assert 'image-cdn-' in artwork and 'i.scdn.co' in artwork
+          assert 'SpotifyArtworkFetcher spotifyArtwork' in native
+          assert 'getStringExtra("id")' in native
+          assert 'spotifyArtwork.lookup(spotifyTrackUri)' in native
+          assert 'payload.put("cover", spotifyCover)' in native
+          assert 'spotifyArtwork.shutdown()' in native
+          assert 'image-cdn-[a-z0-9-]+' in js
+          assert "var url=s&&typeof s.cover==='string'?s.cover:'';" in js
+          assert "album.classList.remove('spotify-cover')" in js
+          assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in artwork
+          assert 'MediaSessionManager' not in artwork
           assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in manifest
           for field in ['spotifyClientId','spotifySaveClientId','spotifyLogin',
                         'spotifyDisconnect','spotifyRefresh','spotifyDevelopers',
@@ -144,7 +159,7 @@ jobs:
           assert 'dispatchMediaKeyEvent' in native
           assert not Path("app/src/main/java/cl/rush/launcher/PlaybackAccessService.java").exists()
           assert 'rush_turntable.js' not in html
-          print("OK: Rush 3.5 Spotify via aplicación oficial, broadcasts opcionales y Embed; API opcional")
+          print("OK: Rush 3.6 Spotify carátulas oEmbed sin servicios sensibles")
           PY
 
       - name: Compilar APK de prueba
