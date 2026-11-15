@@ -39,6 +39,7 @@ jobs:
 
       - name: Validar interfaz y funciones
         run: |
+          node --check app/src/main/assets/app_categories.js
           node --check app/src/main/assets/dashboard.js
           node --check app/src/main/assets/live_map.js
           python3 - <<'PY'
@@ -48,6 +49,13 @@ jobs:
           native=Path("app/src/main/java/cl/rush/launcher/MainActivity.java").read_text(encoding="utf-8")
           manifest=Path("app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
           assert '<script src="dashboard.js"></script>' in html
+          assert '<script src="app_categories.js"></script>' in html
+          assert html.index('<script src="app_categories.js"></script>') < html.index('<script src="dashboard.js"></script>')
+          assert 'class="apps-sections"' in html and 'apps-section-title' in html
+          assert 'catalog.categorize(items)' in js
+          assert 'grid.appendChild(makeAppButton(item))' in js
+          assert 'setRealLogo(icon,item.icon)' in js
+          assert 'closeOverlay(\'appsPanel\')' in js
           assert '<script src="live_map.js"></script>' in html
           assert 'id="mapTileLayer"' in html and 'id="mapRecenter"' in html
           assert 'id="mapZoomIn"' in html and 'id="mapZoomOut"' in html
@@ -161,6 +169,42 @@ jobs:
           assert 'rush_turntable.js' not in html
           print("OK: Rush 3.6 Spotify carátulas oEmbed sin servicios sensibles")
           PY
+
+      - name: Probar orden de aplicaciones por categoría
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const assert = require('assert');
+          const context = { window: {} };
+          vm.runInNewContext(fs.readFileSync('app/src/main/assets/app_categories.js', 'utf8'), context);
+          const groups = context.window.RushAppCategories;
+          assert.strictEqual(groups.sections.map(g => g.id).join(','), 'video,audio,other');
+          assert.strictEqual(groups.group({name:'Netflix',package:'com.netflix.mediaclient'}),'video');
+          assert.strictEqual(groups.group({name:'YouTube',package:'com.google.android.youtube'}),'video');
+          assert.strictEqual(groups.group({name:'Paramount+',package:'com.cbs.app'}),'video');
+          assert.strictEqual(groups.group({name:'Prime Video',package:'com.amazon.avod.thirdpartyclient'}),'video');
+          assert.strictEqual(groups.group({name:'Spotify',package:'com.spotify.music'}),'audio');
+          assert.strictEqual(groups.group({name:'YouTube Music',package:'com.google.android.apps.youtube.music'}),'audio');
+          assert.strictEqual(groups.group({name:'Google Maps',package:'com.google.android.apps.maps'}),'other');
+          assert.strictEqual(groups.group({name:'Play Store',package:'com.android.vending'}),'other');
+          const sample = [
+            {name:'Google Maps',package:'com.google.android.apps.maps'},
+            {name:'YouTube',package:'com.google.android.youtube'},
+            {name:'Spotify',package:'com.spotify.music'},
+            {name:'Netflix',package:'com.netflix.mediaclient'},
+            {name:'Paramount+',package:'com.cbs.app'}
+          ];
+          const categorized = groups.categorize(sample);
+          assert.strictEqual(categorized.video.map(x=>x.name).join(','),'Netflix,Paramount+,YouTube');
+          assert.strictEqual(categorized.audio.map(x=>x.name).join(','),'Spotify');
+          assert.strictEqual(categorized.other.map(x=>x.name).join(','),'Google Maps');
+          const query = 'netflix';
+          const filtered = groups.categorize(sample.filter(x=>x.name.toLowerCase().includes(query)));
+          assert.strictEqual(filtered.video.length,1);
+          assert.strictEqual(filtered.audio.length,0);
+          console.log('OK: Streaming y video primero, música después, otras apps al final; búsqueda compatible.');
+          NODE
 
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
