@@ -1,4 +1,4 @@
-# Rush Launcher 3.3.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.3.1 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -97,3 +97,14 @@ La imagen fija del Toyota Rush usa recorte SVG sobre fotografía local para inte
 - El mapa GPS real, el menú de rutas, las funciones OBD, los controles musicales y el modo claro/oscuro de 3.2 se conservan.
 
 **Verificación de hardware pendiente:** compilar la APK no confirma que todos los fabricantes expongan su icono al PackageManager. Algunos TBox restringen ciertas apps del sistema; en ese caso el botón muestra el símbolo genérico.
+
+## Rush Launcher 3.3.1 — corrección de bloqueo de Play Protect
+En un Carlinkit TBox Lite S, la versión 3.3 fue bloqueada con el aviso «Aplicación bloqueada para proteger tu dispositivo». Google identifica como riesgo elevado algunas APK descargadas directamente con servicios de lectura de notificaciones. Se corrigió el origen probable:
+- Eliminados PlaybackAccessService, su declaración en AndroidManifest.xml y toda dependencia de MediaSessionManager que requería acceso sensible.
+- Esta APK no declara servicios NotificationListener ni permisos de accesibilidad, SMS, lectura de notificaciones o control multimedia privilegiado.
+- Spotify conserva comandos AudioManager.dispatchMediaKeyEvent (anterior, siguiente, play/pausa), que dependen de la compatibilidad del reproductor activo.
+- Nombre de canción, artista y estado se muestran SOLO si Spotify envía broadcasts opcionales desde el mismo Android Box; no se solicitan datos sensibles para forzarlos.
+- Íconos auténticos de aplicaciones Android por PackageManager, mapa GPS real, rutas web, clima voluntario, modo día/noche y OBD no se alteran.
+- El workflow inspecciona el manifiesto final del APK generado para impedir que reaparezcan servicios sensibles.
+- Play Protect puede seguir advirtiendo por otros motivos (APK debug, reputación, firmas o política del dispositivo). No se aconseja deshabilitar ni eludir Play Protect. La compilación no demuestra aprobación de Play Protect en un equipo físico.
+- Si el paquete se instaló previamente con otra clave de firma, Android puede exigir desinstalar la versión antigua (se perderían datos locales). No forzar instalaciones bloqueadas.
