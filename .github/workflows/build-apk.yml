@@ -37,29 +37,29 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Verificar JavaScript de la interfaz
+      - name: Validar interfaz y funciones
         run: |
+          node --check app/src/main/assets/dashboard.js
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          html = Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S)
-          if not scripts:
-              raise SystemExit("Falta JavaScript de la interfaz")
-          Path("/tmp/rush-ui-inline.js").write_text("\\n".join(scripts), encoding="utf-8")
+          html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
+          js=Path("app/src/main/assets/dashboard.js").read_text(encoding="utf-8")
+          native=Path("app/src/main/java/cl/rush/launcher/MainActivity.java").read_text(encoding="utf-8")
+          manifest=Path("app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+          assert '<script src="dashboard.js"></script>' in html
+          assert 'rush_hero.jpg' in html and Path("app/src/main/assets/rush_hero.jpg").stat().st_size>0
+          assert 'data-theme="light"' in html and 'data-theme=dark' in html
+          for item in ['appsPanel','settingsPanel','obdPanel','weatherConsent','musicToggle','songTitle','songArtist']:
+              assert 'id="'+item+'"' in html,item
+          for func in ['rushSpotifyState','rushInstalledApps','rushPosition','rushWeather']:
+              assert 'window.'+func in js,func
+          assert 'public void getWeather(double latitude, double longitude)' in native
+          assert 'com.spotify.music.metadatachanged' in native
+          assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
+          assert 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE' not in manifest
+          assert 'rush_turntable.js' not in html
+          print("OK: Dashboard 3.0, apps, GPS, Spotify y clima")
           PY
-          node --check /tmp/rush-ui-inline.js
-          test -f app/src/main/assets/rush_hero.jpg
-          test -s app/src/main/assets/rush_hero.jpg
-          if grep -q 'id="rushViewHome"\|id="rushViewGarage"\|rush_turntable.js' app/src/main/assets/index.html; then echo 'Giro 360 aun activo'; exit 1; fi
-          grep -q 'id="mediaTitle"' app/src/main/assets/index.html
-          grep -q 'id="mediaArtist"' app/src/main/assets/index.html
-          grep -q 'window.rushSpotifyState' app/src/main/assets/index.html
-          grep -q 'SPOTIFY_METADATA' app/src/main/java/cl/rush/launcher/MainActivity.java
-          grep -q 'id="openApps"' app/src/main/assets/index.html
-          grep -q 'window.rushInstalledApps' app/src/main/assets/index.html
-          grep -q 'public void listApps()' app/src/main/java/cl/rush/launcher/MainActivity.java
-          if grep -q '<button data-open="waze"' app/src/main/assets/index.html; then echo 'Waze duplicado en accesos'; exit 1; fi
 
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
