@@ -54,6 +54,7 @@ public class MainActivity extends Activity implements LocationListener {
     private static final int LOCATION_REQUEST_CODE = 1101;
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
     private ObdReader obdReader;
+    private SpotifyConnectClient spotifyConnect;
     private WebView webView;
     private LocationManager locationManager;
     private boolean pageLoaded = false;
@@ -136,6 +137,23 @@ public class MainActivity extends Activity implements LocationListener {
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
         registerSpotifyReceiver();
+        spotifyConnect = new SpotifyConnectClient(this, new SpotifyConnectClient.Callback() {
+            @Override public void event(String expression) {
+                javascript(expression);
+            }
+            @Override public void openBrowser(Uri uri) {
+                try {
+                    Intent browser = new Intent(Intent.ACTION_VIEW, uri);
+                    browser.addCategory(Intent.CATEGORY_BROWSABLE);
+                    startActivity(browser);
+                } catch (Exception error) {
+                    message("No hay navegador compatible para autorizar Spotify.");
+                }
+            }
+        });
+        if (spotifyConnect.handles(getIntent().getData())) {
+            spotifyConnect.handleRedirect(getIntent());
+        }
         obdReader = new ObdReader(new ObdReader.Listener() {
             @Override public void onStatus(String status) {
                 javascript("window.rushObdStatus(" + JSONObject.quote(status) + ");");
@@ -169,6 +187,7 @@ public class MainActivity extends Activity implements LocationListener {
                 // leer el GPS automáticamente, si el TBox dispone de proveedor.
                 startGps();
                 sendSpotifyState();
+                if (spotifyConnect != null) spotifyConnect.uiReady();
             }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -748,6 +767,7 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onPause() {
+        if (spotifyConnect != null) spotifyConnect.pause();
         super.onPause();
         if (locationManager != null) {
             try { locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
@@ -757,11 +777,13 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
+        if (spotifyConnect != null) spotifyConnect.resume();
         if (pageLoaded) { startGps(); sendSpotifyState(); sendDockIcons(); }
     }
 
     @Override
     protected void onDestroy() {
+        if (spotifyConnect != null) spotifyConnect.destroy();
         if (spotifyReceiverRegistered) {
             try { unregisterReceiver(spotifyReceiver); } catch (RuntimeException ignored) { }
             spotifyReceiverRegistered = false;
@@ -778,6 +800,13 @@ public class MainActivity extends Activity implements LocationListener {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (spotifyConnect != null) spotifyConnect.handleRedirect(intent);
+    }
+
+    @Override
     public void onBackPressed() {
         exitToOriginalHome();
     }
@@ -787,6 +816,36 @@ public class MainActivity extends Activity implements LocationListener {
             runUi(() -> {
                 sendSpotifyState();
                 sendDockIcons();
+                if (spotifyConnect != null) spotifyConnect.uiReady();
+            });
+        }
+        @JavascriptInterface public void spotifyClientId(String clientId) {
+            runUi(() -> spotifyConnect.configure(clientId));
+        }
+        @JavascriptInterface public void spotifyConnect() {
+            runUi(() -> spotifyConnect.connect());
+        }
+        @JavascriptInterface public void spotifyDisconnect() {
+            runUi(() -> spotifyConnect.disconnect());
+        }
+        @JavascriptInterface public void spotifyRefresh() {
+            runUi(() -> spotifyConnect.refreshPlayback(true));
+        }
+        @JavascriptInterface public void spotifyControl(String command) {
+            runUi(() -> spotifyConnect.command(command));
+        }
+        @JavascriptInterface public void spotifySeek(long milliseconds) {
+            runUi(() -> spotifyConnect.seek(milliseconds));
+        }
+        @JavascriptInterface public void spotifyDevelopers() {
+            runUi(() -> {
+                try {
+                    Intent browser = new Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://developer.spotify.com/dashboard"));
+                    startActivity(browser);
+                } catch (Exception ex) {
+                    message("No hay navegador para abrir Spotify for Developers");
+                }
             });
         }
         @JavascriptInterface public void listApps() {
