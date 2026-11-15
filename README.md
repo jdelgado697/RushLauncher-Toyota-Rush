@@ -1,4 +1,4 @@
-# Rush Launcher 3.6.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.7.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -155,3 +155,11 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 - Se conservan mapa GPS, Spotify nativo, barra de controles, progreso aproximado, playlist y menú de Apps.
 - El servidor Spotify oEmbed recibe la URL pública de la pista para responder; el servicio necesita internet. Algunas pistas locales, episodios o contenidos privados pueden carecer de portada. El cambio está validado por compilación, pero la carga real debe comprobarse en el Carlinkit TBox Lite S.
 - No se modifican los permisos del manifiesto ni se anula Google Play Protect.
+
+## Rush Launcher 3.7.0 — Apps agrupadas y ordenadas
+- En el cajón **Apps** se muestran tres secciones en este orden: **Streaming y video**, **Música y audio** y **Otras aplicaciones**. No se fuerza a instalar ninguna aplicación; solo aparecen las que Android expone como lanzables en el TBox.
+- Incluye reconocimiento de plataformas como YouTube, Netflix, Prime Video, Paramount+, Disney+, Max, Pluto TV, Crunchyroll, Plex, VLC, Kodi e IPTV; Spotify, YouTube Music, Deezer, Tidal y otros reproductores se ubican en Música y audio.
+- La categorización utiliza preferentemente el nombre del paquete Android y secundariamente la etiqueta visible. Las apps no reconocidas se colocan en Otras aplicaciones, sin adivinar su función.
+- Se mantiene el orden alfabético dentro de cada sección, la búsqueda global, los iconos oficiales obtenidos del dispositivo y el acceso a las aplicaciones.
+- En dispositivos pequeños las secciones comparten un contenedor desplazable; los títulos identifican los grupos y solo se muestran secciones con resultados.
+- No se añaden permisos, no se modifica Spotify ni el mapa GPS, ni se altera la pantalla principal. La compilación incluye pruebas deterministas de clasificación.
