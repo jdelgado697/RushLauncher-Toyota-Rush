@@ -1,4 +1,4 @@
-/* Rush Launcher 3.7 — grupos en el cajón de apps.
+/* Rush Launcher 3.7.1 — Xuper al inicio y grupos en el cajón de apps.
  * Clasificación local, sin permisos ni consultas externas.
  * Revisión de packageId antes que nombre para evitar falsos positivos.
  */
@@ -47,9 +47,19 @@
   function fold(v) {
     return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
   }
+  function isXuper(item) {
+    var pkg = String(item && item.package || '').toLowerCase();
+    var name = fold(item && item.name).trim();
+    // Variantes Xuper, Xuper TV y Xuper Play detectadas desde las apps instaladas.
+    // No requiere ni provoca la instalación de aplicaciones adicionales.
+    return /(^|[^a-z0-9])xuper([^a-z0-9]|$)/.test(name)
+        || /(^|\.)xuper(\.|$)/.test(pkg)
+        || /^xuper[a-z0-9]*(\.|$)/.test(pkg);
+  }
   function group(item) {
     var pkg = String(item && item.package || '').toLowerCase();
     var name = fold(item && item.name);
+    if (isXuper(item)) return 'video';
     if (videoPackages[pkg]) return 'video';
     if (audioPackages[pkg]) return 'audio';
     // Variantes del nombre del paquete en marcas y versiones de Android TV.
@@ -77,7 +87,13 @@
     var result = {video:[],audio:[],other:[]};
     (items || []).forEach(function(item) { result[group(item)].push(item); });
     sections.forEach(function(section) { result[section.id].sort(compareNames); });
+    // Prioridad solicitada: todos los Xuper instalados antes que cualquier
+    // otra aplicación de streaming; el resto conserva el orden alfabético.
+    result.video.sort(function(a,b) {
+      var ax = isXuper(a), bx = isXuper(b);
+      return ax === bx ? compareNames(a,b) : (ax ? -1 : 1);
+    });
     return result;
   }
-  global.RushAppCategories = {group:group, categorize:categorize, sections:sections};
+  global.RushAppCategories = {group:group, isXuper:isXuper, categorize:categorize, sections:sections};
 })(window);
