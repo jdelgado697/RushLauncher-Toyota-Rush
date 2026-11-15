@@ -64,6 +64,15 @@
  .music-seek{gap:4px;padding-top:0}
  .music-seek span{font-size:7px}
 }
+
+/* v3.3 · iconos reales recuperados desde PackageManager.
+   Los accesos del sistema (Apps, Bluetooth, FM original) usan SVG neutrales. */
+.dockicon.real-icon,.app-mini.real-icon,.album.real-icon{background:transparent!important;box-shadow:none!important;overflow:hidden}
+.dockicon.real-icon img,.app-mini.real-icon img,.album.real-icon img{width:100%;height:100%;display:block;object-fit:contain;pointer-events:none;border-radius:22%}
+.dockicon.real-icon>.icon,.app-mini.real-icon>.icon,.album.real-icon>.icon{display:none}
+.album.real-icon:after{display:none}
+.dock-label{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:860px){.dock-label{font-size:9px}}
 </style>
 </head>
 <body>
@@ -116,7 +125,7 @@
   </section>
   <div class="widgets">
    <section class="music glass" aria-label="Reproductor multimedia">
-    <button type="button" class="album" data-action="spotify" aria-label="Abrir Spotify"><svg class="icon"><use href="#i-music"/></svg></button>
+    <button type="button" class="album" data-action="spotify" aria-label="Abrir el reproductor"><svg class="icon"><use href="#i-music"/></svg></button>
     <div class="musicbody">
      <div class="musicbrand"><span class="spotify-dot">●</span> <span id="mediaBrand">Música</span> <button type="button" id="mediaPermission" class="moretext" aria-label="Autorizar información musical">Vincular</button><button type="button" id="musicHelp" class="moretext" aria-label="Detalles del reproductor">ⓘ</button></div>
      <div class="musicrow">
@@ -139,11 +148,11 @@
 </main>
 <nav class="dock" aria-label="Accesos principales">
  <button class="dockbtn" type="button" data-action="apps"><span class="dockicon"><svg class="icon"><use href="#i-apps"/></svg></span>Apps</button>
- <button class="dockbtn" type="button" data-action="route"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span>Mapas</button>
- <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span>Spotify</button>
+ <button class="dockbtn" type="button" data-action="route"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span><span class="dock-label">Mapas</span></button>
+ <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span><span class="dock-label">Spotify</span></button>
  <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
  <button class="dockbtn" type="button" data-action="bluetoothSettings"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-bluetooth"/></svg></span>Bluetooth</button>
- <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span>AutoKit</button>
+ <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">AutoKit</span></button>
 </nav>
 </div>
 <div class="scrim" id="appsPanel" hidden>
