@@ -29,6 +29,29 @@
 :root[data-theme=dark] .mapgraphic svg{filter:brightness(.48) saturate(.78) contrast(1.14)}
 :root[data-theme=dark] .mapnote{background:#253665e8;color:#e5ebff}
 :root[data-theme=dark] .mapfocus{background:#293866;color:#e9eeff}
+
+/* Mapa GPS real; las teselas solo aparecen cuando Android entrega coordenadas. */
+.mapgraphic.realmap{background:#dce6f3;position:relative;isolation:isolate;touch-action:none;overscroll-behavior:contain}
+.map-tile-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.map-tile{position:absolute;width:256px;height:256px;max-width:none;display:block;user-select:none;pointer-events:none}
+.map-position{position:absolute;left:50%;top:50%;width:28px;height:28px;z-index:6;transform:translate(-50%,-50%);pointer-events:none}
+.map-accuracy{position:absolute;width:42px;height:42px;left:-7px;top:-7px;background:#4281fc28;border:1px solid #648ffb77;border-radius:50%}
+.map-point{position:absolute;left:7px;top:7px;width:14px;height:14px;border:3px solid #fff;border-radius:50%;background:#3a77ec;box-shadow:0 1px 7px #2f4d80b9}
+.map-arrow{position:absolute;left:10px;top:-8px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #3e70f7;transform:rotate(var(--heading,0deg));transform-origin:50% 22px}
+.map-loading{position:absolute;inset:0;z-index:2;display:grid;place-content:center;text-align:center;padding:14px;background:#dce7f3f4;color:#516789;font-size:11px;font-weight:700;pointer-events:none}
+.map-tools{position:absolute;right:6px;top:7px;z-index:10;display:flex;flex-direction:column;gap:4px}
+.map-tool{width:29px;height:29px;border-radius:9px;background:#fbfcfff0;color:#4b5a8d;font-weight:850;font-size:18px;display:grid;place-items:center;box-shadow:0 3px 8px #14264c39}
+.map-tool .icon{width:15px;height:15px}
+.map-tool.not-following{background:#cfd8f8}
+.mapgraphic.realmap .mapnote{z-index:8;bottom:16px;left:5px;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;padding:3px 5px;background:#ffffffdf;color:#40537a}
+.map-attribution{position:absolute;z-index:8;bottom:1px;right:3px;padding:1px 3px;font-size:7px;line-height:1.3;color:#263f65;background:#fffdf7cd;border-radius:3px;white-space:nowrap;pointer-events:none}
+:root[data-theme=dark] .mapgraphic.realmap{background:#182238}
+:root[data-theme=dark] .map-tile{filter:brightness(.69) contrast(1.16) saturate(.80)}
+:root[data-theme=dark] .mapgraphic.realmap svg{filter:none}
+:root[data-theme=dark] .map-loading{background:#1c2840f0;color:#dee4fc}
+:root[data-theme=dark] .map-tool{background:#293455e8;color:#ecedff}
+:root[data-theme=dark] .mapgraphic.realmap .mapnote{background:#24334bdc;color:#eff4ff}
+:root[data-theme=dark] .map-attribution{background:#24334bdc;color:#e1eaff}
 </style>
 </head>
 <body>
@@ -53,22 +76,20 @@
 </header>
 <main class="main">
  <section class="mapcard glass" aria-label="Navegación">
-  <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-pin"/></svg></span><div><strong>Waze</strong><small id="mapSubtitle">Navegación con tu ubicación</small></div></div>
-  <div class="mapgraphic" aria-label="Representación ilustrativa de un mapa, no es una ruta real">
-   <svg viewBox="0 0 380 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <rect width="380" height="260" fill="#e3eaf7"/>
-    <path d="M0 52 378 79M-5 120 378 146M-10 200 390 218M82 -12 67 279M164 -12 152 279M272 -12 264 279M340 -12 335 280" stroke="#fdfdff" stroke-width="26" fill="none"/>
-    <path d="M-40 52 380 79M-10 120 385 146M-10 200 390 218M82 -12 67 279M164 -12 152 279M272 -12 264 279M340 -12 335 280" stroke="#cad4e5" stroke-width="1.8" fill="none"/>
-    <path d="M305 -20 360 30l40 102-22 9-65-82-51-45Z" fill="#b8d9c4"/>
-    <path d="m-25 248 55-64 70 9 24 69Z" fill="#b6d8c5"/>
-    <path d="M48 -30Q150 70 150 137T247 285" stroke="#d5bdff" stroke-width="13" fill="none"/>
-    <path d="M48 -30Q150 70 150 137T247 285" stroke="#ffffff" stroke-width="9" fill="none"/>
-    <circle cx="190" cy="125" r="25" fill="#437de744"/><circle cx="190" cy="125" r="11" fill="#4c7ae9" stroke="white" stroke-width="4"/>
-    <text x="25" y="87" font-size="11" fill="#8091a8">Mapa ilustrativo</text>
-    <text x="248" y="190" font-size="10" fill="#8a99aa">Abre Waze para rutas</text>
-   </svg>
+  <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-pin"/></svg></span><div><strong>Mapa GPS</strong><small id="mapSubtitle">Esperando ubicación real</small></div></div>
+  <div class="mapgraphic realmap" id="realMap" role="region" aria-label="Mapa real interactivo de OpenStreetMap con posición GPS" tabindex="0">
+   <div class="map-tile-layer" id="mapTileLayer" aria-hidden="true"></div>
+   <div class="map-position" id="mapPositionMarker" aria-label="Ubicación GPS del vehículo" hidden>
+    <div class="map-accuracy"></div><div class="map-point"></div><div class="map-arrow"></div>
+   </div>
+   <div class="map-loading" id="mapWaiting">Esperando ubicación GPS real…</div>
+   <div class="map-tools">
+    <button class="map-tool" type="button" id="mapZoomIn" aria-label="Acercar mapa">+</button>
+    <button class="map-tool" type="button" id="mapZoomOut" aria-label="Alejar mapa">−</button>
+    <button class="map-tool" type="button" id="mapRecenter" aria-label="Centrar mapa en el vehículo"><svg class="icon"><use href="#i-locate"/></svg></button>
+   </div>
    <span class="mapnote" id="locationStatus">Esperando GPS</span>
-   <button class="mapfocus" type="button" data-action="map" aria-label="Abrir Waze"><svg class="icon"><use href="#i-locate"/></svg></button>
+   <div class="map-attribution" aria-label="Derechos de autor OpenStreetMap">© OpenStreetMap contributors</div>
   </div>
   <button type="button" class="mapcta" data-action="map">Abrir Waze <svg class="icon"><use href="#i-arrow"/></svg></button>
  </section>
@@ -157,5 +178,6 @@
  </div>
 </div>
 <div id="toast" class="toast" hidden></div>
+<script src="live_map.js"></script>
 <script src="dashboard.js"></script>
 </body></html>
