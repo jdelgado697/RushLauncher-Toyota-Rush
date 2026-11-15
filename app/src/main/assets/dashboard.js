@@ -52,6 +52,22 @@ $('saveName').addEventListener('click',function(){
  saved.name=$('nameInput').value.trim().slice(0,32);store('rush_user_name',saved.name);updateTime();notice('Nombre actualizado')
 });
 $('nameInput').value=saved.name;
+$('chooseDefaultHome').addEventListener('click',function(){
+ if(!nativeApp){notice('Esta opción solo funciona en el Android del TBox');return}
+ app('enableHome');
+});
+window.rushHomeState=function(info){
+ var txt=info&&info.selected?'Rush Launcher es el inicio predeterminado de Android':
+         info&&info.available?'Rush Launcher disponible para elegir como inicio':
+         'Pulsa Elegir Rush Launcher como inicio para configurar Android';
+ write('homeStatus',txt);
+};
+$('rushVehicle').addEventListener('error',function(){
+ if(this.getAttribute('src')!=='rush_hero.jpg'){
+  this.src='rush_hero.jpg';
+  this.classList.add('fallback-gray-car');
+ }
+});
 $('returnOriginal').addEventListener('click',function(){app('exit')});
 $('requestGps').addEventListener('click',function(){if(nativeApp)window.Rush.askGps();else notice('GPS requiere Android')});
 $('openBluetooth').addEventListener('click',function(){app('bluetoothSettings')});
