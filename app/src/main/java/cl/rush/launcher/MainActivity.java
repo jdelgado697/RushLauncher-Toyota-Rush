@@ -55,6 +55,7 @@ public class MainActivity extends Activity implements LocationListener {
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
     private ObdReader obdReader;
     private SpotifyConnectClient spotifyConnect;
+    private SpotifyArtworkFetcher spotifyArtwork;
     private WebView webView;
     private LocationManager locationManager;
     private boolean pageLoaded = false;
@@ -73,6 +74,8 @@ public class MainActivity extends Activity implements LocationListener {
     private String spotifyTrack = "";
     private String spotifyArtist = "";
     private String spotifyAlbum = "";
+    private String spotifyTrackUri = "";
+    private String spotifyCover = "";
     private long spotifyDurationMs = 0;
     private long spotifyPositionMs = 0;
     private long spotifyPositionReceivedAt = 0;
@@ -93,6 +96,13 @@ public class MainActivity extends Activity implements LocationListener {
                 spotifyTrack = intent.getStringExtra("track") == null ? "" : intent.getStringExtra("track");
                 spotifyArtist = intent.getStringExtra("artist") == null ? "" : intent.getStringExtra("artist");
                 spotifyAlbum = intent.getStringExtra("album") == null ? "" : intent.getStringExtra("album");
+                String incomingUri = intent.getStringExtra("id");
+                if (incomingUri == null) incomingUri = "";
+                if (!incomingUri.equals(spotifyTrackUri)) {
+                    spotifyTrackUri = incomingUri;
+                    spotifyCover = "";
+                    if (spotifyArtwork != null) spotifyArtwork.lookup(spotifyTrackUri);
+                }
                 // Spotify documenta length en segundos (Integer).
                 spotifyDurationMs = Math.max(0, intent.getIntExtra("length", 0)) * 1000L;
                 spotifyPositionMs = 0L;
@@ -129,6 +139,8 @@ public class MainActivity extends Activity implements LocationListener {
             payload.put("track", spotifyTrack);
             payload.put("artist", spotifyArtist);
             payload.put("album", spotifyAlbum);
+            payload.put("trackUri", spotifyTrackUri);
+            payload.put("cover", spotifyCover);
             payload.put("playing", spotifyPlaying == null ? JSONObject.NULL : spotifyPlaying.booleanValue());
             payload.put("hasData", !spotifyTrack.isEmpty() || spotifyPlaying != null);
             payload.put("app", "Spotify");
@@ -149,6 +161,13 @@ public class MainActivity extends Activity implements LocationListener {
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
+        spotifyArtwork = new SpotifyArtworkFetcher((uri, coverUrl) -> {
+            // Evita que una respuesta de otra canción sustituya la imagen actual.
+            if (uri != null && uri.equals(spotifyTrackUri)) {
+                spotifyCover = coverUrl;
+                sendSpotifyState();
+            }
+        });
         registerSpotifyReceiver();
         spotifyConnect = new SpotifyConnectClient(this, new SpotifyConnectClient.Callback() {
             @Override public void event(String expression) {
@@ -822,6 +841,7 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onDestroy() {
+        if (spotifyArtwork != null) spotifyArtwork.shutdown();
         if (spotifyConnect != null) spotifyConnect.destroy();
         if (spotifyReceiverRegistered) {
             try { unregisterReceiver(spotifyReceiver); } catch (RuntimeException ignored) { }
