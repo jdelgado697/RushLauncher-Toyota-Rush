@@ -55,11 +55,8 @@ jobs:
           assert 'Representación ilustrativa de un mapa' not in html
           assert 'window.RushLiveMap.updatePosition' in js
           assert 'id="routePanel"' in html
-          assert 'id="musicProgress"' in html
-          assert 'id="enableMediaAccess"' in html
           assert 'data-action="route"' in html
           assert 'Abrir Waze' not in html
-          assert 'window.rushActivePlayback' in js
           assert 'window.rushDockApps' in js
           assert 'setRealLogo(icon,item.icon)' in js
           assert 'class="dock-label"' in html
@@ -73,19 +70,8 @@ jobs:
           assert 'iconExecutor.execute' in native
           assert 'QUERY_ALL_PACKAGES' not in manifest
           assert 'android.permission.QUERY_ALL_PACKAGES' not in manifest
-          assert 'window.rushMediaAccess' in js
           assert 'window.Rush.navigate' in js
-          assert 'window.Rush.seekMedia' in js
-          assert 'MediaSessionManager' in native
-          assert 'refreshMediaSession()' in native
-          assert 'requestMediaAccess()' in native
           assert 'private void openMaps(String destination)' in native
-          manifest_service = 'android:name=".PlaybackAccessService"'
-          assert manifest_service in manifest
-          service = Path("app/src/main/java/cl/rush/launcher/PlaybackAccessService.java").read_text(encoding="utf-8")
-          assert 'extends NotificationListenerService' in service
-          assert 'getNotification().extras' not in service
-          assert 'getText' not in service
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
           assert 'requestAnimationFrame' in mapjs
@@ -101,14 +87,35 @@ jobs:
           assert 'public void getWeather(double latitude, double longitude)' in native
           assert 'com.spotify.music.metadatachanged' in native
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
-          assert 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
+          assert 'NotificationListenerService' not in manifest
+          assert 'PlaybackAccessService' not in manifest
+          assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in manifest
+          assert 'ACCESSIBILITY' not in manifest
+          assert 'MediaSessionManager' not in native
+          assert 'requestMediaAccess' not in native
+          assert 'requestMediaAccess' not in js
+          assert 'id="mediaPermission"' not in html
+          assert 'id="musicHelp"' in html
+          assert 'AudioManager audio' in native
+          assert 'dispatchMediaKeyEvent' in native
+          assert not Path("app/src/main/java/cl/rush/launcher/PlaybackAccessService.java").exists()
           assert 'rush_turntable.js' not in html
-          print("OK: Dashboard 3.0, apps, GPS, Spotify y clima")
+          print("OK: Rush 3.3.1 sin acceso a notificaciones, logos reales, mapas y controles multimedia")
           PY
 
       - name: Compilar APK de prueba
         run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Verificar manifiesto final de APK
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          if "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -E 'PlaybackAccessService|NotificationListenerService|BIND_NOTIFICATION_LISTENER_SERVICE|MEDIA_CONTENT_CONTROL|ACCESSIBILITY_SERVICE'; then
+            echo "La APK incluye capacidades sensibles prohibidas."
+            exit 1
+          fi
+          echo "OK: APK sin servicio de lectura de notificaciones"
 
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
