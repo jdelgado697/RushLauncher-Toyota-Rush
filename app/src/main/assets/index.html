@@ -85,6 +85,13 @@
 .music-seek span{font-size:8px;white-space:nowrap;color:var(--sub)}
 #spotifyClientId,#spotifyRedirect{font-family:ui-monospace,monospace;font-size:12px}
 #spotifyConnectStatus{font-weight:700}
+
+/* Spotify 3.5: primero la aplicación nativa; API solo opción avanzada. */
+.spotify-advanced{margin:10px 0;padding:10px 12px;border-radius:12px;background:var(--card,rgba(125,128,160,.08));border:1px solid rgba(100,115,175,.24)}
+.spotify-advanced summary{font-weight:750;font-size:13px;cursor:pointer;padding:4px 0}
+.spotify-advanced[open] summary{margin-bottom:12px}
+#spotifyEmbedContainer{min-height:352px;width:100%;background:#151515;border-radius:12px}
+#spotifyEmbedContainer iframe{display:block}
 </style>
 </head>
 <body>
@@ -207,32 +214,45 @@
  </div>
 </div>
 <div class="scrim" id="musicPanel" hidden>
- <div class="sheet" role="dialog" aria-modal="true" aria-label="Conectar Spotify">
-  <div class="sheet-head"><h2>Spotify Connect</h2><button class="close" type="button" data-close="musicPanel">Cerrar ✕</button></div>
-  <p class="muted">Vincula Spotify de forma oficial para mostrar canción, artista, carátula, progreso y controlar la reproducción. Requiere Spotify Premium, internet y una aplicación registrada en Spotify for Developers.</p>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Opciones de Spotify">
+  <div class="sheet-head"><h2>Spotify en tu Toyota</h2><button class="close" type="button" data-close="musicPanel">Cerrar ✕</button></div>
   <div class="set-line">
-   <h3>1. Configurar aplicación de Spotify</h3>
-   <p class="muted">Crea o selecciona tu aplicación en Spotify for Developers. Registra exactamente esta dirección en sus Redirect URIs:</p>
-   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherxli://spotify/callback" readonly aria-label="Dirección de redirección para copiar"/>
-   <p class="muted">Introduce solo tu Client ID público de 32 caracteres. Nunca compartas ni ingreses un Client Secret.</p>
-   <input class="searchapps" id="spotifyClientId" type="text" maxlength="32" placeholder="Client ID de Spotify (32 caracteres)" autocomplete="off" autocapitalize="off" spellcheck="false"/>
+   <h3>Reproducción directa — sin Spotify Developers</h3>
+   <p class="muted">Abre Spotify en el Android del TBox, reproduce una canción y vuelve a Rush Launcher. Los botones del panel envían reproducir/pausar y anterior/siguiente a Android.</p>
    <div class="tile-buttons">
-    <button type="button" class="actionbtn" id="spotifyDevelopers">Abrir Spotify Developers</button>
+    <button class="actionbtn highlight" type="button" data-action="spotify">Abrir Spotify</button>
+    <button class="actionbtn" type="button" data-action="spotifyPlaylist">Abrir mi playlist</button>
+    <button class="actionbtn" type="button" id="spotifyEmbedOpen">Reproductor web de mi playlist</button>
+   </div>
+   <p class="muted">Para ver el título, artista y avance sin crear una app en Developers, busca en los ajustes de Spotify <strong>Device Broadcast Status</strong> y actívalo si existe. No todas las versiones ofrecen esta función. Sin ella, la música puede reproducirse normalmente, pero Rush Launcher no tendrá los datos de la canción.</p>
+  </div>
+  <details class="spotify-advanced">
+   <summary>Integración avanzada por Spotify API (opcional)</summary>
+   <p class="muted">Solo para cuentas que puedan registrar una aplicación en Spotify for Developers. Permite metadatos, carátula y búsqueda de estado desde Spotify Connect con autorización OAuth PKCE.</p>
+   <p class="muted">Registra exactamente esta URI de retorno:</p>
+   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherxli://spotify/callback" readonly aria-label="Redirección Spotify"/>
+   <p class="muted">Introduce solamente el Client ID público (nunca Client Secret).</p>
+   <input class="searchapps" id="spotifyClientId" type="text" maxlength="32" placeholder="Client ID (32 caracteres)" autocomplete="off" autocapitalize="off" spellcheck="false"/>
+   <div class="tile-buttons">
+    <button type="button" class="actionbtn" id="spotifyDevelopers">Spotify Developers</button>
     <button type="button" class="actionbtn" id="spotifySaveClientId">Guardar Client ID</button>
    </div>
-  </div>
-  <div class="set-line">
-   <h3>2. Autorizar y controlar</h3>
-   <p class="muted" id="spotifyConnectStatus" role="status">Spotify no vinculado</p>
+   <p id="spotifyConnectStatus" class="muted" role="status">No vinculado mediante API</p>
    <div class="tile-buttons">
-    <button class="actionbtn highlight" type="button" id="spotifyLogin">Conectar Spotify</button>
+    <button class="actionbtn highlight" type="button" id="spotifyLogin">Conectar cuenta</button>
     <button class="actionbtn" type="button" id="spotifyRefresh">Actualizar canción</button>
     <button class="actionbtn" type="button" id="spotifyDisconnect">Desconectar</button>
-    <button class="actionbtn" type="button" data-action="spotify">Abrir Spotify</button>
    </div>
-  </div>
-  <p class="muted">Se abrirá el navegador para iniciar sesión y conceder permisos. Rush Launcher no recibe tu contraseña: guarda únicamente el token de sesión cifrado con Android Keystore. Puedes desconectar Spotify en cualquier momento. La música debe estar reproduciéndose en un dispositivo Spotify Connect activo. Cuando no puedas usar la API, siguen disponibles los botones multimedia Android.</p>
-  <p class="muted">Por seguridad y para evitar distracciones, realiza esta configuración con el vehículo estacionado.</p>
+  </details>
+  <p class="muted">No se solicitan permisos de lectura de notificaciones. El reproductor web puede ofrecer solo fragmentos si el WebView del TBox no admite reproducción cifrada. Configura todo con el vehículo estacionado.</p>
+ </div>
+</div>
+<div class="scrim" id="spotifyEmbedPanel" hidden>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Reproductor web de playlist de Spotify">
+  <div class="sheet-head"><h2>Mi playlist · Spotify</h2><button class="close" type="button" id="spotifyEmbedClose">Cerrar ✕</button></div>
+  <div id="spotifyEmbedContainer" aria-label="Playlist de Spotify"></div>
+  <p class="muted">Reproducción a través del reproductor oficial de Spotify. Si no funciona completo en el TBox, pulsa «Abrir mi playlist» para utilizar la aplicación oficial.</p>
+  <button class="actionbtn highlight" type="button" data-action="spotifyPlaylist">Abrir en Spotify</button>
  </div>
 </div>
 <div class="scrim" id="routePanel" hidden>
