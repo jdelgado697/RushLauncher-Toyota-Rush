@@ -1,4 +1,4 @@
-# Rush Launcher 3.2.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.3.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -85,3 +85,15 @@ La imagen fija del Toyota Rush usa recorte SVG sobre fotografía local para inte
 ### Pruebas
 - El workflow de GitHub compila APK debug y valida las conexiones UI/nativas.
 - Verificar en el TBox el permiso de sesión multimedia, que el reproductor está visible, que el botón de mapa externo encuentra navegador compatible y que la reproducción real muestra información. Compilar no certifica funcionamiento en el hardware.
+
+
+## Versión 3.3.0 — íconos originales de las aplicaciones
+- El launcher obtiene los **íconos originales** de las aplicaciones que Android declara como lanzables usando \`PackageManager.queryIntentActivities(ACTION_MAIN + CATEGORY_LAUNCHER)\` y \`ResolveInfo.loadIcon()\`. No descarga logos desde internet ni reproduce imitaciones.
+- El menú **Apps** lista nombre e ícono real de cada aplicación visible y permite buscarla y abrirla; no enumera servicios ocultos ni necesita \`QUERY_ALL_PACKAGES\`. Los logos se convierten en PNG local de 64×64 y se muestran como imágenes \`data:\` dentro del WebView. Se usa caché y un hilo auxiliar para minimizar carga al abrir el menú.
+- La barra de accesos **Mapas, Spotify y AutoKit** selecciona automáticamente el logo de la aplicación realmente instalada. AutoKit reconoce las variantes Carlinkit/manstep/ZLink disponibles, y Mapas reconoce proveedores compatibles. Si falta el programa, mantiene el pictograma genérico: no muestra un logo de un producto no instalado.
+- Los accesos **Apps, Bluetooth y Radio FM original Toyota** mantienen íconos neutrales del sistema, ya que no representan necesariamente aplicaciones Android. Radio FM no controla el sintonizador original desde el TBox.
+- El panel de música muestra el logo real del reproductor Android que esté activo si este ofrece una actividad de lanzamiento visible. Cuando no es posible leer el ícono, se usa el pictograma genérico. No se descargan carátulas de terceros.
+- Los íconos se actualizan al reabrir el launcher y al acceder a Apps; los paquetes visibles varían según el firmware del TBox. Este cambio no modifica el firmware ni agrega permisos sensibles.
+- El mapa GPS real, el menú de rutas, las funciones OBD, los controles musicales y el modo claro/oscuro de 3.2 se conservan.
+
+**Verificación de hardware pendiente:** compilar la APK no confirma que todos los fabricantes expongan su icono al PackageManager. Algunos TBox restringen ciertas apps del sistema; en ese caso el botón muestra el símbolo genérico.
