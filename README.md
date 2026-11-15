@@ -1,4 +1,4 @@
-# Rush Launcher 3.5.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.6.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -146,3 +146,12 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 3. Para título/artista, buscar en Spotify > Ajustes > Device Broadcast Status. Si no aparece, esta compatibilidad no está disponible en esa versión; no se mostrarán datos inventados.
 4. Probar **Abrir mi playlist**. Si la instalación de Spotify no admite el intent, verificar el navegador y Spotify Web.
 5. Probar Embed solo como alternativa. Si la radio no dispone de DRM compatible, utilizar Spotify nativo.
+
+## Rush Launcher 3.6.0 — carátulas originales de Spotify sin Client ID
+- Spotify envía `id` en el broadcast oficial `com.spotify.music.metadatachanged`, además de `track`, `artist` y `album`. Solo se consulta portada cuando cambia ese identificador.
+- Se consulta **Spotify oEmbed** para la URL `https://open.spotify.com/track/{id}` (o episodio), con `GET https://open.spotify.com/oembed?url=...`. La respuesta oficial incluye `thumbnail_url` cuando está disponible. No se requieren Spotify Developers, OAuth, Client ID, permisos de notificaciones ni cambios en la cuenta.
+- Se limita la URL recibida a CDNs de imágenes de Spotify (i.scdn.co, mosaic.scdn.co, image-cdn-*.spotifycdn.com), siempre por HTTPS, y se dibuja en el panel Música. Si falta portada, hay error HTTP o internet, se muestra el ícono original sin inventar imágenes.
+- Consultas fuera del hilo principal; timeout de conexión y lectura de 7 segundos; caché local de 96 pistas durante la sesión y verificación del ID antes de mostrar una imagen tardía. No se almacenan contraseñas ni se comparte ubicación.
+- Se conservan mapa GPS, Spotify nativo, barra de controles, progreso aproximado, playlist y menú de Apps.
+- El servidor Spotify oEmbed recibe la URL pública de la pista para responder; el servicio necesita internet. Algunas pistas locales, episodios o contenidos privados pueden carecer de portada. El cambio está validado por compilación, pero la carga real debe comprobarse en el Carlinkit TBox Lite S.
+- No se modifican los permisos del manifiesto ni se anula Google Play Protect.
