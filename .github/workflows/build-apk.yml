@@ -40,6 +40,7 @@ jobs:
       - name: Validar interfaz y funciones
         run: |
           node --check app/src/main/assets/dashboard.js
+          node --check app/src/main/assets/live_map.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -47,6 +48,16 @@ jobs:
           native=Path("app/src/main/java/cl/rush/launcher/MainActivity.java").read_text(encoding="utf-8")
           manifest=Path("app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
           assert '<script src="dashboard.js"></script>' in html
+          assert '<script src="live_map.js"></script>' in html
+          assert 'id="mapTileLayer"' in html and 'id="mapRecenter"' in html
+          assert 'id="mapZoomIn"' in html and 'id="mapZoomOut"' in html
+          assert '© OpenStreetMap contributors' in html
+          assert 'Representación ilustrativa de un mapa' not in html
+          assert 'window.RushLiveMap.updatePosition' in js
+          mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
+          assert 'https://tile.openstreetmap.org/' in mapjs
+          assert 'requestAnimationFrame' in mapjs
+          assert 'RushLauncher/3.1.0' in native
           assert 'rush_hero.jpg' in html and Path("app/src/main/assets/rush_hero.jpg").stat().st_size>0
           assert 'id="rushClip"' in html
           assert ':root[data-theme=dark] .mapgraphic svg' in html
