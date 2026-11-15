@@ -52,6 +52,18 @@
 :root[data-theme=dark] .map-tool{background:#293455e8;color:#ecedff}
 :root[data-theme=dark] .mapgraphic.realmap .mapnote{background:#24334bdc;color:#eff4ff}
 :root[data-theme=dark] .map-attribution{background:#24334bdc;color:#e1eaff}
+
+/* v3.2 · integración multimedia real y navegación sin Waze */
+.music-seek{display:flex;align-items:center;gap:7px;min-width:0;padding-top:2px}
+.music-seek input{flex:1;min-width:0;height:12px;accent-color:var(--accent);touch-action:pan-x}
+.music-seek span{font-size:8px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.musicbrand{flex-wrap:wrap}
+.music-seek[hidden],#mediaPermission[hidden]{display:none!important}
+@media(max-width:860px){
+ .musicbrand #mediaPermission{font-size:8px;padding:2px 5px;border-radius:7px;background:var(--btn)}
+ .music-seek{gap:4px;padding-top:0}
+ .music-seek span{font-size:7px}
+}
 </style>
 </head>
 <body>
@@ -91,7 +103,7 @@
    <span class="mapnote" id="locationStatus">Esperando GPS</span>
    <div class="map-attribution" aria-label="Derechos de autor OpenStreetMap">© OpenStreetMap contributors</div>
   </div>
-  <button type="button" class="mapcta" data-action="map">Abrir Waze <svg class="icon"><use href="#i-arrow"/></svg></button>
+  <button type="button" class="mapcta" data-action="route">Navegar <svg class="icon"><use href="#i-arrow"/></svg></button>
  </section>
  <div class="rightarea">
   <section class="cararea" aria-label="Mi Toyota Rush">
@@ -106,12 +118,13 @@
    <section class="music glass" aria-label="Reproductor multimedia">
     <button type="button" class="album" data-action="spotify" aria-label="Abrir Spotify"><svg class="icon"><use href="#i-music"/></svg></button>
     <div class="musicbody">
-     <div class="musicbrand"><span class="spotify-dot">●</span> Spotify <button type="button" id="musicHelp" class="moretext" aria-label="Detalles del reproductor">ⓘ</button></div>
+     <div class="musicbrand"><span class="spotify-dot">●</span> <span id="mediaBrand">Música</span> <button type="button" id="mediaPermission" class="moretext" aria-label="Autorizar información musical">Vincular</button><button type="button" id="musicHelp" class="moretext" aria-label="Detalles del reproductor">ⓘ</button></div>
      <div class="musicrow">
       <div class="musicnames"><strong id="songTitle">Sin datos de Spotify</strong><small id="songArtist">Abre Spotify para reproducir</small></div>
       <div class="musicctrl"><button data-media="previous" type="button" aria-label="Canción anterior"><svg class="icon"><use href="#i-prev"/></svg></button><button id="musicToggle" data-media="toggle" class="primary" type="button" aria-label="Reproducir">▶</button><button data-media="next" type="button" aria-label="Canción siguiente"><svg class="icon"><use href="#i-next"/></svg></button></div>
      </div>
-     <div class="musicbase"><small id="songState" class="songstate">Metadatos no disponibles</small><button type="button" class="moretext" data-action="spotify">Abrir ↗</button></div>
+     <div class="musicbase"><small id="songState" class="songstate">Sin reproducir</small><button type="button" class="moretext" data-action="spotify">Abrir ↗</button></div>
+     <div id="mediaProgressRow" class="music-seek" hidden><input id="musicProgress" type="range" min="0" max="100" value="0" aria-label="Posición de la canción"><span id="musicTime">0:00 / 0:00</span></div>
     </div>
    </section>
    <section class="weather glass" aria-label="Clima actual">
@@ -126,7 +139,7 @@
 </main>
 <nav class="dock" aria-label="Accesos principales">
  <button class="dockbtn" type="button" data-action="apps"><span class="dockicon"><svg class="icon"><use href="#i-apps"/></svg></span>Apps</button>
- <button class="dockbtn" type="button" data-action="map"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span>Mapas</button>
+ <button class="dockbtn" type="button" data-action="route"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span>Mapas</button>
  <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span>Spotify</button>
  <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
  <button class="dockbtn" type="button" data-action="bluetoothSettings"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-bluetooth"/></svg></span>Bluetooth</button>
@@ -170,11 +183,22 @@
  </div>
 </div>
 <div class="scrim" id="musicPanel" hidden>
- <div class="sheet" role="dialog" aria-modal="true" aria-label="Información musical">
-  <div class="sheet-head"><h2>Spotify y música</h2><button class="close" type="button" data-close="musicPanel">Cerrar ✕</button></div>
-  <p class="muted">Los controles multimedia envían las órdenes anteriores/siguiente/reproducir-pausar a la sesión activa de Android. Abre Spotify y comienza una reproducción antes de utilizarlos.</p>
-  <p class="muted">Para mostrar título, artista y estado, algunas versiones de Spotify permiten activar «Device Broadcast Status» en sus ajustes. Si Spotify no transmite esos datos, no aparecerán en el launcher. No se requiere acceso a notificaciones.</p>
-  <button class="actionbtn highlight" type="button" data-action="spotify">Abrir Spotify</button>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración de música">
+  <div class="sheet-head"><h2>Vincular reproductor</h2><button class="close" type="button" data-close="musicPanel">Cerrar ✕</button></div>
+  <p class="muted">Rush Launcher puede mostrar título, artista, duración y reproducción de Spotify o del reproductor multimedia activo del TBox. Con autorización, los controles de play/pausa, anterior, siguiente y posición actuarán sobre esa sesión.</p>
+  <p id="mediaAccessStatus" class="muted">Sin acceso multimedia: pulsa Autorizar</p>
+  <p class="muted"><strong>Privacidad:</strong> Android solicita activar «Acceso a notificaciones» para esta integración. Rush Launcher utiliza esa autorización exclusivamente para consultar sesiones multimedia: no lee, guarda ni transmite textos de notificaciones. Puedes desactivarla en Ajustes. Esta autorización es opcional.</p>
+  <div class="tile-buttons"><button class="actionbtn highlight" type="button" id="enableMediaAccess">Autorizar integración</button><button class="actionbtn" type="button" id="mediaRefresh">Actualizar música</button><button class="actionbtn" type="button" data-action="spotify">Abrir Spotify</button></div>
+  <p class="muted">Si no autorizas, algunos Spotify antiguos permiten «Device Broadcast Status» y se usarán esos datos cuando existan. Si Spotify no es compatible con tu TBox, se puede abrir su sitio web, pero la reproducción en el navegador puede no ofrecer controles externos.</p>
+ </div>
+</div>
+<div class="scrim" id="routePanel" hidden>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Iniciar navegación">
+  <div class="sheet-head"><h2>Navegar sin Waze</h2><button class="close" type="button" data-close="routePanel">Cerrar ✕</button></div>
+  <p class="muted">El mapa principal ya utiliza GPS real. Escribe un destino para abrir indicaciones en Google Maps o en un navegador compatible. No necesitas instalar Waze.</p>
+  <input type="text" id="routeDestination" class="searchapps" placeholder="Ej.: Temuco, Terminal de Buses, dirección…" maxlength="180" aria-label="Dirección o destino"/>
+  <div class="tile-buttons"><button class="actionbtn highlight" id="startRoute" type="button">Iniciar ruta</button><button class="actionbtn" id="justMap" type="button">Abrir mapa externo</button></div>
+  <p class="muted">La navegación guiada se realiza fuera del launcher. Si no hay aplicación compatible, se intentará abrir Google Maps en el navegador.</p>
  </div>
 </div>
 <div id="toast" class="toast" hidden></div>
