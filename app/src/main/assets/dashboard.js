@@ -134,7 +134,7 @@ function weatherWord(code){
 function updateWeather(){
  write('weatherToggle',saved.weather?'Desactivar clima':'Activar clima');
  write('weatherConsent',saved.weather?'Desactivar clima':'Activar clima');
- if(!saved.weather){write('weatherTemp','—°');write('weatherDescription','Clima desactivado');write('weatherRange','Actívalo para consultar tu ubicación');write('weatherIcon','☀');return}
+ if(!saved.weather){write('weatherTemp','—°');write('weatherDescription','Clima desactivado');write('weatherRange','Actívalo para consultar tu ubicación');write('weatherIcon','—');return}
  if(state.weather&&state.weather.ok){
    var v=state.weather.current||{},day=state.weather.daily||{};
    write('weatherTemp',typeof v.temperature_2m==='number'?Math.round(v.temperature_2m)+'°':'—°');
@@ -145,7 +145,7 @@ function updateWeather(){
  }else{
    write('weatherTemp','—°');write('weatherDescription',state.weatherLoading?'Consultando…':'Sin datos de clima');
    write('weatherRange',state.location?'Revisa tu conexión a internet':'GPS necesario');
-   write('weatherIcon','☁');
+   write('weatherIcon','· · ·');
  }
 }
 function refreshWeather(force){
