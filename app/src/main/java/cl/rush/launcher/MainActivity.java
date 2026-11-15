@@ -11,6 +11,11 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import android.util.Base64;
+import android.util.LruCache;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
@@ -58,6 +63,9 @@ public class MainActivity extends Activity implements LocationListener {
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
+    // Iconos del PackageManager, sin descargas ni archivos externos.
+    private final ExecutorService iconExecutor = Executors.newSingleThreadExecutor();
+    private final LruCache<String, String> appIconCache = new LruCache<>(128);
     private volatile long lastWeatherRequest = 0L;
     private volatile double lastWeatherLat = 999.0;
     private volatile double lastWeatherLon = 999.0;
@@ -378,30 +386,137 @@ public class MainActivity extends Activity implements LocationListener {
         return getPackageManager().queryIntentActivities(query, 0);
     }
 
-    private void sendInstalledApps() {
-        JSONArray result = new JSONArray();
+    private static final String[] AUTOKIT_PACKAGES = {
+            "cn.manstep.phonemirrorBox",
+            "cn.manstep.phonemirrorBox2",
+            "com.carlinkit.autokit",
+            "com.zjinnova.zlink",
+            "com.suding.speedplay"
+    };
+    private static final String[] MAP_PACKAGES = {
+            "com.google.android.apps.maps",
+            "com.google.android.apps.mapslite",
+            "app.organicmaps",
+            "net.osmand",
+            "com.here.app.maps"
+    };
+
+    /** Devuelve un ícono real del launcher, no un logo inventado. */
+    private String pngIcon(android.content.pm.ResolveInfo info) {
+        if (info == null || info.activityInfo == null) return "";
+        String key = info.activityInfo.packageName + "/" + info.activityInfo.name;
+        String cached = appIconCache.get(key);
+        if (cached != null) return cached;
+        String data = "";
         try {
-            List<android.content.pm.ResolveInfo> apps = launcherApps();
-            java.util.Collections.sort(apps, (a, b) -> {
-                CharSequence first = a.loadLabel(getPackageManager());
-                CharSequence second = b.loadLabel(getPackageManager());
-                return String.valueOf(first).compareToIgnoreCase(String.valueOf(second));
-            });
-            java.util.Set<String> seen = new java.util.HashSet<>();
-            for (android.content.pm.ResolveInfo app : apps) {
-                if (app.activityInfo == null) continue;
-                String pkg = app.activityInfo.packageName;
-                if (pkg == null || pkg.equals(getPackageName()) || !seen.add(pkg)) continue;
-                JSONObject obj = new JSONObject();
-                String label = String.valueOf(app.loadLabel(getPackageManager()));
-                obj.put("name", label.isEmpty() ? pkg : label);
-                obj.put("package", pkg);
-                result.put(obj);
+            Drawable drawable = info.loadIcon(getPackageManager());
+            if (drawable != null) {
+                // 64×64 evita enviar bitmaps gigantes al WebView 800×480.
+                Bitmap bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(bmp);
+                drawable.setBounds(0, 0, 64, 64);
+                drawable.draw(canvas);
+                ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+                if (bmp.compress(Bitmap.CompressFormat.PNG, 90, encoded)) {
+                    data = "data:image/png;base64," +
+                            Base64.encodeToString(encoded.toByteArray(), Base64.NO_WRAP);
+                }
+                bmp.recycle();
             }
-        } catch (Exception e) {
-            message("No se pudo consultar el listado de aplicaciones");
+        } catch (Exception ignored) { }
+        appIconCache.put(key, data);
+        return data;
+    }
+
+    private android.content.pm.ResolveInfo findLauncherApp(
+            List<android.content.pm.ResolveInfo> apps, String name) {
+        for (android.content.pm.ResolveInfo info : apps) {
+            if (info.activityInfo != null && name.equals(info.activityInfo.packageName)) {
+                return info;
+            }
         }
-        javascript("window.rushInstalledApps(" + result.toString() + ");");
+        return null;
+    }
+
+    private android.content.pm.ResolveInfo firstLauncherApp(
+            List<android.content.pm.ResolveInfo> apps, String[] packages) {
+        for (String pkg : packages) {
+            android.content.pm.ResolveInfo candidate = findLauncherApp(apps, pkg);
+            if (candidate != null) return candidate;
+        }
+        return null;
+    }
+
+    private android.content.pm.ResolveInfo findAutoKit(
+            List<android.content.pm.ResolveInfo> apps) {
+        android.content.pm.ResolveInfo preferred = firstLauncherApp(apps, AUTOKIT_PACKAGES);
+        if (preferred != null) return preferred;
+        for (android.content.pm.ResolveInfo app : apps) {
+            if (app.activityInfo == null) continue;
+            CharSequence title = app.loadLabel(getPackageManager());
+            String label = title == null ? "" :
+                    title.toString().toLowerCase(java.util.Locale.ROOT);
+            if (label.contains("autokit") || label.contains("zlink")) return app;
+        }
+        return null;
+    }
+
+    private JSONObject describeApp(android.content.pm.ResolveInfo info) throws Exception {
+        JSONObject result = new JSONObject();
+        String name = String.valueOf(info.loadLabel(getPackageManager()));
+        result.put("name", name.trim().isEmpty() ? info.activityInfo.packageName : name);
+        result.put("package", info.activityInfo.packageName);
+        String image = pngIcon(info);
+        if (!image.isEmpty()) result.put("icon", image);
+        return result;
+    }
+
+    /**
+     * Actualiza los íconos del dock desde el dispositivo; si la app no existe
+     * no se suministra un logo, por lo que queda el símbolo neutral del botón.
+     */
+    private void sendDockIcons() {
+        iconExecutor.execute(() -> {
+            JSONArray dock = new JSONArray();
+            try {
+                List<android.content.pm.ResolveInfo> apps = launcherApps();
+                android.content.pm.ResolveInfo[] choices = {
+                        firstLauncherApp(apps, MAP_PACKAGES),
+                        findLauncherApp(apps, "com.spotify.music"),
+                        findAutoKit(apps)
+                };
+                String[] actions = {"route", "spotify", "autokit"};
+                for (int n = 0; n < choices.length; n++) {
+                    if (choices[n] == null) continue;
+                    JSONObject item = describeApp(choices[n]);
+                    item.put("action", actions[n]);
+                    dock.put(item);
+                }
+            } catch (Exception ignored) { }
+            javascript("window.rushDockApps(" + dock.toString() + ");");
+        });
+    }
+
+    private void sendInstalledApps() {
+        iconExecutor.execute(() -> {
+            JSONArray result = new JSONArray();
+            try {
+                List<android.content.pm.ResolveInfo> apps = launcherApps();
+                java.util.Collections.sort(apps, (a, b) -> {
+                    String first = String.valueOf(a.loadLabel(getPackageManager()));
+                    String second = String.valueOf(b.loadLabel(getPackageManager()));
+                    return first.compareToIgnoreCase(second);
+                });
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                for (android.content.pm.ResolveInfo info : apps) {
+                    if (info.activityInfo == null) continue;
+                    String pkg = info.activityInfo.packageName;
+                    if (pkg == null || pkg.equals(getPackageName()) || !seen.add(pkg)) continue;
+                    result.put(describeApp(info));
+                }
+            } catch (Exception ignored) { }
+            javascript("window.rushInstalledApps(" + result.toString() + ");");
+        });
     }
 
     private void openInstalledApp(String pkg) {
@@ -791,7 +906,7 @@ public class MainActivity extends Activity implements LocationListener {
         mediaPolling = true;
         mainHandler.removeCallbacks(mediaPoller);
         mainHandler.post(mediaPoller);
-        if (pageLoaded) { startGps(); sendSpotifyState(); }
+        if (pageLoaded) { startGps(); sendSpotifyState(); sendDockIcons(); }
     }
 
     @Override
@@ -803,6 +918,7 @@ public class MainActivity extends Activity implements LocationListener {
             spotifyReceiverRegistered = false;
         }
         weatherExecutor.shutdownNow();
+        iconExecutor.shutdownNow();
         if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
             webView.removeJavascriptInterface("Rush");
@@ -822,6 +938,7 @@ public class MainActivity extends Activity implements LocationListener {
             runUi(() -> {
                 sendSpotifyState();
                 refreshMediaSession();
+                sendDockIcons();
             });
         }
         @JavascriptInterface public void requestMediaAccess() {
