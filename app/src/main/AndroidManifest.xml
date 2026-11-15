@@ -38,18 +38,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Opcional. El usuario debe autorizarlo manualmente.
-             El servicio no inspecciona ni guarda contenidos de notificaciones:
-             únicamente habilita consultar MediaSessionManager. -->
-        <service
-            android:name=".PlaybackAccessService"
-            android:label="Rush Launcher · Música"
-            android:exported="true"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
         <!-- Disabled until the user explicitly enables it in Rush Launcher settings. -->
         <activity-alias
             android:name=".HomeAlias"
