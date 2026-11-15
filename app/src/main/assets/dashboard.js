@@ -187,24 +187,35 @@ function renderMusic(info){
  setMusicIcon(s);
  write('songTitle',s?(s.track||'Reproducción activa'):'Sin datos de música');
  write('songArtist',s?(s.artist||'Artista no disponible'):'Inicia Spotify en el TBox');
- write('songState',s?(s.playing===true?'Reproduciendo':s.playing===false?'En pausa':'Estado no disponible'):(state.spotifyConnected?'Sin reproducción activa en Spotify':'Conecta Spotify para datos reales'));
+ write('songState',s?(s.playing===true?'Reproduciendo':s.playing===false?'En pausa':'Estado no disponible'):(state.spotifyConnected?'Sin reproducción activa en Spotify':'Abre Spotify en el TBox para escuchar música'));
  write('musicToggle',s&&s.playing?'Ⅱ':'▶');
  write('mediaBrand',s?(s.app||'Spotify'):'Música');
  $('musicToggle').setAttribute('aria-label',s&&s.playing?'Pausar música':'Reproducir música');
- var progress=$('musicProgress');
- var duration=api?Number(s.duration)||0:0;
- var position=api?Number(s.position)||0:0;
- show($('mediaProgressRow'),duration>0);
- if(duration>0){
-  progress.max=String(duration);
-  if(document.activeElement!==progress)progress.value=String(Math.min(Math.max(position,0),duration));
-  write('musicTime',spotifyTime(position)+' / '+spotifyTime(duration));
- }
+ if(s&&!s._receivedAt)s._receivedAt=Date.now();
+ updateMusicProgress();
 }
 function spotifyTime(ms){
  var seconds=Math.max(0,Math.floor((Number(ms)||0)/1000));
  return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
 }
+function updateMusicProgress(){
+ var s=state.currentPlayback,progress=$('musicProgress');
+ var duration=s?Math.max(0,Number(s.duration)||0):0;
+ show($('mediaProgressRow'),duration>0);
+ if(!duration)return;
+ var position=Math.max(0,Number(s.position)||0);
+ var receivedAt=Number(s.updatedAt||s._receivedAt)||Date.now();
+ if(s.playing===true){
+  var elapsed=Date.now()-receivedAt;
+  if(elapsed>=0&&elapsed<120000)position+=elapsed;
+ }
+ position=Math.min(duration,position);
+ progress.max=String(duration);
+ progress.disabled=s.source!=='api';
+ if(document.activeElement!==progress)progress.value=String(position);
+ write('musicTime',spotifyTime(position)+' / '+spotifyTime(duration)+(s.source==='broadcast'?' aprox.':''));
+}
+
 window.rushSpotifyState=function(info){
  state.spotify=info;
  if(!state.spotifyConnected)renderMusic(info);
@@ -268,6 +279,26 @@ $('spotifyDevelopers').addEventListener('click',function(){
  if(nativeApp)window.Rush.spotifyDevelopers();
 });
 $('musicHelp').addEventListener('click',function(){openOverlay('musicPanel')});
+$('spotifyEmbedOpen').addEventListener('click',function(){
+ var host=$('spotifyEmbedContainer');
+ if(!host.querySelector('iframe')){
+  var frame=document.createElement('iframe');
+  frame.title='Spotify · Tu playlist';
+  frame.src='https://open.spotify.com/embed/playlist/6jaGMO7U1463pu2nSX2V6v?theme=0';
+  frame.style.width='100%';
+  frame.style.height='352px';
+  frame.style.minHeight='352px';
+  frame.style.border='0';
+  frame.style.borderRadius='12px';
+  frame.setAttribute('allow','autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+  host.appendChild(frame);
+ }
+ openOverlay('spotifyEmbedPanel');
+});
+$('spotifyEmbedClose').addEventListener('click',function(){
+ $('spotifyEmbedContainer').textContent='';
+ closeOverlay('spotifyEmbedPanel');
+});
 $('startRoute').addEventListener('click',function(){
  var value=$('routeDestination').value.trim();
  if(!value){notice('Escribe un destino para iniciar ruta');return}
@@ -368,6 +399,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')Array.protot
 window.addEventListener('focus',function(){if(nativeApp)window.Rush.ready()});
 updateTime();updateWeather();renderMetrics();
 setInterval(updateTime,30000);
+setInterval(updateMusicProgress,1000);
 renderMusic(null);
 if(nativeApp){window.Rush.ready();window.Rush.askGps();}
 })();
