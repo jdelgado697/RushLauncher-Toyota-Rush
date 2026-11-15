@@ -599,8 +599,7 @@ public class MainActivity extends Activity implements LocationListener {
             android.content.pm.ResolveInfo resolved =
                     getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
             return resolved != null && resolved.activityInfo != null
-                    && getPackageName().equals(resolved.activityInfo.packageName)
-                    && resolved.activityInfo.name.endsWith("HomeAlias");
+                    && getPackageName().equals(resolved.activityInfo.packageName);
         } catch (Exception ignored) { return false; }
     }
 
