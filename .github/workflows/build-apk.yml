@@ -180,6 +180,10 @@ jobs:
           vm.runInNewContext(fs.readFileSync('app/src/main/assets/app_categories.js', 'utf8'), context);
           const groups = context.window.RushAppCategories;
           assert.strictEqual(groups.sections.map(g => g.id).join(','), 'video,audio,other');
+          assert.strictEqual(groups.group({name:'Xuper TV',package:'com.xuper.tv'}),'video');
+          assert.strictEqual(groups.group({name:'Xuper Play',package:'com.xuper.play'}),'video');
+          assert.strictEqual(groups.isXuper({name:'Xuper TV',package:'com.xuper.tv'}),true);
+          assert.strictEqual(groups.isXuper({name:'YouTube',package:'com.google.android.youtube'}),false);
           assert.strictEqual(groups.group({name:'Netflix',package:'com.netflix.mediaclient'}),'video');
           assert.strictEqual(groups.group({name:'YouTube',package:'com.google.android.youtube'}),'video');
           assert.strictEqual(groups.group({name:'Paramount+',package:'com.cbs.app'}),'video');
@@ -191,19 +195,21 @@ jobs:
           const sample = [
             {name:'Google Maps',package:'com.google.android.apps.maps'},
             {name:'YouTube',package:'com.google.android.youtube'},
+            {name:'Xuper TV',package:'com.xuper.tv'},
+            {name:'Xuper Play',package:'com.xuper.play'},
             {name:'Spotify',package:'com.spotify.music'},
             {name:'Netflix',package:'com.netflix.mediaclient'},
             {name:'Paramount+',package:'com.cbs.app'}
           ];
           const categorized = groups.categorize(sample);
-          assert.strictEqual(categorized.video.map(x=>x.name).join(','),'Netflix,Paramount+,YouTube');
+          assert.strictEqual(categorized.video.map(x=>x.name).join(','),'Xuper Play,Xuper TV,Netflix,Paramount+,YouTube');
           assert.strictEqual(categorized.audio.map(x=>x.name).join(','),'Spotify');
           assert.strictEqual(categorized.other.map(x=>x.name).join(','),'Google Maps');
           const query = 'netflix';
           const filtered = groups.categorize(sample.filter(x=>x.name.toLowerCase().includes(query)));
           assert.strictEqual(filtered.video.length,1);
           assert.strictEqual(filtered.audio.length,0);
-          console.log('OK: Streaming y video primero, música después, otras apps al final; búsqueda compatible.');
+          console.log('OK: Xuper primero entre videos; otros videos, música y otras apps ordenadas.');
           NODE
 
       - name: Compilar APK de prueba
