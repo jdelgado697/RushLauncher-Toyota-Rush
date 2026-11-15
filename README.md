@@ -1,4 +1,4 @@
-# Rush Launcher 3.4.0 · Toyota Rush 2021 XLI
+# Rush Launcher 3.5.0 · Toyota Rush 2021 XLI
 
 Launcher Android para **Carlinkit TBox Lite S** que se muestra en la radio original del Toyota mediante el sistema de conexión compatible. No reemplaza ni modifica el firmware C67 del vehículo.
 
@@ -128,3 +128,21 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 - No se pueden asegurar las decisiones de Google Play Protect desde el APK: se revisa el manifiesto para que no incluya los servicios sensibles que provocaron el riesgo anterior; la prueba final la realiza el dispositivo.
 - No existe bypass de Play Protect, root, accesibilidad, overlays ni permisos invasivos. La seguridad del sistema permanece activada.
 - Estado y errores se muestran dentro del panel Spotify. La aplicación maneja 401, 403, 404 y 429; las cuotas y las reglas de Spotify pueden variar.
+
+## Rush Launcher 3.5.0 — Spotify sin dependencia de Spotify Developers
+- La pantalla Música prioriza iniciar la **aplicación Spotify instalada** en Android. El dock y el botón Abrir no requieren Client ID, Spotify Developers ni acceso a notificaciones.
+- Nuevo botón **Abrir mi playlist**: intenta iniciar `spotify:playlist:6jaGMO7U1463pu2nSX2V6v` en la app oficial, y usa `https://open.spotify.com/playlist/6jaGMO7U1463pu2nSX2V6v` desde un navegador como alternativa.
+- Nuevo **reproductor web opcional** con Spotify Embed. Solo se carga al pulsar el botón. La reproducción íntegra depende del soporte DRM/EME y autenticación del WebView, y puede limitarse a previews; si falla, utilizar la app nativa.
+- Los botones de reproducción, pausa y saltos usan `AudioManager.dispatchMediaKeyEvent` cuando no hay Client ID autorizado. Android dirige estos eventos al reproductor multimedia activo: si se está reproduciendo otra app, puede recibirlos esa app.
+- Spotify documenta `com.spotify.music.metadatachanged` y `com.spotify.music.playbackstatechanged` con datos opcionales de tema, artista, álbum, duración, reproducción y posición. Rush Launcher los muestra si se difunden en el TBox. La opción `Device Broadcast Status` debe habilitarse en Spotify si la versión instalada la ofrece; no se puede activar desde Rush Launcher ni garantizar su existencia.
+- La duración/posición se presenta como **aproximada** cuando procede de broadcasts; la barra no permite adelantar mediante broadcasts porque esa API no admite seek. El control de posición avanzado sigue disponible solo con OAuth Web API autorizado.
+- La interfaz avanzada por Spotify API permanece en una sección desplegable **opcional**, útil cuando Spotify permita crear el Client ID.
+- El mapa real GPS, los iconos originales de las apps, la selección de temas y las demás funciones existentes no cambian.
+- El archivo APK se comprueba automáticamente para impedir que se incorporen permisos de lectura de notificaciones o accesibilidad. Esto **no asegura** la aprobación de Google Play Protect, cuya decisión se verifica al instalar en el hardware.
+
+### Prueba en Carlinkit TBox Lite S
+1. Con el auto detenido, abrir Spotify desde la barra del launcher. Iniciar música en Spotify y volver a Rush Launcher.
+2. Comprobar si play/pausa y siguiente/anterior controlan realmente Spotify. Si no, confirmar que Spotify esté siendo el reproductor Android activo.
+3. Para título/artista, buscar en Spotify > Ajustes > Device Broadcast Status. Si no aparece, esta compatibilidad no está disponible en esa versión; no se mostrarán datos inventados.
+4. Probar **Abrir mi playlist**. Si la instalación de Spotify no admite el intent, verificar el navegador y Spotify Web.
+5. Probar Embed solo como alternativa. Si la radio no dispone de DRM compatible, utilizar Spotify nativo.
