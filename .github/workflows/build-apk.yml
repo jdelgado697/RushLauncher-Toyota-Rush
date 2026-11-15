@@ -104,6 +104,21 @@ jobs:
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
           assert 'window.rushSpotifyConnectState' in js
+          assert 'id="spotifyEmbedOpen"' in html
+          assert 'id="spotifyEmbedPanel"' in html
+          assert 'id="spotifyEmbedContainer"' in html
+          assert 'data-action="spotifyPlaylist"' in html
+          assert 'Device Broadcast Status' in html
+          assert 'https://open.spotify.com/embed/playlist/6jaGMO7U1463pu2nSX2V6v' in js
+          assert 'window.Rush.media(cmd)' in js
+          assert 'spotifyTime(position)' in js
+          assert 'updateMusicProgress' in js
+          assert 'spotifyDurationMs' in native and 'spotifyPositionMs' in native
+          assert 'com.spotify.music.metadatachanged' in native
+          assert 'getIntExtra("playbackPosition", 0)' in native
+          assert 'spotify:playlist:' in native
+          assert 'spotifyPlaylist' in native
+          assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in manifest
           for field in ['spotifyClientId','spotifySaveClientId','spotifyLogin',
                         'spotifyDisconnect','spotifyRefresh','spotifyDevelopers',
                         'spotifyRedirect','musicProgress','musicCover']:
@@ -129,7 +144,7 @@ jobs:
           assert 'dispatchMediaKeyEvent' in native
           assert not Path("app/src/main/java/cl/rush/launcher/PlaybackAccessService.java").exists()
           assert 'rush_turntable.js' not in html
-          print("OK: Rush 3.4 con OAuth PKCE Spotify y sin permisos sensibles")
+          print("OK: Rush 3.5 Spotify via aplicación oficial, broadcasts opcionales y Embed; API opcional")
           PY
 
       - name: Compilar APK de prueba
