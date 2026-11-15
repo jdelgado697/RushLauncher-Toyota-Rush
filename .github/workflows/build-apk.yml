@@ -54,6 +54,25 @@ jobs:
           assert '© OpenStreetMap contributors' in html
           assert 'Representación ilustrativa de un mapa' not in html
           assert 'window.RushLiveMap.updatePosition' in js
+          assert 'id="routePanel"' in html
+          assert 'id="musicProgress"' in html
+          assert 'id="enableMediaAccess"' in html
+          assert 'data-action="route"' in html
+          assert 'Abrir Waze' not in html
+          assert 'window.rushActivePlayback' in js
+          assert 'window.rushMediaAccess' in js
+          assert 'window.Rush.navigate' in js
+          assert 'window.Rush.seekMedia' in js
+          assert 'MediaSessionManager' in native
+          assert 'refreshMediaSession()' in native
+          assert 'requestMediaAccess()' in native
+          assert 'private void openMaps(String destination)' in native
+          manifest_service = 'android:name=".PlaybackAccessService"'
+          assert manifest_service in manifest
+          service = Path("app/src/main/java/cl/rush/launcher/PlaybackAccessService.java").read_text(encoding="utf-8")
+          assert 'extends NotificationListenerService' in service
+          assert 'getNotification().extras' not in service
+          assert 'getText' not in service
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
           assert 'requestAnimationFrame' in mapjs
