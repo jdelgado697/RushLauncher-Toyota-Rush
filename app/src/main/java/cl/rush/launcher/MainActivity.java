@@ -73,6 +73,9 @@ public class MainActivity extends Activity implements LocationListener {
     private String spotifyTrack = "";
     private String spotifyArtist = "";
     private String spotifyAlbum = "";
+    private long spotifyDurationMs = 0;
+    private long spotifyPositionMs = 0;
+    private long spotifyPositionReceivedAt = 0;
     private Boolean spotifyPlaying = null;
     private boolean spotifyReceiverRegistered = false;
 
@@ -90,8 +93,14 @@ public class MainActivity extends Activity implements LocationListener {
                 spotifyTrack = intent.getStringExtra("track") == null ? "" : intent.getStringExtra("track");
                 spotifyArtist = intent.getStringExtra("artist") == null ? "" : intent.getStringExtra("artist");
                 spotifyAlbum = intent.getStringExtra("album") == null ? "" : intent.getStringExtra("album");
+                // Spotify documenta length en segundos (Integer).
+                spotifyDurationMs = Math.max(0, intent.getIntExtra("length", 0)) * 1000L;
+                spotifyPositionMs = 0L;
+                spotifyPositionReceivedAt = System.currentTimeMillis();
             } else if (SPOTIFY_PLAYBACK.equals(action)) {
                 spotifyPlaying = intent.getBooleanExtra("playing", false);
+                spotifyPositionMs = Math.max(0L, intent.getIntExtra("playbackPosition", 0));
+                spotifyPositionReceivedAt = System.currentTimeMillis();
             } else return;
             sendSpotifyState();
         }
@@ -124,6 +133,10 @@ public class MainActivity extends Activity implements LocationListener {
             payload.put("hasData", !spotifyTrack.isEmpty() || spotifyPlaying != null);
             payload.put("app", "Spotify");
             payload.put("source", "broadcast");
+            payload.put("package", "com.spotify.music");
+            payload.put("duration", spotifyDurationMs);
+            payload.put("position", spotifyPositionMs);
+            payload.put("updatedAt", spotifyPositionReceivedAt);
         } catch (Exception ignored) { }
         javascript("window.rushSpotifyState(" + payload.toString() + ");");
     }
@@ -435,6 +448,29 @@ public class MainActivity extends Activity implements LocationListener {
      * Google Maps instalado -> navegador instalado -> sitio Maps mediante ACTION_VIEW.
      * Los servicios web de rutas requieren internet.
      */
+    private static final String SPOTIFY_PLAYLIST_ID = "6jaGMO7U1463pu2nSX2V6v";
+
+    /** Abrir la playlist del usuario en Spotify oficial, o en navegador si no está. */
+    private void openSpotifyPlaylist() {
+        try {
+            Intent nativeSpotify = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("spotify:playlist:" + SPOTIFY_PLAYLIST_ID));
+            nativeSpotify.setPackage("com.spotify.music");
+            startActivity(nativeSpotify);
+            return;
+        } catch (Exception ignored) {
+            // Algunos Android Box no exponen este intent.
+        }
+        try {
+            Intent webSpotify = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://open.spotify.com/playlist/" + SPOTIFY_PLAYLIST_ID));
+            webSpotify.addCategory(Intent.CATEGORY_BROWSABLE);
+            startActivity(webSpotify);
+        } catch (Exception error) {
+            message("No se encontró Spotify ni navegador compatible en el TBox");
+        }
+    }
+
     private void openSpotifyWeb() {
         try {
             Intent site = new Intent(Intent.ACTION_VIEW,
@@ -480,6 +516,9 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void openRoute(String action) {
         switch (action) {
+            case "spotifyPlaylist":
+                openSpotifyPlaylist();
+                break;
             case "spotify":
                 Intent installedSpotify = getPackageManager().getLaunchIntentForPackage("com.spotify.music");
                 if (installedSpotify != null) {
