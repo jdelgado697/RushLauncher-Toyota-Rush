@@ -165,6 +165,9 @@ window.rushWeather=function(data){
 function mmss(ms){ms=Math.max(0,Math.floor(Number(ms)||0));return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')}
 function renderMusic(s){
  state.currentPlayback=(s&&s.hasData)?s:null;
+ if(state.currentPlayback&&state.currentPlayback.package&&validAppIcon(state.currentPlayback.icon)){
+  state.appIcons[state.currentPlayback.package]=state.currentPlayback.icon;
+ }
  setMusicIcon(state.currentPlayback);
  var has=!!(s&&s.hasData);
  var fromSession=has&&s.source==='session';
