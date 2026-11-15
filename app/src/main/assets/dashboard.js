@@ -77,18 +77,19 @@ function renderMetrics(){
 }
 window.rushGpsStatus=function(status){
  state.gpsStatus=String(status||'Sin información');if(/desactivado|sin permiso|no disponible|sin proveedor|requerido/i.test(state.gpsStatus))state.gps=null;
+ if(window.RushLiveMap)window.RushLiveMap.setStatus(state.gpsStatus);
  renderMetrics();
 };
 window.rushGpsData=function(speed,heading){
  state.gps=(typeof speed==='number'&&isFinite(speed))?Math.max(0,speed):null;
  if(state.gps!==null)state.gpsStatus='GPS disponible';
+ if(window.RushLiveMap)window.RushLiveMap.updateHeading(heading);
  renderMetrics();
 };
 window.rushPosition=function(lat,lon,accuracy){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
  var old=state.location;state.location={lat:lat,lon:lon,accuracy:accuracy};
- write('locationStatus','Ubicación GPS disponible');
- write('mapSubtitle','Ubicación obtenida · abrir Waze para navegar');
+ if(window.RushLiveMap)window.RushLiveMap.updatePosition(lat,lon,accuracy);
  if(saved.weather&&(!old||Math.abs(old.lat-lat)+Math.abs(old.lon-lon)>.07))refreshWeather(false);
 };
 window.rushObdStatus=function(status){
