@@ -29,7 +29,9 @@
     'com.stremio.one':true,
     'com.stremio.android':true,
     'com.directv.dtvla':true,
-    'com.clarovideo.android':true
+    'com.clarovideo.android':true,
+    'com.smartboxtv.nunchee.fanatiz':true,
+    'com.adc.basquetpass':true
   };
   var audioPackages = {
     'com.spotify.music':true,
@@ -63,13 +65,13 @@
     if (videoPackages[pkg]) return 'video';
     if (audioPackages[pkg]) return 'audio';
     // Variantes del nombre del paquete en marcas y versiones de Android TV.
-    if (/(^|\.)(netflix|youtube|paramount|disneyplus|crunchyroll|plutotv|tubitv|stremio|videolan|kodi|iptv|hbo|maxstream|plexapp)(\.|$)/.test(pkg)
+    if (/(^|\.)(netflix|youtube|paramount|disneyplus|crunchyroll|plutotv|tubitv|stremio|videolan|kodi|iptv|hbo|maxstream|plexapp|fanatiz|basquetpass)(\.|$)/.test(pkg)
         && !/music|kids|studio/.test(pkg)) return 'video';
     if (/(^|\.)(spotify|tidal|deezer|soundcloud|audioplayer|ytmusic)(\.|$)/.test(pkg)) return 'audio';
 
     if (/^(youtube music|yt music|spotify|spotify lite|deezer|tidal|apple music|amazon music|soundcloud|poweramp|aimp|reproductor de musica|music player)(\b|$)/.test(name))
       return 'audio';
-    if (/^(youtube|netflix|paramount(\+| plus)?|disney(\+| plus)?|prime video|amazon prime video|hbo max|max|pluto tv|tubi|crunchyroll|twitch|plex|kodi|vlc|mx player|stremio|apple tv|iptv|directv go|dgo|claro video|clarovideo|movistar plus|vix|videos|reproductor de video)(\b|\+|$)/.test(name))
+    if (/^(youtube|netflix|paramount(\+| plus)?|disney(\+| plus)?|prime video|amazon prime video|hbo max|max|pluto tv|fanatiz|basquet ?pass|basket ?pass|tubi|crunchyroll|twitch|plex|kodi|vlc|mx player|stremio|apple tv|iptv|directv go|dgo|claro video|clarovideo|movistar plus|vix|videos|reproductor de video)(\b|\+|$)/.test(name))
       return 'video';
     return 'other';
   }
