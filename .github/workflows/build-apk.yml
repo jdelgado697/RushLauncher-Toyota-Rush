@@ -88,6 +88,34 @@ jobs:
           assert 'com.spotify.music.metadatachanged' in native
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
+          spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
+          assert 'rushlauncherxli://spotify/callback' in spotify
+          assert 'grant_type=authorization_code' in spotify
+          assert 'code_challenge_method' in spotify
+          assert 'grant_type=refresh_token' in spotify
+          assert 'AndroidKeyStore' in spotify
+          assert 'AES/GCM/NoPadding' in spotify
+          assert 'user-modify-playback-state' in spotify
+          assert '/pause' in spotify and '/play' in spotify
+          assert '/next' in spotify and '/previous' in spotify
+          assert '/seek?position_ms=' in spotify
+          assert 'rushlauncherxli' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'SpotifyConnectClient' in native
+          assert 'spotifyConnect.handleRedirect(intent)' in native
+          assert 'window.rushSpotifyApiPlayback' in js
+          assert 'window.rushSpotifyConnectState' in js
+          for field in ['spotifyClientId','spotifySaveClientId','spotifyLogin',
+                        'spotifyDisconnect','spotifyRefresh','spotifyDevelopers',
+                        'spotifyRedirect','musicProgress','musicCover']:
+              if field == 'musicCover':
+                  assert 'musicCover' in js
+              else:
+                  assert 'id="'+field+'"' in html,field
+          assert 'spotifyClientId(' in native
+          assert 'spotifyControl(' in native
+          assert 'spotifySeek(' in native
+          assert 'NotificationListenerService' not in spotify
+          assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in spotify
           assert 'NotificationListenerService' not in manifest
           assert 'PlaybackAccessService' not in manifest
           assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in manifest
@@ -101,7 +129,7 @@ jobs:
           assert 'dispatchMediaKeyEvent' in native
           assert not Path("app/src/main/java/cl/rush/launcher/PlaybackAccessService.java").exists()
           assert 'rush_turntable.js' not in html
-          print("OK: Rush 3.3.1 sin acceso a notificaciones, logos reales, mapas y controles multimedia")
+          print("OK: Rush 3.4 con OAuth PKCE Spotify y sin permisos sensibles")
           PY
 
       - name: Compilar APK de prueba
