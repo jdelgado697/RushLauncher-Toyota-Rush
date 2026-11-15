@@ -72,6 +72,19 @@
 .album.real-icon:after{display:none}
 .dock-label{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:860px){.dock-label{font-size:9px}}
+
+/* Spotify 3.4: panel real de Spotify Connect y carátula */
+.album.spotify-cover{overflow:hidden;background:transparent!important;padding:0}
+.album.spotify-cover .rush-cover{width:100%;height:100%;object-fit:cover;border-radius:12px;display:block}
+.album.spotify-cover>.icon,.album.spotify-cover>.rush-app-icon{display:none}
+.album.spotify-cover:after{display:none}
+.spotify-info-pill{font-size:9px;color:var(--accent);font-weight:800}
+.music-seek{display:flex;align-items:center;gap:5px;padding-top:3px}
+.music-seek[hidden]{display:none!important}
+.music-seek input{accent-color:#36bb77;touch-action:pan-x}
+.music-seek span{font-size:8px;white-space:nowrap;color:var(--sub)}
+#spotifyClientId,#spotifyRedirect{font-family:ui-monospace,monospace;font-size:12px}
+#spotifyConnectStatus{font-weight:700}
 </style>
 </head>
 <body>
@@ -132,6 +145,10 @@
       <div class="musicctrl"><button data-media="previous" type="button" aria-label="Canción anterior"><svg class="icon"><use href="#i-prev"/></svg></button><button id="musicToggle" data-media="toggle" class="primary" type="button" aria-label="Reproducir">▶</button><button data-media="next" type="button" aria-label="Canción siguiente"><svg class="icon"><use href="#i-next"/></svg></button></div>
      </div>
      <div class="musicbase"><small id="songState" class="songstate">Sin reproducir</small><button type="button" class="moretext" data-action="spotify">Abrir ↗</button></div>
+     <div class="music-seek" id="mediaProgressRow" hidden>
+      <input id="musicProgress" type="range" min="0" max="100" value="0" aria-label="Cambiar posición de canción" />
+      <span id="musicTime">0:00 / 0:00</span>
+     </div>
     </div>
    </section>
    <section class="weather glass" aria-label="Clima actual">
@@ -190,12 +207,32 @@
  </div>
 </div>
 <div class="scrim" id="musicPanel" hidden>
- <div class="sheet" role="dialog" aria-modal="true" aria-label="Ayuda para reproducir música">
-  <div class="sheet-head"><h2>Spotify y música</h2><button class="close" type="button" data-close="musicPanel">Cerrar ✕</button></div>
-  <p class="muted">Los botones de reproducir, pausar, anterior y siguiente envían comandos multimedia estándar de Android al reproductor activo.</p>
-  <p class="muted">El título y artista solo pueden verse cuando la app de música difunde esos datos. Algunas versiones antiguas de Spotify permiten activar «Device Broadcast Status» en sus propios ajustes. No garantizamos que esté disponible en este TBox.</p>
-  <p class="muted"><strong>Privacidad:</strong> Rush Launcher ya no solicita acceso a notificaciones ni acceso privilegiado a sesiones musicales.</p>
-  <button class="actionbtn highlight" type="button" data-action="spotify">Abrir Spotify</button>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Conectar Spotify">
+  <div class="sheet-head"><h2>Spotify Connect</h2><button class="close" type="button" data-close="musicPanel">Cerrar ✕</button></div>
+  <p class="muted">Vincula Spotify de forma oficial para mostrar canción, artista, carátula, progreso y controlar la reproducción. Requiere Spotify Premium, internet y una aplicación registrada en Spotify for Developers.</p>
+  <div class="set-line">
+   <h3>1. Configurar aplicación de Spotify</h3>
+   <p class="muted">Crea o selecciona tu aplicación en Spotify for Developers. Registra exactamente esta dirección en sus Redirect URIs:</p>
+   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherxli://spotify/callback" readonly aria-label="Dirección de redirección para copiar"/>
+   <p class="muted">Introduce solo tu Client ID público de 32 caracteres. Nunca compartas ni ingreses un Client Secret.</p>
+   <input class="searchapps" id="spotifyClientId" type="text" maxlength="32" placeholder="Client ID de Spotify (32 caracteres)" autocomplete="off" autocapitalize="off" spellcheck="false"/>
+   <div class="tile-buttons">
+    <button type="button" class="actionbtn" id="spotifyDevelopers">Abrir Spotify Developers</button>
+    <button type="button" class="actionbtn" id="spotifySaveClientId">Guardar Client ID</button>
+   </div>
+  </div>
+  <div class="set-line">
+   <h3>2. Autorizar y controlar</h3>
+   <p class="muted" id="spotifyConnectStatus" role="status">Spotify no vinculado</p>
+   <div class="tile-buttons">
+    <button class="actionbtn highlight" type="button" id="spotifyLogin">Conectar Spotify</button>
+    <button class="actionbtn" type="button" id="spotifyRefresh">Actualizar canción</button>
+    <button class="actionbtn" type="button" id="spotifyDisconnect">Desconectar</button>
+    <button class="actionbtn" type="button" data-action="spotify">Abrir Spotify</button>
+   </div>
+  </div>
+  <p class="muted">Se abrirá el navegador para iniciar sesión y conceder permisos. Rush Launcher no recibe tu contraseña: guarda únicamente el token de sesión cifrado con Android Keystore. Puedes desconectar Spotify en cualquier momento. La música debe estar reproduciéndose en un dispositivo Spotify Connect activo. Cuando no puedas usar la API, siguen disponibles los botones multimedia Android.</p>
+  <p class="muted">Por seguridad y para evitar distracciones, realiza esta configuración con el vehículo estacionado.</p>
  </div>
 </div>
 <div class="scrim" id="routePanel" hidden>
