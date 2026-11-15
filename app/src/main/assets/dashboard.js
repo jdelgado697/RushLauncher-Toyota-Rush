@@ -5,7 +5,7 @@ var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
 try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'auto',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'auto',weather:false}};
-var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,mediaAccess:false,mediaSession:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
+var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
 function app(action){if(nativeApp)window.Rush.open(action);else notice('Disponible al instalar en Android')}
@@ -162,62 +162,24 @@ window.rushWeather=function(data){
  if(!state.weather&&data&&data.message)write('weatherRange',String(data.message).slice(0,70));
  updateWeather();
 };
-function mmss(ms){ms=Math.max(0,Math.floor(Number(ms)||0));return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')}
-function renderMusic(s){
- state.currentPlayback=(s&&s.hasData)?s:null;
- if(state.currentPlayback&&state.currentPlayback.package&&validAppIcon(state.currentPlayback.icon)){
-  state.appIcons[state.currentPlayback.package]=state.currentPlayback.icon;
- }
- setMusicIcon(state.currentPlayback);
- var has=!!(s&&s.hasData);
- var fromSession=has&&s.source==='session';
- var duration=Number(s&&s.duration)||0,position=Number(s&&s.position)||0;
- write('songTitle',has?(s.track||'Reproductor activo'):'Sin canción detectada');
- write('songArtist',has?(s.artist||s.album||'Artista no disponible'):'Inicia música en el TBox');
- write('songState',has?(s.playing?'Reproduciendo':(s.playing===false?'En pausa':'Estado no disponible')):(state.mediaAccess?'Ninguna reproducción activa':'Vincula música para ver canciones'));
- write('musicToggle',has&&s.playing?'Ⅱ':'▶');
- write('mediaBrand',has?(s.app||'Música'):'Música');
- $('musicToggle').setAttribute('aria-label',has&&s.playing?'Pausar música':'Reproducir música');
- var progress=$('musicProgress');
- show($('mediaPermission'),!state.mediaAccess);
- show($('mediaProgressRow'),fromSession&&duration>0);
- if(fromSession&&duration>0){
-   progress.max=String(Math.max(1,duration));
-   if(!progress.matches(':active'))progress.value=String(Math.min(Math.max(0,position),duration));
-   progress.disabled=!s.canSeek;
-   write('musicTime',mmss(position)+' / '+mmss(duration));
- }
+/* Controles multimedia Android. Los metadatos son opcionales:
+   algunos Spotify ofrecen broadcasts, pero no existe acceso a sesiones globales. */
+function renderMusic(info){
+ var s=info&&info.hasData?info:null;
+ state.currentPlayback=s;
+ if(s&&s.package&&validAppIcon(s.icon))state.appIcons[s.package]=s.icon;
+ setMusicIcon(s);
+ write('songTitle',s?(s.track||'Reproducción activa'):'Sin datos de música');
+ write('songArtist',s?(s.artist||'Artista no disponible'):'Inicia Spotify en el TBox');
+ write('songState',s?(s.playing===true?'Reproduciendo':s.playing===false?'En pausa':'Estado no disponible'):'Los datos de Spotify dependen de su compatibilidad');
+ write('musicToggle',s&&s.playing?'Ⅱ':'▶');
+ write('mediaBrand',s?(s.app||'Spotify'):'Música');
+ $('musicToggle').setAttribute('aria-label',s&&s.playing?'Pausar música':'Reproducir música');
 }
-window.rushMediaAccess=function(granted){
- state.mediaAccess=!!granted;
- write('mediaAccessStatus',state.mediaAccess?'Acceso multimedia autorizado':'Sin acceso multimedia: pulsa Autorizar');
- if(!state.mediaAccess){state.mediaSession=false;renderMusic(state.spotify)}
- else{show($('mediaPermission'),false)}
+window.rushSpotifyState=function(info){
+ state.spotify=info;
+ renderMusic(info);
 };
-window.rushActivePlayback=function(s){
- if(!state.mediaAccess)return;
- state.mediaSession=!!(s&&s.hasData);
- renderMusic(s);
-};
-window.rushSpotifyState=function(s){
- state.spotify=s;
- if(!state.mediaAccess)renderMusic(s);
-};
-$('mediaPermission').addEventListener('click',function(){
- if(nativeApp&&typeof window.Rush.requestMediaAccess==='function')window.Rush.requestMediaAccess();
- else notice('Acceso multimedia disponible en Android');
-});
-$('enableMediaAccess').addEventListener('click',function(){
- if(nativeApp&&typeof window.Rush.requestMediaAccess==='function')window.Rush.requestMediaAccess();
- else notice('Disponible en el TBox');
-});
-$('mediaRefresh').addEventListener('click',function(){
- if(nativeApp&&typeof window.Rush.refreshMedia==='function')window.Rush.refreshMedia();
-});
-$('musicProgress').addEventListener('change',function(){
- if(state.mediaAccess&&nativeApp&&typeof window.Rush.seekMedia==='function')
-   window.Rush.seekMedia(Math.round(Number(this.value)||0));
-});
 Array.prototype.forEach.call(document.querySelectorAll('[data-media]'),function(b){
  b.addEventListener('click',function(){if(nativeApp)window.Rush.media(b.getAttribute('data-media'));else notice('Requiere Android')})
 });
