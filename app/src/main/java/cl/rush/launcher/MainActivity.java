@@ -58,6 +58,7 @@ public class MainActivity extends Activity implements LocationListener {
     private SpotifyArtworkFetcher spotifyArtwork;
     private WebView webView;
     private LocationManager locationManager;
+    private boolean gpsRequested = false; // Solo después de un toque explícito del usuario.
     // Filtros de antigüedad y prioridad GPS para no alternar con red imprecisa.
     private long lastFixElapsedNs = 0L;
     private long lastAccurateGpsNs = 0L;
@@ -210,7 +211,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/3.8.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.0.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -218,9 +219,8 @@ public class MainActivity extends Activity implements LocationListener {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageLoaded = true;
-                // Solicita permiso de ubicación al iniciar la app y empieza a
-                // leer el GPS automáticamente, si el TBox dispone de proveedor.
-                startGps();
+                // Modo multimedia: sin solicitud de GPS al iniciar ni mapa activo.
+                // El GPS se inicia solo al pulsar Activar clima o Solicitar GPS.
                 sendSpotifyState();
                 sendHomeState();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
@@ -882,7 +882,10 @@ public class MainActivity extends Activity implements LocationListener {
     protected void onResume() {
         super.onResume();
         if (spotifyConnect != null) spotifyConnect.resume();
-        if (pageLoaded) { startGps(); sendSpotifyState(); sendDockIcons(); sendHomeState(); }
+        if (pageLoaded) {
+            if (gpsRequested) startGps();
+            sendSpotifyState(); sendDockIcons(); sendHomeState();
+        }
     }
 
     @Override
@@ -973,7 +976,7 @@ public class MainActivity extends Activity implements LocationListener {
             runUi(() -> openMaps(destination));
         }
         @JavascriptInterface public void askGps() {
-            runUi(() -> startGps());
+            runUi(() -> { gpsRequested = true; startGps(); });
         }
         @JavascriptInterface public void getWeather(double latitude, double longitude) {
             runUi(() -> fetchWeather(latitude, longitude));
