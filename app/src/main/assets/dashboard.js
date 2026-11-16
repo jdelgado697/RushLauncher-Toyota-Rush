@@ -337,17 +337,12 @@ $('spotifyEmbedClose').addEventListener('click',function(){
  closeOverlay('spotifyEmbedPanel');
 });
 $('startRoute').addEventListener('click',function(){
- var value=$('routeDestination').value.trim();
- if(!value){notice('Escribe un destino para iniciar ruta');return}
- if(nativeApp&&typeof window.Rush.navigate==='function')window.Rush.navigate(value);
- else notice('La navegación requiere Android');
+ closeOverlay('routePanel');
+ app('autokit');
 });
 $('justMap').addEventListener('click',function(){
  closeOverlay('routePanel');
  app('maps');
-});
-$('routeDestination').addEventListener('keydown',function(ev){
- if(ev.key==='Enter'){$('startRoute').click();ev.preventDefault()}
 });
 
 /** URL local generado desde PackageManager de Android; nunca logos descargados. */
@@ -381,7 +376,7 @@ function setMusicIcon(media){
 }
 window.rushDockApps=function(apps){
  var available=Array.isArray(apps)?apps:[];
- var defaults={route:'Mapas',spotify:'Spotify',autokit:'AutoKit'};
+ var defaults={spotify:'Spotify',autokit:'CarPlay'};
  state.dockApps={};
  Object.keys(defaults).forEach(function(action){
   var button=document.querySelector('.dockbtn[data-action="'+action+'"]');
@@ -399,7 +394,7 @@ window.rushDockApps=function(apps){
   state.dockApps[a.action]=a.package;
   setRealLogo(button.querySelector('.dockicon'),a.icon);
   var caption=button.querySelector('.dock-label');
-  if(caption)caption.textContent=String(a.name||defaults[a.action]).slice(0,28);
+  if(caption)caption.textContent=a.action==='autokit'?'CarPlay':String(a.name||defaults[a.action]).slice(0,28);
  });
  setMusicIcon(state.currentPlayback);
 };
@@ -485,5 +480,5 @@ updateTime();updateWeather();renderMetrics();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
 renderMusic(null);
-if(nativeApp){window.Rush.ready();window.Rush.askGps();}
+if(nativeApp){window.Rush.ready();} // GPS solo bajo petición (clima / panel OBD).
 })();
