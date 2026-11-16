@@ -56,12 +56,14 @@ jobs:
           assert 'grid.appendChild(makeAppButton(item))' in js
           assert 'setRealLogo(icon,item.icon)' in js
           assert 'closeOverlay(\'appsPanel\')' in js
-          assert '<script src="live_map.js"></script>' in html
-          assert 'id="mapTileLayer"' in html and 'id="mapRecenter"' in html
-          assert 'id="mapZoomIn"' in html and 'id="mapZoomOut"' in html
-          assert '© OpenStreetMap contributors' in html
-          assert 'Representación ilustrativa de un mapa' not in html
-          assert 'window.RushLiveMap.updatePosition' in js
+          assert '<script src="live_map.js"></script>' not in html
+          assert 'id="mapTileLayer"' not in html
+          assert 'id="realMap"' not in html
+          assert 'Navega desde tu iPhone' in html
+          assert 'data-action="autokit"' in html
+          assert 'Abrir CarPlay' in html
+          assert 'CarPlay' in html
+          assert "window.Rush.askGps();} // GPS" not in js
           assert 'id="routePanel"' in html
           assert 'data-action="route"' in html
           assert 'Abrir Waze' not in html
@@ -78,25 +80,24 @@ jobs:
           assert 'iconExecutor.execute' in native
           assert 'QUERY_ALL_PACKAGES' not in manifest
           assert 'android.permission.QUERY_ALL_PACKAGES' not in manifest
-          assert 'window.Rush.navigate' in js
+          assert "app('autokit')" in js
           assert 'private void openMaps(String destination)' in native
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
           assert 'requestAnimationFrame' in mapjs
-          assert 'RushLauncher/3.8.0' in native
+          assert 'RushLauncher/4.0.0' in native
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
           assert 'src="rush_gray.webp"' in html and 'id="rushVehicle"' in html
           assert 'id="rushClip"' not in html
           assert 'mask-image:none!important' in html
-          assert 'MAX_CACHED_TILES=20' in mapjs
-          assert 'MIN_FOLLOW_METERS=1.0' in mapjs
-          assert 'PAN_DURATION_MS=380' in mapjs
-          assert "entry[1].style.display='none'" in mapjs
-          assert 'locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500L, 0f, this)' in native
-          assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1200L, 0f, this)' in native
-          assert 'followTo(lat,lon)' in mapjs
+          assert 'gpsRequested = false' in native
+          assert 'if (gpsRequested) startGps()' in native
+          assert 'gpsRequested = true; startGps()' in native
+          assert 'launchAutoKit()' in native
+          assert 'getLaunchIntentForPackage' in native
+          assert 'video' in Path("app/src/main/assets/app_categories.js").read_text(encoding="utf-8")
           assert 'id="chooseDefaultHome"' in html
           assert 'id="homeStatus"' in html
           assert "app('enableHome')" in js
