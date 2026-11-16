@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 3.0 · Toyota Rush XLI</title>
+<title>Rush Launcher 4.0 · Toyota Rush XLI · Multimedia y CarPlay</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -111,6 +111,17 @@
 .car-badges{bottom:0;right:2px}
 .map-tile{will-change:auto}
 .realmap{contain:layout paint}
+
+/* Modo multimedia y CarPlay: sin teselas ni GPS en segundo plano. */
+.carplay-panel{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px;padding:12px;background:linear-gradient(150deg,rgba(34,80,171,.17),rgba(37,162,210,.09));border:1px solid var(--line);border-radius:16px}
+.carplay-signet{width:62px;height:62px;min-height:50px;display:grid;place-items:center;border-radius:18px;color:#fff;background:linear-gradient(145deg,#176a9c,#23356c);box-shadow:0 6px 15px #10264b44}
+.carplay-signet svg{width:33px;height:33px}
+.carplay-panel strong{font-size:clamp(14px,1.5vw,20px);line-height:1.1}
+.carplay-panel p{margin:0;max-width:230px;color:var(--sub);font-size:clamp(10px,1.05vw,12px);line-height:1.35}
+.carplay-economy{font-size:9px;font-weight:800;letter-spacing:.1px;padding:5px 8px;border-radius:99px;color:var(--sub);background:var(--btn)}
+.carplay-guide{font-size:10px;font-weight:800;color:var(--accent2);padding:2px 8px;align-self:center}
+@media(max-width:860px){.carplay-panel{padding:5px;gap:5px}.carplay-signet{height:35px;min-height:35px;width:40px;border-radius:12px}.carplay-signet svg{width:22px;height:22px}.carplay-panel p{font-size:9px}.carplay-economy{font-size:8px;padding:3px 6px}.carplay-guide{font-size:9px}}
+@media(max-height:370px){.carplay-panel{padding:3px}.carplay-signet{display:none}.carplay-panel p{font-size:8px}.carplay-guide{display:none}}
 </style>
 </head>
 <body>
@@ -134,23 +145,16 @@
  <div class="topright"><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
 </header>
 <main class="main">
- <section class="mapcard glass" aria-label="Navegación">
-  <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-pin"/></svg></span><div><strong>Mapa GPS</strong><small id="mapSubtitle">Esperando ubicación real</small></div></div>
-  <div class="mapgraphic realmap" id="realMap" role="region" aria-label="Mapa real interactivo de OpenStreetMap con posición GPS" tabindex="0">
-   <div class="map-tile-layer" id="mapTileLayer" aria-hidden="true"></div>
-   <div class="map-position" id="mapPositionMarker" aria-label="Ubicación GPS del vehículo" style="display:none">
-    <div class="map-accuracy"></div><div class="map-point"></div><div class="map-arrow"></div>
-   </div>
-   <div class="map-loading" id="mapWaiting">Esperando ubicación GPS real…</div>
-   <div class="map-tools">
-    <button class="map-tool" type="button" id="mapZoomIn" aria-label="Acercar mapa">+</button>
-    <button class="map-tool" type="button" id="mapZoomOut" aria-label="Alejar mapa">−</button>
-    <button class="map-tool" type="button" id="mapRecenter" aria-label="Centrar mapa en el vehículo"><svg class="icon"><use href="#i-locate"/></svg></button>
-   </div>
-   <span class="mapnote" id="locationStatus">Esperando GPS</span>
-   <div class="map-attribution" aria-label="Derechos de autor OpenStreetMap">© OpenStreetMap contributors</div>
+ <section class="mapcard glass" aria-label="CarPlay y navegación desde iPhone">
+  <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-auto"/></svg></span><div><strong>CarPlay · Navegación</strong><small>La ruta se calcula en tu iPhone</small></div></div>
+  <div class="carplay-panel" aria-label="Acceso sin mapas en segundo plano">
+   <div class="carplay-signet"><svg class="icon"><use href="#i-auto"/></svg></div>
+   <strong>Navega desde tu iPhone</strong>
+   <p>Abre AutoKit para usar Apple Maps, Google Maps o Waze con CarPlay.</p>
+   <span class="carplay-economy">Mapa Android desactivado · Menor consumo</span>
   </div>
-  <button type="button" class="mapcta" data-action="route">Navegar <svg class="icon"><use href="#i-arrow"/></svg></button>
+  <button type="button" class="mapcta" data-action="autokit">Abrir CarPlay <svg class="icon"><use href="#i-arrow"/></svg></button>
+  <button type="button" class="carplay-guide" data-action="route">Cómo conectar el iPhone</button>
  </section>
  <div class="rightarea">
   <section class="cararea" aria-label="Mi Toyota Rush">
@@ -186,11 +190,11 @@
 </main>
 <nav class="dock" aria-label="Accesos principales">
  <button class="dockbtn" type="button" data-action="apps"><span class="dockicon"><svg class="icon"><use href="#i-apps"/></svg></span>Apps</button>
- <button class="dockbtn" type="button" data-action="route"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span><span class="dock-label">Mapas</span></button>
+ <button class="dockbtn" type="button" data-action="youtube"><span class="dockicon map"><svg class="icon"><use href="#i-apps"/></svg></span><span class="dock-label">YouTube</span></button>
  <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span><span class="dock-label">Spotify</span></button>
  <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
  <button class="dockbtn" type="button" data-action="bluetoothSettings"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-bluetooth"/></svg></span>Bluetooth</button>
- <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">AutoKit</span></button>
+ <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">CarPlay</span></button>
 </nav>
 </div>
 <div class="scrim" id="appsPanel" hidden>
@@ -281,16 +285,15 @@
  </div>
 </div>
 <div class="scrim" id="routePanel" hidden>
- <div class="sheet" role="dialog" aria-modal="true" aria-label="Iniciar navegación">
-  <div class="sheet-head"><h2>Navegar sin Waze</h2><button class="close" type="button" data-close="routePanel">Cerrar ✕</button></div>
-  <p class="muted">El mapa principal ya utiliza GPS real. Escribe un destino para abrir indicaciones en Google Maps o en un navegador compatible. No necesitas instalar Waze.</p>
-  <input type="text" id="routeDestination" class="searchapps" placeholder="Ej.: Temuco, Terminal de Buses, dirección…" maxlength="180" aria-label="Dirección o destino"/>
-  <div class="tile-buttons"><button class="actionbtn highlight" id="startRoute" type="button">Iniciar ruta</button><button class="actionbtn" id="justMap" type="button">Abrir mapa externo</button></div>
-  <p class="muted">La navegación guiada se realiza fuera del launcher. Si no hay aplicación compatible, se intentará abrir Google Maps en el navegador.</p>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Conectar Apple CarPlay">
+  <div class="sheet-head"><h2>Conectar iPhone a CarPlay</h2><button class="close" type="button" data-close="routePanel">Cerrar ✕</button></div>
+  <p class="muted">1. Enciende Bluetooth y Wi-Fi en tu iPhone. 2. Abre AutoKit. 3. Selecciona en el iPhone el nombre Bluetooth mostrado por el TBox y confirma el emparejamiento. 4. Una vez conectado, abre tu app de navegación desde CarPlay.</p>
+  <div class="tile-buttons"><button class="actionbtn highlight" id="startRoute" type="button">Abrir AutoKit / CarPlay</button><button class="actionbtn" id="justMap" type="button">Google Maps Android (alternativa)</button></div>
+  <p class="muted">CarPlay utiliza el iPhone. Rush Launcher no inicia rutas en el teléfono automáticamente. Si AutoKit no está disponible, vuelve al inicio original del TBox y búscalo.</p>
  </div>
 </div>
 <div id="toast" class="toast" hidden></div>
-<script src="live_map.js"></script>
+<!-- Modo multimedia: NO cargar mapas OSM ni animar teselas en segundo plano. -->
 <script src="app_categories.js"></script>
 <script src="dashboard.js"></script>
 </body></html>
