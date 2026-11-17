@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.0 · Toyota Rush XLI · Multimedia y CarPlay</title>
+<title>Rush Launcher 4.1 · Multimedia CarPlay y OBD · Toyota Rush XLI</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -122,6 +122,18 @@
 .carplay-guide{font-size:10px;font-weight:800;color:var(--accent2);padding:2px 8px;align-self:center}
 @media(max-width:860px){.carplay-panel{padding:5px;gap:5px}.carplay-signet{height:35px;min-height:35px;width:40px;border-radius:12px}.carplay-signet svg{width:22px;height:22px}.carplay-panel p{font-size:9px}.carplay-economy{font-size:8px;padding:3px 6px}.carplay-guide{font-size:9px}}
 @media(max-height:370px){.carplay-panel{padding:3px}.carplay-signet{display:none}.carplay-panel p{font-size:8px}.carplay-guide{display:none}}
+
+/* Rush Launcher 4.1 · Tablero OBD de lectura real, 800x480 y pantallas táctiles */
+.obd-sheet{width:min(780px,96vw);max-height:94vh;padding:14px;overflow-y:auto}
+.obd-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--text);font-size:12px;margin:0 0 10px}
+.obd-topline span{font-size:10px;color:var(--sub)}
+.obd-dashboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.obd-metric{display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:74px;min-width:0;padding:11px;border:1px solid var(--line);border-radius:15px;background:var(--glass-soft)}
+.obd-metric>span{font-size:11px;font-weight:750;color:var(--sub);line-height:1.1}
+.obd-metric>strong{font-size:clamp(15px,1.9vw,23px);font-variant-numeric:tabular-nums;letter-spacing:-.45px}
+.obd-metric>small{font-size:9px;color:var(--sub)}
+@media(max-width:860px){.obd-sheet{padding:10px}.obd-dashboard{gap:5px}.obd-metric{min-height:60px;padding:7px;gap:3px}.obd-metric>span{font-size:10px}.obd-metric>strong{font-size:15px}.obd-metric>small{font-size:8px}}
+@media(max-height:370px){.obd-metric{min-height:54px;padding:5px}.obd-topline{margin-bottom:5px}}
 </style>
 </head>
 <body>
@@ -160,7 +172,7 @@
   <section class="cararea" aria-label="Mi Toyota Rush">
    <img id="rushVehicle" class="carphoto" src="rush_gray.webp" alt="Toyota Rush 2021 XLI gris, vehículo completo" decoding="async" loading="eager" />
    <div class="car-label">Mi Toyota Rush · 2021 XLI</div>
-   <div class="car-badges"><button type="button" data-action="obd" id="obdInfo">OBD sin conectar</button><button type="button" data-action="obd" id="speedBadge">— km/h</button></div>
+   <div class="car-badges"><button type="button" data-action="obdDashboard" id="obdInfo">OBD sin conectar</button><button type="button" data-action="obdDashboard" id="speedBadge">— km/h</button></div>
   </section>
   <div class="widgets">
    <section class="music glass" aria-label="Reproductor multimedia">
@@ -193,7 +205,7 @@
  <button class="dockbtn" type="button" data-action="youtube"><span class="dockicon map"><svg class="icon"><use href="#i-apps"/></svg></span><span class="dock-label">YouTube</span></button>
  <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span><span class="dock-label">Spotify</span></button>
  <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
- <button class="dockbtn" type="button" data-action="bluetoothSettings"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-bluetooth"/></svg></span>Bluetooth</button>
+ <button class="dockbtn" type="button" data-action="obdDashboard"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-pin"/></svg></span>Tablero OBD</button>
  <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">CarPlay</span></button>
 </nav>
 </div>
@@ -207,7 +219,7 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 3.8</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher OBD 4.1</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -221,18 +233,39 @@
     <button type="button" class="actionbtn highlight" id="chooseDefaultHome">Elegir Rush Launcher como inicio</button>
     <button type="button" class="actionbtn" id="returnOriginal">Restaurar inicio original del TBox</button>
    </div>
-   <p class="muted">Prueba antes el mapa, Spotify y el botón de restauración. Algunos firmwares Carlinkit bloquean esta elección.</p>
+   <p class="muted">Prueba antes CarPlay, Spotify, el tablero OBD y el botón de restauración. Algunos firmwares Carlinkit bloquean esta elección.</p>
   </div>
  </div>
 </div>
 <div class="scrim" id="obdPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Conexión OBD2">
   <div class="sheet-head"><h2>OBD2 Bluetooth</h2><button class="close" data-close="obdPanel" type="button">Cerrar ✕</button></div>
-  <p class="muted">Solo ELM327 Bluetooth Classic vinculado con Android. Datos soportados: velocidad ECU, RPM y temperatura del refrigerante; dependen del automóvil.</p>
+  <p class="muted">ELM327 Bluetooth Classic vinculado con Android. Lectura de PIDs Mode 01 disponibles en la ECU; no realiza escrituras ni cambios al vehículo.</p>
   <p id="obdStatusText" class="muted">No conectado</p>
   <div class="tile-buttons"><button class="actionbtn highlight" type="button" id="scanDevices">Buscar vinculados</button><button class="actionbtn" type="button" id="disconnectObd">Desconectar</button><button type="button" class="actionbtn" data-action="bluetoothSettings">Ajustes Bluetooth</button></div>
   <div class="list" id="deviceList">Sin dispositivos</div>
-  <p class="muted">Velocidad: <span id="obdResult">Sin conexión</span> · RPM: <span id="rpmResult">—</span> · Refrigerante: <span id="coolantResult">—</span></p>
+  <p class="muted">Estado: <span id="obdResult">Sin conexión</span> · RPM: <span id="rpmResult">—</span> · Refrigerante: <span id="coolantResult">—</span></p><button type="button" class="actionbtn highlight" data-action="obdDashboard">Ver tablero avanzado</button>
+ </div>
+</div>
+<div class="scrim" id="obdDashboardPanel" hidden>
+ <div class="sheet obd-sheet" role="dialog" aria-modal="true" aria-label="Tablero OBD avanzado">
+  <div class="sheet-head"><h2>Tablero OBD · Toyota Rush</h2><button class="close" type="button" data-close="obdDashboardPanel">Cerrar ✕</button></div>
+  <div class="obd-topline"><strong id="obdAdvancedState">OBD desconectado</strong><span id="obdUpdatedAt">Sin datos</span></div>
+  <div class="obd-dashboard" aria-live="polite">
+   <div class="obd-metric"><span>Velocidad ECU</span><strong data-obd-metric="speed">—</strong><small data-obd-state="speed">Desconectado</small></div>
+   <div class="obd-metric"><span>Revoluciones</span><strong data-obd-metric="rpm">—</strong><small data-obd-state="rpm">Desconectado</small></div>
+   <div class="obd-metric"><span>Refrigerante</span><strong data-obd-metric="coolant">—</strong><small data-obd-state="coolant">Desconectado</small></div>
+   <div class="obd-metric"><span>Voltaje ELM</span><strong data-obd-metric="voltage">—</strong><small data-obd-state="voltage">Desconectado</small></div>
+   <div class="obd-metric"><span>Carga del motor</span><strong data-obd-metric="engineLoad">—</strong><small data-obd-state="engineLoad">Desconectado</small></div>
+   <div class="obd-metric"><span>Presión MAP</span><strong data-obd-metric="map">—</strong><small data-obd-state="map">Desconectado</small></div>
+   <div class="obd-metric"><span>Aire de admisión</span><strong data-obd-metric="iat">—</strong><small data-obd-state="iat">Desconectado</small></div>
+   <div class="obd-metric"><span>Acelerador</span><strong data-obd-metric="throttle">—</strong><small data-obd-state="throttle">Desconectado</small></div>
+   <div class="obd-metric"><span>Ajuste corto STFT</span><strong data-obd-metric="stft1">—</strong><small data-obd-state="stft1">Desconectado</small></div>
+   <div class="obd-metric"><span>Ajuste largo LTFT</span><strong data-obd-metric="ltft1">—</strong><small data-obd-state="ltft1">Desconectado</small></div>
+   <div class="obd-metric"><span>Temperatura catalizador</span><strong data-obd-metric="catalyst">—</strong><small data-obd-state="catalyst">Desconectado</small></div>
+  </div>
+  <div class="tile-buttons"><button type="button" class="actionbtn highlight" id="obdAdvancedConnect">Conectar ELM327</button><button type="button" class="actionbtn" data-action="bluetoothSettings">Bluetooth Android</button></div>
+  <p class="muted">Solo datos OBD-II reales de la ECU y voltaje reportado por el adaptador. La disponibilidad depende del vehículo. No usar para diagnosticar averías ni mirar la pantalla mientras conduces.</p>
  </div>
 </div>
 <div class="scrim" id="radioPanel" hidden>
