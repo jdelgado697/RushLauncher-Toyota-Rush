@@ -1,4 +1,4 @@
-/* Rush Launcher 4.13 — seguimiento, flecha GPS y mapa rumbo arriba.
+/* Rush Launcher 4.14 — seguimiento GPS suavizado y modo navegación por defecto.
  * OpenStreetMap raster: solo teselas visibles; sin precarga ni descargas masivas.
  * Sin biblioteca remota, sin rutas simuladas, siempre muestra atribución.
  * https://operations.osmfoundation.org/policies/tiles/
@@ -14,30 +14,142 @@ var note=document.getElementById('locationStatus');
 if(!host||!layer||!marker)return;
 var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
 var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=null;
+var displayCenter=null,motionStart=null,motionGoal=null,motionStarted=0,motionDuration=820;
+var motionFrame=null,lastMotionFrame=0,lastFixAt=0,paintedAt=0;
+var courseFrom=0,courseTarget=0,courseStarted=0,courseDuration=950;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
 var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=24,MAX_CACHED_TILES=32;
 var drawPending=false,lastStatus='Esperando ubicación Android';
 var osmtile='https://tile.openstreetmap.org/';
 var routeGeometry=null,destination=null,selecting=false,downPoint=null,moved=0;
 var driving=false,courseDegrees=0,hasCourse=false,speedKmh=0,visualShift=0,visualRotation=0;
-function updateWorldTransform(h){
+// Solo se transforman dos capas de mapa por GPU; las teselas se recolocan
+// puntualmente, NO en cada fotograma de animación. Sin GPS nuevo no se
+// inventa posición ni se sigue avanzando indefinidamente.
+function distanceFromPaintCenter(){
+ if(!center||!displayCenter)return {dx:0,dy:0,distance:0};
+ var a=mercator(center.lat,center.lon,zoom),b=mercator(displayCenter.lat,displayCenter.lon,zoom);
+ var dx=b.x-a.x,dy=b.y-a.y,worldWidth=TILE*Math.pow(2,zoom);
+ if(dx>worldWidth/2)dx-=worldWidth;
+ if(dx<-worldWidth/2)dx+=worldWidth;
+ return {dx:dx,dy:dy,distance:Math.hypot(dx,dy)};
+}
+function applyTransform(){
+ if(!active)return;
+ var w=host.clientWidth,h=host.clientHeight;
+ if(!w||!h)return;
  visualShift=driving&&following?Math.round(Math.min(72,Math.max(28,h*.16))):0;
  visualRotation=driving&&following&&hasCourse?-courseDegrees:0;
- var transform=driving&&following?
-   'translate3d(0,'+visualShift+'px,0) rotate('+visualRotation+'deg)':'';
+ var d=distanceFromPaintCenter();
+ var moving=driving&&following;
+ var tx=moving?-d.dx:0,ty=moving?-d.dy:0;
+ var transform=moving?
+  'translate3d(0,'+visualShift+'px,0) rotate('+visualRotation+'deg) translate3d('+
+   tx.toFixed(2)+'px,'+ty.toFixed(2)+'px,0)':'';
  layer.style.transformOrigin='50% 50%';
  routeSvg.style.transformOrigin='50% 50%';
- layer.style.transform=transform;routeSvg.style.transform=transform;
- host.classList.toggle('is-navigating',driving&&following);
- marker.classList.toggle('is-navigation',driving&&following);
- marker.classList.toggle('is-unoriented',driving&&following&&!hasCourse);
+ layer.style.transform=transform;
+ routeSvg.style.transform=transform;
+ host.classList.toggle('is-navigating',moving);
+ marker.classList.toggle('is-navigation',moving);
+ marker.classList.toggle('is-unoriented',moving&&!hasCourse);
+ if(moving&&position){
+  marker.style.left=(w/2)+'px';
+  marker.style.top=(h/2+visualShift)+'px';
+  marker.style.display='block';
+ }
+ updateDestinationPin(w,h);
+}
+function updateWorldTransform(h){applyTransform();}
+function updateDestinationPin(w,h){
+ if(!destination||!center){destinationPin.hidden=true;return;}
+ var target=displayCenter&&driving&&following?displayCenter:center;
+ var base=mercator(target.lat,target.lon,zoom),p=screenPoint(destination.lat,destination.lon,w,h,base);
+ var x=p.x,y=p.y;
+ if(driving&&following){
+  var angle=visualRotation*Math.PI/180,dx=x-w/2,dy=y-h/2;
+  x=w/2+dx*Math.cos(angle)-dy*Math.sin(angle);
+  y=h/2+dx*Math.sin(angle)+dy*Math.cos(angle)+visualShift;
+ }
+ destinationPin.style.left=x.toFixed(1)+'px';
+ destinationPin.style.top=y.toFixed(1)+'px';
+ destinationPin.hidden=x < -45||x>w+45||y < -45||y>h+45;
+}
+function ensureMotionFrame(){
+ if(!active||motionFrame!==null||!driving||!following)return;
+ motionFrame=requestAnimationFrame(animateMotion);
+}
+function animateMotion(now){
+ motionFrame=null;
+ if(!active||!driving||!following)return;
+ // 25 fps como máximo: prioriza baja carga para TBox Lite S.
+ if(now-lastMotionFrame<38){ensureMotionFrame();return;}
+ lastMotionFrame=now;
+ var moving=false;
+ if(motionStart&&motionGoal){
+  var fraction=Math.min(1,(now-motionStarted)/motionDuration);
+  var p=Math.max(0,fraction);
+  displayCenter={
+   lat:motionStart.lat+(motionGoal.lat-motionStart.lat)*p,
+   lon:motionStart.lon+(motionGoal.lon-motionStart.lon)*p
+  };
+  moving=fraction<1;
+  if(!moving){motionStart=null;motionGoal=null;}
+ }
+ if(hasCourse&&courseStarted){
+  var turn=Math.min(1,(now-courseStarted)/courseDuration);
+  var delta=((courseTarget-courseFrom+540)%360)-180;
+  courseDegrees=(courseFrom+delta*turn+360)%360;
+  if(turn<1)moving=true;
+  else courseStarted=0;
+ }
+ applyTransform();
+ var offset=distanceFromPaintCenter();
+ if((offset.distance>68&&now-paintedAt>580)||
+    (offset.distance>18&&now-paintedAt>2300)){
+  center={lat:displayCenter.lat,lon:displayCenter.lon};
+  requestDraw();
+  paintedAt=now;
+ }
+ if(moving)ensureMotionFrame();
+}
+function beginGpsTween(lat,lon,acc){
+ var goal={lat:lat,lon:lon},now=performance.now();
+ if(!displayCenter){
+  displayCenter=goal;center={lat:lat,lon:lon};
+  lastFixAt=now;motionStart=null;motionGoal=null;
+  requestDraw();applyTransform();return;
+ }
+ var delta=metersBetween(displayCenter,goal),dt=lastFixAt?now-lastFixAt:1000;
+ lastFixAt=now;
+ if(!Number.isFinite(delta))return;
+ // Evita vibración al estar parado, sin ocultar movimiento significativo.
+ var noise=Math.max(4,Math.min(13,(Number.isFinite(acc)?acc:20)*.35));
+ if(speedKmh<5&&delta<noise)return;
+ // Si Android reporta un salto enorme, evita desplazar el mapa lentamente
+ // varios cientos de metros: usar la posición real de forma inmediata.
+ if(delta>250){
+  displayCenter=goal;center={lat:lat,lon:lon};
+  motionStart=null;motionGoal=null;requestDraw();applyTransform();return;
+ }
+ motionStart={lat:displayCenter.lat,lon:displayCenter.lon};
+ motionGoal=goal;motionStarted=now;
+ motionDuration=Math.max(420,Math.min(1000,dt*.88));
+ ensureMotionFrame();
 }
 function drivingMode(value){
+ var wasDriving=driving;
  driving=!!value;following=true;selecting=false;
  if(driving){
-  zoom=16;
-  if(position)center={lat:position.lat,lon:position.lon};
- }else{layer.style.transform='';routeSvg.style.transform='';}
+  if(!wasDriving)zoom=16;
+  if(position&&!displayCenter)displayCenter={lat:position.lat,lon:position.lon};
+  if(displayCenter&&!center)center={lat:displayCenter.lat,lon:displayCenter.lon};
+  applyTransform();ensureMotionFrame();
+ }else{
+  motionStart=null;motionGoal=null;
+  layer.style.transform='';routeSvg.style.transform='';
+  if(displayCenter)center={lat:displayCenter.lat,lon:displayCenter.lon};
+ }
  requestDraw();
 }
 function overviewRoute(){
@@ -63,9 +175,12 @@ function overviewRoute(){
 function smoothCourse(next){
  if(!Number.isFinite(next))return;
  next=(next%360+360)%360;
- if(!hasCourse){courseDegrees=next;hasCourse=true;return;}
- var diff=((next-courseDegrees+540)%360)-180;
- courseDegrees=(courseDegrees+diff*.4+360)%360;
+ if(!hasCourse){courseDegrees=next;courseTarget=next;hasCourse=true;return;}
+ var difference=((next-courseDegrees+540)%360)-180;
+ if(Math.abs(difference)<1.3)return;
+ courseFrom=courseDegrees;courseTarget=next;
+ courseStarted=performance.now();
+ ensureMotionFrame();
 }
 
 var routeShadow=document.getElementById('navRouteShadow'),routeLine=document.getElementById('navRouteLine');
