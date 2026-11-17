@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.6 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
+<title>Rush Launcher 4.7 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -443,7 +443,7 @@
 </svg>
 <div class="screen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.6</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.7</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -536,7 +536,7 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.6 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.7 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -544,11 +544,9 @@
   <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D con búsqueda y cálculo de rutas dentro del launcher. Requiere internet y ubicación Android; la precisión depende del TBox. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
 
   <div class="set-line">
-   <h3>Botones Inicio · Atrás · Menú</h3>
-   <p class="muted">Para regresar desde Xuper TV si el botón físico de Inicio no responde, puedes activar tres controles flotantes opcionales sobre aplicaciones externas.</p>
-   <p class="muted">El servicio «Controles Rush» requiere activación manual en Accesibilidad. No lee mensajes ni el contenido de aplicaciones. Puedes desactivarlo en cualquier momento.</p>
-   <div class="tile-buttons"><button type="button" class="actionbtn highlight" id="floatingNavSettings">Configurar controles flotantes</button></div>
-   <p class="muted" id="floatingNavStatus">Desactivado hasta que lo habilites en Android.</p>
+   <h3>Inicio y navegación del TBox</h3>
+   <p class="muted">Rush Launcher puede establecerse como Inicio de Android cuando el TBox lo permite. Por seguridad, esta edición no solicita permisos de Accesibilidad y no dibuja controles flotantes sobre Xuper TV.</p>
+   <p class="muted">Dentro de Rush funcionan Inicio, Apps y Atrás. Desde Xuper utiliza el botón Inicio del sistema, si el firmware lo redirige al launcher predeterminado.</p>
   </div>
   <div class="set-line">
    <h3>Launcher predeterminado del TBox</h3>
@@ -685,7 +683,7 @@
    <summary>Integración avanzada por Spotify API (opcional)</summary>
    <p class="muted">Solo para cuentas que puedan registrar una aplicación en Spotify for Developers. Permite metadatos, carátula y búsqueda de estado desde Spotify Connect con autorización OAuth PKCE.</p>
    <p class="muted">Registra exactamente esta URI de retorno:</p>
-   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherobd46://spotify/callback" readonly aria-label="Redirección Spotify"/>
+   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherobd47://spotify/callback" readonly aria-label="Redirección Spotify"/>
    <p class="muted">Introduce solamente el Client ID público (nunca Client Secret).</p>
    <input class="searchapps" id="spotifyClientId" type="text" maxlength="32" placeholder="Client ID (32 caracteres)" autocomplete="off" autocapitalize="off" spellcheck="false"/>
    <div class="tile-buttons">
