@@ -219,7 +219,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.5.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.6.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -599,7 +599,7 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void setHomeOption(boolean enabled) {
         getPackageManager().setComponentEnabledSetting(
-                new ComponentName(this, "cl.rush.launcher.obd45.HomeAlias"),
+                new ComponentName(this, "cl.rush.launcher.obd46.HomeAlias"),
                 enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                         : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
@@ -620,7 +620,7 @@ public class MainActivity extends Activity implements LocationListener {
         boolean available = false;
         try {
             int enabled = getPackageManager().getComponentEnabledSetting(
-                new ComponentName(this, "cl.rush.launcher.obd45.HomeAlias"));
+                new ComponentName(this, "cl.rush.launcher.obd46.HomeAlias"));
             available = enabled == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
         } catch (Exception ignored) { }
         javascript("window.rushHomeState({available:" + available
