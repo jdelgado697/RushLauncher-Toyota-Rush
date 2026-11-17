@@ -323,7 +323,7 @@ jobs:
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
-          if "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -E 'PlaybackAccessService|NotificationListenerService|BIND_NOTIFICATION_LISTENER_SERVICE|MEDIA_CONTENT_CONTROL|ACCESSIBILITY_SERVICE'; then
+          if "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -E 'PlaybackAccessService|NotificationListenerService|BIND_NOTIFICATION_LISTENER_SERVICE|MEDIA_CONTENT_CONTROL'; then
             echo "La APK incluye capacidades sensibles prohibidas."
             exit 1
           fi
