@@ -89,14 +89,23 @@ window.rushNavSearch=function(result){
  });
  show(box,true);navStatus('Selecciona un destino en la lista');
 };
+window.rushNavRouteProgress=function(data){
+ if(!data||!data.message)return;
+ navStatus(String(data.message));
+};
 window.rushNavRoute=function(data){
- if(!data||!data.ok){navStatus(data&&data.message||'Ruta no disponible');return;}
+ if(!data||!data.ok){
+  navStatus(data&&data.message||'Ruta no disponible');
+  show($('navGuide'),false);
+  show($('navRouteInfo'),false);
+  return;
+ }
  nav.route=data;nav.step=0;
  if(window.RushLiveMap)window.RushLiveMap.setRoute(data.geometry);
  write('navRouteInfo',((Number(data.meters)||0)/1000).toFixed(1)+' km · '+
    Math.round((Number(data.seconds)||0)/60)+' min aprox.');
  show($('navRouteInfo'),true);show($('navGuide'),true);
- navStatus('Ruta azul: guía experimental sin tráfico en vivo');
+ navStatus('Ruta calculada con '+String(data.provider||'motor de rutas')+' · sin tráfico en vivo');
  navGuidance();
 };
 function navClear(){
@@ -138,7 +147,7 @@ $('navStartRoute').addEventListener('click',function(){
  if(!nativeApp||typeof window.Rush.routeNav!=='function'){
   navStatus('Cálculo de ruta disponible en Android');return;
  }
- navStatus('Calculando ruta…');
+ navStatus('Calculando ruta por carretera con OSRM…');
  window.Rush.routeNav(loc.lat,loc.lon,nav.destination.lat,nav.destination.lon);
 });
 $('navClearRoute').addEventListener('click',navClear);
