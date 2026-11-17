@@ -286,7 +286,7 @@ host.addEventListener('pointermove',function(e){
   if(pinchDistance>0&&d/pinchDistance>1.40){setZoom(zoom+1);pinchDistance=d}
   else if(pinchDistance>0&&d/pinchDistance<.72){setZoom(zoom-1);pinchDistance=d}
  }else if(pointers.size===1&&center&&!selecting){
-   if(driving){driving=false;following=false;requestDraw();}
+   if(driving){driving=false;following=false;requestDraw();if(typeof window.rushNavExploring==='function')window.rushNavExploring();}
   var dx=e.clientX-old.x,dy=e.clientY-old.y;
   if(Math.abs(dx)+Math.abs(dy)>0.6){
    following=false;
