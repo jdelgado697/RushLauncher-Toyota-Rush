@@ -59,7 +59,7 @@ jobs:
           assert '<script src="live_map.js"></script>' not in html
           assert 'id="mapTileLayer"' not in html
           assert 'id="realMap"' not in html
-          assert 'Navega desde tu iPhone' in html
+          assert 'Tablero en vivo' in html
           assert 'data-action="autokit"' in html
           assert 'Abrir CarPlay' in html
           assert 'CarPlay' in html
