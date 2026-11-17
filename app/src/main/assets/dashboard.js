@@ -5,7 +5,7 @@ var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
 try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'auto',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'auto',weather:false}};
-var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
+var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,obd:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
 function app(action){if(nativeApp)window.Rush.open(action);else notice('Disponible al instalar en Android')}
@@ -37,6 +37,7 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-action]'),function
  if(action==='route'){openOverlay('routePanel');return}
  if(action==='settings'){openOverlay('settingsPanel');return}
  if(action==='obd'){openOverlay('obdPanel');loadDevices();return}
+ if(action==='obdDashboard'){openOverlay('obdDashboardPanel');renderObdAdvanced();return}
  if(action==='map'){app('waze');return}
  if(action==='radio'){openOverlay('radioPanel');return}
  app(action);
@@ -110,16 +111,62 @@ window.rushPosition=function(lat,lon,accuracy){
 window.rushObdStatus=function(status){
  var val=String(status||'Sin conexión');
  state.obdConnected=/conectado|leyendo|datos obd/i.test(val)&&!/desconectado|no conectado/i.test(val);
- if(!state.obdConnected){state.obdSpeed=null;state.rpm=null;state.coolant=null}
- write('obdStatusText',val);renderMetrics();
+ if(!state.obdConnected){state.obdSpeed=null;state.rpm=null;state.coolant=null;state.obd=null}
+ write('obdStatusText',val);renderMetrics();renderObdAdvanced();
 };
-window.rushObdData=function(speed,rpm,coolant){
+// El lector entrega un JSON exclusivamente con respuestas OBD-II reales.
+var obdMetricFields=[
+ ['speed','0D','km/h',0],['rpm','0C','RPM',0],['coolant','05','°C',0],
+ ['voltage','RV','V',2],['engineLoad','04','%',0],['map','0B','kPa',0],
+ ['iat','0F','°C',0],['throttle','11','%',0],
+ ['stft1','06','%',1],['ltft1','07','%',1],['catalyst','3C','°C',1]
+];
+function renderObdAdvanced(){
+ var info=state.obd||{},known=info.supportedKnown===true;
+ var pids=Array.isArray(info.supported)?info.supported:[];
+ obdMetricFields.forEach(function(f){
+  var value=document.querySelector('[data-obd-metric="'+f[0]+'"]');
+  var detail=document.querySelector('[data-obd-state="'+f[0]+'"]');
+  if(!value||!detail)return;
+  var num=info[f[0]];
+  if(!state.obdConnected){
+   value.textContent='—';detail.textContent='Desconectado';return;
+  }
+  if(typeof num==='number'&&isFinite(num)){
+   value.textContent=num.toFixed(f[3])+' '+f[2];
+   detail.textContent='Lectura ECU / ELM';return;
+  }
+  value.textContent='—';
+  detail.textContent=known&&f[1]!=='RV'&&pids.indexOf(f[1])<0?
+    'No compatible':'Sin lectura todavía';
+ });
+ var available=obdMetricFields.filter(function(f){
+  return typeof info[f[0]]==='number'&&isFinite(info[f[0]]);
+ }).length;
+ write('obdAdvancedState',state.obdConnected?
+   'OBD conectado · '+available+' lecturas disponibles'+
+    (known?' · Compatibilidad detectada':' · Compatibilidad sin confirmar'):
+   'OBD desconectado · Conecta tu ELM327');
+ write('obdUpdatedAt',state.obdConnected&&typeof info.updatedAt==='number'?
+   'Última respuesta '+new Date(info.updatedAt).toLocaleTimeString('es-CL'):'Sin datos');
+}
+window.rushObdData=function(data){
+ if(!data||typeof data!=='object'||!Object.keys(data).length){
+  state.obd=null;state.obdConnected=false;
+  state.obdSpeed=null;state.rpm=null;state.coolant=null;
+  renderMetrics();renderObdAdvanced();return;
+ }
  state.obdConnected=true;
- state.obdSpeed=typeof speed==='number'&&speed>=0?speed:null;
- state.rpm=typeof rpm==='number'&&rpm>=0?rpm:null;
- state.coolant=typeof coolant==='number'&&coolant>-500?coolant:null;
- renderMetrics();
+ state.obd=data;
+ state.obdSpeed=typeof data.speed==='number'&&isFinite(data.speed)?data.speed:null;
+ state.rpm=typeof data.rpm==='number'&&isFinite(data.rpm)?data.rpm:null;
+ state.coolant=typeof data.coolant==='number'&&isFinite(data.coolant)?data.coolant:null;
+ renderMetrics();renderObdAdvanced();
 };
+$('obdAdvancedConnect').addEventListener('click',function(){
+ closeOverlay('obdDashboardPanel');
+ openOverlay('obdPanel');loadDevices();
+});
 function loadDevices(){
  if(!nativeApp){write('deviceList','Disponible en Android');return}
  write('deviceList','Buscando dispositivos vinculados…');
@@ -476,7 +523,7 @@ window.rushInstalledApps=function(items){
 $('appsSearch').addEventListener('input',paintApps);
 document.addEventListener('keydown',function(e){if(e.key==='Escape')Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){show(p,false)})});
 window.addEventListener('focus',function(){if(nativeApp)window.Rush.ready()});
-updateTime();updateWeather();renderMetrics();
+updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
 renderMusic(null);
