@@ -154,6 +154,7 @@ function draw(){
    if(!keep.has(old[0])){old[1].remove();tiles.delete(old[0])}
   }
  }
+ drawNavigation(w,h,world);
  if(position){
   var point=mercator(position.lat,position.lon,zoom);
   var dx=point.x-world.x;
@@ -199,6 +200,7 @@ host.addEventListener('pointerdown',function(e){
  if(e.target.closest('button')||e.target.closest('a'))return;
  host.setPointerCapture(e.pointerId);
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ downPoint={x:e.clientX,y:e.clientY};moved=0;
  dragging=true;lastX=e.clientX;lastY=e.clientY;
  if(pointers.size===2){
   var a=[...pointers.values()];
@@ -208,12 +210,13 @@ host.addEventListener('pointerdown',function(e){
 host.addEventListener('pointermove',function(e){
  if(!pointers.has(e.pointerId))return;
  var old=pointers.get(e.pointerId);
+ moved+=Math.abs(e.clientX-old.x)+Math.abs(e.clientY-old.y);
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(pointers.size===2){
   var vals=[...pointers.values()],d=Math.hypot(vals[0].x-vals[1].x,vals[0].y-vals[1].y);
   if(pinchDistance>0&&d/pinchDistance>1.40){setZoom(zoom+1);pinchDistance=d}
   else if(pinchDistance>0&&d/pinchDistance<.72){setZoom(zoom-1);pinchDistance=d}
- }else if(pointers.size===1&&center){
+ }else if(pointers.size===1&&center&&!selecting){
   var dx=e.clientX-old.x,dy=e.clientY-old.y;
   if(Math.abs(dx)+Math.abs(dy)>0.6){
    following=false;
@@ -222,7 +225,17 @@ host.addEventListener('pointermove',function(e){
  }
  e.preventDefault();
 },{passive:false});
-function release(e){pointers.delete(e.pointerId);dragging=pointers.size>0;if(pointers.size<2)pinchDistance=0}
+function release(e){
+ if(selecting&&downPoint&&moved<15&&center&&pointers.size===1){
+  var r=host.getBoundingClientRect(),p=mercator(center.lat,center.lon,zoom);
+  var target=reverse(p.x+(e.clientX-r.left-r.width/2),
+                     p.y+(e.clientY-r.top-r.height/2),zoom);
+  setDestination(target.lat,target.lon);
+  if(typeof window.rushNavPicked==='function')window.rushNavPicked(target);
+ }
+ downPoint=null;pointers.delete(e.pointerId);
+ dragging=pointers.size>0;if(pointers.size<2)pinchDistance=0;
+}
 host.addEventListener('pointerup',release);
 host.addEventListener('pointercancel',release);
 host.addEventListener('lostpointercapture',release);
@@ -259,6 +272,7 @@ function deactivate(){
  }
  tiles.clear();loadedTiles=0;failedTiles=0;
  position=null;center=null;heading=null;accuracy=null;
+ routeGeometry=null;destination=null;selecting=false;
  marker.style.display='none';message.textContent='Mapa pausado';message.hidden=false;
  if(subtitle)subtitle.textContent='Mapa pausado · sin descargas';
  if(note)note.textContent='Ubicación desactivada';
@@ -270,7 +284,13 @@ window.RushLiveMap={
  updateHeading:function(h){heading=Number.isFinite(h)?h:null;requestDraw()},
  setStatus:status,
  recenter:recenter,
- getState:function(){return {active:active,position:position,center:center,zoom:zoom,following:following,tiles:tiles.size}}
+ setDestination:setDestination,
+ setRoute:setRoute,
+ clearRoute:clearRoute,
+ enableSelection:enableSelection,
+ getDestination:function(){return destination},
+ getPosition:function(){return position},
+ getState:function(){return {active:active,position:position,center:center,zoom:zoom,following:following,tiles:tiles.size,route:!!routeGeometry}}
 };
 status('Esperando ubicación Android…');
 })();
