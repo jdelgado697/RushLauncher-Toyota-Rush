@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.3 · OBD, Mapa 2D bajo demanda y CarPlay</title>
+<title>Rush Launcher 4.4 · Navegador integrado + OBD + Multimedia</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -236,6 +236,49 @@
  .dock{max-width:745px;padding:5px 7px}
  .dockbtn{min-width:44px;max-width:100px}
 }
+
+/* 4.4: navegación dentro de la propia APK, sin abrir AutoKit. */
+.nav-search{display:flex;gap:5px;height:35px;flex:none;min-height:35px}
+.nav-search input{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;
+ background:var(--glass-soft);padding:4px 9px;color:var(--text);font-size:13px}
+.nav-search button{border-radius:9px;background:#217adb;color:#fff;font-size:11px;font-weight:850;padding:0 9px;white-space:nowrap}
+.nav-results{position:absolute;z-index:35;top:83px;left:12px;right:12px;max-height:155px;overflow-y:auto;
+ border:1px solid var(--line);border-radius:11px;padding:4px;
+ background:var(--top);box-shadow:0 8px 20px #030a2350}
+.nav-results button{display:block;width:100%;text-align:left;border-bottom:1px solid var(--line);
+ background:transparent;padding:8px;color:var(--text);font-size:11px;font-weight:700}
+.nav-results button:last-child{border:0}
+.nav-route-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
+.nav-destination-pin{position:absolute;z-index:7;transform:translate(-50%,-100%);
+ width:16px;height:16px;background:#f65b4e;border:3px solid white;border-radius:50%;
+ box-shadow:0 2px 10px #05153e88;pointer-events:none}
+.nav-destination-pin span{position:absolute;left:17px;top:-5px;background:#fff;color:#14204a;
+ font-size:11px;font-weight:900;padding:2px 6px;border-radius:6px;white-space:nowrap}
+.nav-guide{position:absolute;top:7px;left:8px;z-index:7;max-width:min(60%,360px);
+ padding:7px 10px;background:#0a2f79e8;color:white;border-radius:9px;pointer-events:none;
+ display:flex;flex-direction:column;gap:3px;box-shadow:0 3px 15px #071d4155}
+.nav-guide strong{font-size:14px;line-height:1.1}
+.nav-guide span{font-size:11px;line-height:1.2}
+.nav-guide[hidden],.nav-results[hidden],.nav-destination-pin[hidden],.nav-route-info[hidden]{display:none!important}
+.nav-route-info{white-space:nowrap;font-size:11px;font-weight:850;color:var(--text)}
+.nav-gps-status{padding:4px 7px;font-size:10px;color:var(--sub);background:var(--glass-soft);
+ border:1px solid var(--line);border-radius:8px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.map-sheet-footer{gap:6px}
+.map-sheet-footer .map-quick-button:disabled{opacity:.45}
+.nav-disclaimer{text-align:center;font-size:9px;line-height:1.1;color:var(--sub);
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+@media(max-width:860px){
+ .nav-search{height:29px;min-height:29px}
+ .nav-search input{font-size:11px;padding:2px 7px}
+ .nav-search button{font-size:10px;padding:0 7px}
+ .nav-results{top:72px}
+ .map-sheet-footer .map-quick-button{padding:6px 6px}
+ .map-sheet{gap:4px}
+ .nav-disclaimer{font-size:8px}
+ .nav-guide{max-width:62%;padding:5px 7px}
+ .nav-guide strong{font-size:12px}
+ .nav-guide span{font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -287,8 +330,8 @@
    <div><span>Refrigerante</span><strong id="homeCoolant">— °C</strong></div>
    <div><span>Voltaje ELM</span><strong id="homeVoltage">— V</strong></div>
   </div>
-  <button type="button" class="mapcta" data-action="autokit">Abrir CarPlay <svg class="icon"><use href="#i-arrow"/></svg></button>
-  <button type="button" class="carplay-guide" data-action="route">Cómo conectar el iPhone</button>
+  <button type="button" class="mapcta" data-action="map">Abrir navegación <svg class="icon"><use href="#i-arrow"/></svg></button>
+  <button type="button" class="carplay-guide" data-action="route">Buscar destino y calcular ruta</button>
  </section>
  <div class="rightarea">
   <section class="cararea" aria-label="Mi Toyota Rush">
@@ -328,8 +371,8 @@
  <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span><span class="dock-label">Spotify</span></button>
  <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
  <button class="dockbtn" type="button" data-action="obdDashboard"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-pin"/></svg></span>Tablero OBD</button>
- <button class="dockbtn" type="button" data-action="map"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span>Mapa 2D</button>
- <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">CarPlay</span></button>
+ 
+ <button class="dockbtn" type="button" data-action="map"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">Navegación</span></button>
 </nav>
 </div>
 <div class="scrim" id="appsPanel" hidden>
@@ -342,12 +385,12 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher OBD 4.3</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.4 · Unificado</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
-  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Mapa 2D de OpenStreetMap: se descarga únicamente al abrirlo, se libera al cerrarlo y depende de la ubicación disponible en Android. Para navegación guiada, utiliza CarPlay con tu iPhone.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir mapa 2D</button><button type="button" class="actionbtn" data-action="autokit">Abrir CarPlay</button></div></div>
+  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D con búsqueda y cálculo de rutas dentro del launcher. Requiere internet y ubicación Android; la precisión depende del TBox. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
   <div class="set-line"><h3>Clima</h3><p class="muted">Al activar el clima, se envía tu ubicación a Open-Meteo para consultar el pronóstico. Puedes desactivarlo desde el panel.</p></div>
   <div class="set-line">
    <h3>Launcher predeterminado del TBox</h3>
@@ -415,31 +458,49 @@
  </div>
 </div>
 <div class="scrim" id="mapPanel" hidden>
- <div class="sheet map-sheet" role="dialog" aria-modal="true" aria-label="Mapa 2D ligero en vivo">
+ <div class="sheet map-sheet" role="dialog" aria-modal="true" aria-label="Rush Navigator 2D con rutas">
   <div class="map-sheet-head">
-   <div class="map-heading"><strong>MAPA 2D · Rush</strong><small>Solo activo mientras está abierto</small></div>
-   <button type="button" class="map-quick-button" data-action="autokit">CarPlay</button>
-   <button type="button" class="close" data-close="mapPanel">Cerrar ✕</button>
+   <div class="map-heading"><strong>RUSH NAVIGATOR</strong><small>Mapa, ruta e indicaciones dentro de Rush Launcher</small></div>
+   <span id="navTopStatus" class="nav-gps-status">Sin GPS</span>
+   <button type="button" class="close" data-close="mapPanel">Inicio ✕</button>
   </div>
-  <div class="mapgraphic realmap" id="realMap" tabindex="0" aria-label="Mapa con controles táctiles, arrastrar para desplazar">
+  <div class="nav-search">
+   <input type="text" id="navQuery" maxlength="140" placeholder="Buscar lugar, calle o dirección" aria-label="Destino" autocomplete="off">
+   <button type="button" id="navSearchBtn">Buscar</button>
+   <button type="button" id="navSelectMap" title="Elegir destino tocando el mapa">Elegir en mapa</button>
+  </div>
+  <div class="nav-results" id="navResults" hidden aria-label="Destinos encontrados"></div>
+  <div class="mapgraphic realmap" id="realMap" tabindex="0" aria-label="Mapa: deslizar o tocar para elegir un destino">
    <div class="map-tile-layer" id="mapTileLayer" aria-hidden="true"></div>
+   <svg id="navRouteOverlay" class="nav-route-overlay" aria-hidden="true" preserveAspectRatio="none">
+    <polyline id="navRouteShadow" fill="none" stroke="#0b2148" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="navRouteLine" fill="none" stroke="#20b3ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+   </svg>
+   <div id="navDestinationPin" class="nav-destination-pin" hidden><span>Destino</span></div>
    <div id="mapPositionMarker" class="map-position" style="display:none" aria-label="Posición detectada">
     <span class="map-accuracy"></span><span class="map-point"></span><span class="map-arrow"></span>
    </div>
-   <div class="map-loading" id="mapWaiting">Esperando ubicación del TBox…</div>
+   <div class="map-loading" id="mapWaiting">Solicitando ubicación Android…</div>
    <div class="map-tools">
     <button type="button" id="mapRecenter" class="map-tool" aria-label="Seguir ubicación">◎</button>
     <button type="button" id="mapZoomIn" class="map-tool" aria-label="Acercar mapa">+</button>
     <button type="button" id="mapZoomOut" class="map-tool" aria-label="Alejar mapa">−</button>
    </div>
+   <div class="nav-guide" id="navGuide" hidden>
+    <strong id="navGuideTitle">Ruta calculada</strong>
+    <span id="navGuideDetail">Sigue la línea azul; consulta señales reales</span>
+   </div>
    <div class="mapnote" id="locationStatus">Sin lectura de ubicación</div>
    <span class="map-attribution">© OpenStreetMap contributors</span>
   </div>
   <div class="map-sheet-footer">
-    <span id="mapSubtitle">Buscando señal de ubicación…</span>
-    <button type="button" class="map-quick-button" id="mapRetryGps">Reintentar GPS</button>
-    <button type="button" class="map-quick-button" data-action="autokit">Navegar con iPhone</button>
+   <span id="mapSubtitle">Elige un destino para calcular una ruta</span>
+   <span id="navRouteInfo" class="nav-route-info" hidden></span>
+   <button type="button" class="map-quick-button" id="navStartRoute" disabled>Calcular ruta</button>
+   <button type="button" class="map-quick-button" id="navClearRoute">Finalizar</button>
+   <button type="button" class="map-quick-button" id="mapRetryGps">Ubicación</button>
   </div>
+  <div class="nav-disclaimer">Rutas experimentales por internet y posición Android. Sin tráfico ni garantía de precisión. Configura antes de conducir.</div>
  </div>
 </div>
 <div class="scrim" id="radioPanel" hidden>
@@ -492,11 +553,11 @@
  </div>
 </div>
 <div class="scrim" id="routePanel" hidden>
- <div class="sheet" role="dialog" aria-modal="true" aria-label="Conectar Apple CarPlay">
-  <div class="sheet-head"><h2>Conectar iPhone a CarPlay</h2><button class="close" type="button" data-close="routePanel">Cerrar ✕</button></div>
-  <p class="muted">1. Enciende Bluetooth y Wi-Fi en tu iPhone. 2. Abre AutoKit. 3. Selecciona en el iPhone el nombre Bluetooth mostrado por el TBox y confirma el emparejamiento. 4. Una vez conectado, abre tu app de navegación desde CarPlay.</p>
-  <div class="tile-buttons"><button class="actionbtn highlight" id="startRoute" type="button">Abrir AutoKit / CarPlay</button><button class="actionbtn" id="justMap" type="button">Google Maps Android (alternativa)</button></div>
-  <p class="muted">CarPlay utiliza el iPhone. Rush Launcher no inicia rutas en el teléfono automáticamente. Si AutoKit no está disponible, vuelve al inicio original del TBox y búscalo.</p>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Navegación integrada">
+  <div class="sheet-head"><h2>Navegación en Rush Launcher</h2><button type="button" class="close" data-close="routePanel">Cerrar ✕</button></div>
+  <p class="muted">Abre Rush Navigator, escribe una dirección y pulsa Buscar. Selecciona el destino y pulsa Calcular ruta. También puedes pulsar «Elegir en mapa» y tocar un punto. El cálculo necesita conexión a internet y ubicación Android.</p>
+  <div class="tile-buttons"><button id="startRoute" type="button" class="actionbtn highlight">Abrir Rush Navigator</button><button id="justMap" type="button" class="actionbtn">Ver mapa</button></div>
+  <p class="muted">Las indicaciones son orientativas: no sustituyen señalización vial ni un sistema GPS fiable. Configura el recorrido antes de conducir.</p>
  </div>
 </div>
 <div id="toast" class="toast" hidden></div>
