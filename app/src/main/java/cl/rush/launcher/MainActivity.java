@@ -221,7 +221,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.10.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.11.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -993,6 +993,15 @@ public class MainActivity extends Activity implements LocationListener {
     }
     // Los servidores de OSRM y Valhalla son demostrativos, sin SLA.
     // Ambas APIs devuelven JSON OSRM, Valhalla con format=osrm.
+    // Servidor FOSSGIS público para uso ligero a petición del usuario.
+    private static JSONObject retrieveFossgisRoute(double aLat,double aLon,double bLat,
+                                                    double bLon) throws Exception {
+        String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
+                aLon,aLat,bLon,bLat);
+        String url="https://routing.openstreetmap.de/routed-car/route/v1/driving/"
+                +coords+"?overview=simplified&geometries=geojson&steps=true";
+        return new JSONObject(getNavText(url,550000,4800,7000));
+    }
     private static JSONObject retrieveOsrmRoute(double aLat,double aLon,double bLat,
                                                  double bLon) throws Exception {
         String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
@@ -1073,10 +1082,18 @@ public class MainActivity extends Activity implements LocationListener {
         return result;
     }
     private static String navigationFailure(Exception e) {
-        if(e instanceof java.net.SocketTimeoutException)return "tiempo de espera agotado";
-        if(e instanceof java.net.UnknownHostException)return "DNS o servidor inaccesible";
-        if(e instanceof javax.net.ssl.SSLException)return "fallo de conexión segura";
-        if(e instanceof java.net.ConnectException)return "conexión rechazada";
+        Throwable t=e;
+        while(t!=null){
+            if(t instanceof javax.net.ssl.SSLHandshakeException ||
+               t instanceof javax.net.ssl.SSLPeerUnverifiedException ||
+               t instanceof javax.net.ssl.SSLProtocolException ||
+               t instanceof java.security.cert.CertificateException)
+                return "certificado o negociación HTTPS rechazados por Android";
+            if(t instanceof java.net.SocketTimeoutException)return "tiempo de espera agotado";
+            if(t instanceof java.net.UnknownHostException)return "DNS sin resolver";
+            if(t instanceof java.net.ConnectException)return "conexión rechazada";
+            t=t.getCause();
+        }
         String msg=e.getMessage();
         if(msg!=null){
             if(msg.startsWith("SIN_RUTA:"))return "sin ruta vial entre los puntos";
@@ -1086,7 +1103,12 @@ public class MainActivity extends Activity implements LocationListener {
                 return "servidor HTTP "+status.replaceAll("[^0-9]","");
             }
         }
-        return "sin respuesta del servicio";
+        return "no se recibió respuesta utilizable";
+    }
+    private void routeProgress(String msg){
+        JSONObject progress=new JSONObject();
+        try{progress.put("message",msg);}catch(Exception ignored){}
+        navReply("rushNavRouteProgress",progress);
     }
     private void fetchNavigationRoute(double aLat,double aLon,double bLat,double bLon) {
         if(!validCoord(aLat,aLon)||!validCoord(bLat,bLon)){
@@ -1098,36 +1120,44 @@ public class MainActivity extends Activity implements LocationListener {
         }
         lastRouteRequest=now;
         navigationExecutor.execute(()->{
-            String primaryFailure="";
+            String fossgisError="";
             try{
                 JSONObject answer=normalizedRoute(
-                        retrieveOsrmRoute(aLat,aLon,bLat,bLon),"OSRM");
-                navReply("rushNavRoute",answer);
-                return;
-            }catch(Exception osrmError){
-                primaryFailure=navigationFailure(osrmError);
-            }
+                        retrieveFossgisRoute(aLat,aLon,bLat,bLon),"OSRM FOSSGIS");
+                navReply("rushNavRoute",answer);return;
+            }catch(Exception e){fossgisError=navigationFailure(e);}
+            routeProgress("FOSSGIS no respondió ("+fossgisError+"). Probando OSRM…");
+            String osrmError="";
             try{
-                JSONObject progress=new JSONObject();
-                progress.put("message","OSRM no disponible. Probando Valhalla…");
-                navReply("rushNavRouteProgress",progress);
+                JSONObject answer=normalizedRoute(
+                        retrieveOsrmRoute(aLat,aLon,bLat,bLon),"OSRM alternativo");
+                navReply("rushNavRoute",answer);return;
+            }catch(Exception e){osrmError=navigationFailure(e);}
+            routeProgress("OSRM no respondió ("+osrmError+"). Probando Valhalla…");
+            String valhallaError="";
+            try{
                 JSONObject answer=normalizedRoute(
                         retrieveValhallaRoute(aLat,aLon,bLat,bLon),"Valhalla");
-                navReply("rushNavRoute",answer);
-            }catch(Exception fallbackError){
-                String secondaryFailure=navigationFailure(fallbackError);
-                String explanation;
-                if(primaryFailure.contains("sin ruta vial")&&
-                        secondaryFailure.contains("sin ruta vial")){
-                    explanation="No hay una ruta vial identificable. Comprueba que "
-                            +"origen y destino estén junto a calles transitables.";
-                }else{
-                    explanation="Fallaron los motores de rutas: OSRM ("+primaryFailure
-                            +") y Valhalla ("+secondaryFailure+"). "
-                            +"El mapa puede funcionar aunque estos servidores fallen.";
-                }
-                navReply("rushNavRoute",navError(explanation));
+                navReply("rushNavRoute",answer);return;
+            }catch(Exception e){valhallaError=navigationFailure(e);}
+            boolean https=fossgisError.contains("HTTPS")&&
+                    osrmError.contains("HTTPS")&&valhallaError.contains("HTTPS");
+            String message;
+            if(https){
+                message="Los tres servidores rechazaron la conexión HTTPS del TBox. "
+                    +"Comprueba fecha y hora automáticas, certificados de Android "
+                    +"y actualizaciones del sistema. No desactives la seguridad SSL.";
+            }else if(fossgisError.contains("sin ruta vial")&&
+                     osrmError.contains("sin ruta vial")&&
+                     valhallaError.contains("sin ruta vial")){
+                message="Ningún motor encontró un recorrido en automóvil. Comprueba "
+                    +"si ambos puntos están sobre calles accesibles.";
+            }else{
+                message="Sin ruta: FOSSGIS ("+fossgisError+"), OSRM ("
+                        +osrmError+"), Valhalla ("+valhallaError+"). "
+                        +"Verifica internet, certificados y precisión GPS.";
             }
+            navReply("rushNavRoute",navError(message));
         });
     }
 
