@@ -38,6 +38,105 @@ function closeOverlay(id){
 }
 // El archivo de cartografía no se carga ni se ejecuta hasta tocar MAPA.
 var mapScriptLoading=false,mapScriptLoaded=false;
+
+// Navegación integrada: las peticiones de búsqueda y ruta se lanzan por toque.
+var nav={destination:null,route:null,step:0};
+function navStatus(message){write('mapSubtitle',message)}
+function navMeters(a,b){
+ if(!a||!b)return Infinity;
+ var dlat=(a.lat-b.lat)*111320,dlon=(a.lon-b.lon)*111320*Math.cos(a.lat*Math.PI/180);
+ return Math.sqrt(dlat*dlat+dlon*dlon);
+}
+function navInstruction(s){
+ if(!s)return 'Sigue la ruta';
+ var m=s.modifier||'',t=s.type||'',road=s.road||'';
+ var txt=t==='arrive'?'Llegada al destino':t==='depart'?'Inicia el recorrido':
+  t==='roundabout'?'Entra en la rotonda':m==='left'||m==='slight left'?'Gira a la izquierda':
+  m==='right'||m==='slight right'?'Gira a la derecha':m==='sharp left'?'Gira cerrado a la izquierda':
+  m==='sharp right'?'Gira cerrado a la derecha':m==='uturn'?'Cambio de sentido':'Continúa recto';
+ return txt+(road&&t!=='arrive'?' · '+road:'');
+}
+function navGuidance(){
+ if(!nav.route||!Array.isArray(nav.route.steps)||!state.location)return;
+ var steps=nav.route.steps,loc=state.location;
+ while(nav.step+1<steps.length&&navMeters(loc,steps[nav.step])<25)nav.step++;
+ var turn=steps[nav.step];if(!turn)return;
+ var meters=navMeters(loc,turn);
+ write('navGuideTitle',navInstruction(turn));
+ write('navGuideDetail',(meters<1000?Math.round(meters)+' m':(meters/1000).toFixed(1)+' km')+
+  (loc.accuracy>75?' · precisión limitada ±'+Math.round(loc.accuracy)+' m':' · ubicación aproximada'));
+}
+function navSelect(lat,lon,name){
+ if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+ nav.destination={lat:lat,lon:lon,name:name||'Punto del mapa'};nav.route=null;nav.step=0;
+ if(window.RushLiveMap){window.RushLiveMap.setDestination(lat,lon);window.RushLiveMap.enableSelection(false)}
+ $('navStartRoute').disabled=false;
+ show($('navResults'),false);show($('navGuide'),false);show($('navRouteInfo'),false);
+ navStatus('Destino seleccionado · pulsa Calcular ruta');
+}
+window.rushNavPicked=function(point){navSelect(point.lat,point.lon,'Punto en el mapa')};
+window.rushNavSearch=function(result){
+ var box=$('navResults');box.textContent='';
+ if(!result||!result.ok){navStatus(result&&result.message||'No se pudo buscar');return;}
+ var items=Array.isArray(result.items)?result.items:[];
+ if(!items.length){navStatus('Lugar no encontrado. Selecciona un punto en el mapa.');return;}
+ items.forEach(function(hit){
+  var b=document.createElement('button');b.type='button';
+  b.textContent=String(hit.name||'Destino').slice(0,115);
+  b.addEventListener('click',function(){navSelect(hit.lat,hit.lon,hit.name);$('navQuery').value=hit.name});
+  box.appendChild(b);
+ });
+ show(box,true);navStatus('Selecciona un destino en la lista');
+};
+window.rushNavRoute=function(data){
+ if(!data||!data.ok){navStatus(data&&data.message||'Ruta no disponible');return;}
+ nav.route=data;nav.step=0;
+ if(window.RushLiveMap)window.RushLiveMap.setRoute(data.geometry);
+ write('navRouteInfo',((Number(data.meters)||0)/1000).toFixed(1)+' km · '+
+   Math.round((Number(data.seconds)||0)/60)+' min aprox.');
+ show($('navRouteInfo'),true);show($('navGuide'),true);
+ navStatus('Ruta azul: guía experimental sin tráfico en vivo');
+ navGuidance();
+};
+function navClear(){
+ nav.destination=null;nav.route=null;nav.step=0;
+ if(window.RushLiveMap)window.RushLiveMap.clearRoute();
+ $('navStartRoute').disabled=true;
+ show($('navResults'),false);show($('navGuide'),false);show($('navRouteInfo'),false);
+ navStatus('Busca una dirección o marca un punto en el mapa');
+}
+$('navSearchBtn').addEventListener('click',function(){
+ var q=$('navQuery').value.trim();
+ if(q.length<3){navStatus('Escribe una dirección');return;}
+ if(!nativeApp||typeof window.Rush.searchNav!=='function'){
+  navStatus('Búsqueda disponible en la APK Android');return;
+ }
+ show($('navResults'),false);navStatus('Buscando dirección…');window.Rush.searchNav(q);
+});
+$('navQuery').addEventListener('keydown',function(e){
+ if(e.key==='Enter'){e.preventDefault();$('navSearchBtn').click();}
+});
+$('navSelectMap').addEventListener('click',function(){
+ if(!window.RushLiveMap){navStatus('Mapa todavía no cargado');return;}
+ window.RushLiveMap.enableSelection(true);navStatus('Toca el mapa para elegir destino');
+});
+$('navStartRoute').addEventListener('click',function(){
+ if(!nav.destination){navStatus('Selecciona primero un destino');return;}
+ var loc=state.location;
+ if(!loc||!loc.receivedAt||Date.now()-loc.receivedAt>30000){
+  navStatus('Sin ubicación reciente. Pulsa Ubicación.');return;
+ }
+ if(Number.isFinite(loc.accuracy)&&loc.accuracy>150){
+  navStatus('Ubicación imprecisa ±'+Math.round(loc.accuracy)+' m. Revisa GPS.');return;
+ }
+ if(!nativeApp||typeof window.Rush.routeNav!=='function'){
+  navStatus('Cálculo de ruta disponible en Android');return;
+ }
+ navStatus('Calculando ruta…');
+ window.Rush.routeNav(loc.lat,loc.lon,nav.destination.lat,nav.destination.lon);
+});
+$('navClearRoute').addEventListener('click',navClear);
+
 function openMap(){
  openOverlay('mapPanel');
  write('mapSubtitle','Buscando ubicación del TBox…');
