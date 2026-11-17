@@ -89,17 +89,26 @@ window.rushNavSearch=function(result){
  });
  show(box,true);navStatus('Selecciona un destino en la lista');
 };
+function navHideDiagnostics(){show($('navDiagnostics'),false)}
+function navShowDiagnostics(message){
+ write('navDiagMessage',String(message||'No fue posible calcular el recorrido.'));
+ show($('navDiagnostics'),true);
+}
+$('navDiagDismiss').addEventListener('click',navHideDiagnostics);
 window.rushNavRouteProgress=function(data){
  if(!data||!data.message)return;
  navStatus(String(data.message));
 };
 window.rushNavRoute=function(data){
  if(!data||!data.ok){
-  navStatus(data&&data.message||'Ruta no disponible');
+  var problem=data&&data.message||'Ruta no disponible';
+  navStatus('No se calculó la ruta · consulta el diagnóstico');
+  navShowDiagnostics(problem);
   show($('navGuide'),false);
   show($('navRouteInfo'),false);
   return;
  }
+ navHideDiagnostics();
  nav.route=data;nav.step=0;
  if(window.RushLiveMap)window.RushLiveMap.setRoute(data.geometry);
  write('navRouteInfo',((Number(data.meters)||0)/1000).toFixed(1)+' km · '+
@@ -109,6 +118,7 @@ window.rushNavRoute=function(data){
  navGuidance();
 };
 function navClear(){
+ navHideDiagnostics();
  nav.destination=null;nav.route=null;nav.step=0;
  if(window.RushLiveMap)window.RushLiveMap.clearRoute();
  $('navStartRoute').disabled=true;
@@ -147,7 +157,8 @@ $('navStartRoute').addEventListener('click',function(){
  if(!nativeApp||typeof window.Rush.routeNav!=='function'){
   navStatus('Cálculo de ruta disponible en Android');return;
  }
- navStatus('Calculando ruta por carretera con OSRM…');
+ navHideDiagnostics();
+ navStatus('Calculando ruta con FOSSGIS…');
  window.Rush.routeNav(loc.lat,loc.lon,nav.destination.lat,nav.destination.lon);
 });
 $('navClearRoute').addEventListener('click',navClear);
