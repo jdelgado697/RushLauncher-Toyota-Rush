@@ -86,13 +86,19 @@ function drawNavigation(w,h,world){
  }else{routeLine.setAttribute('points','');routeShadow.setAttribute('points','');}
  if(destination){
   var p=screenPoint(destination.lat,destination.lon,w,h,world);
-  destinationPin.style.left=p.x+'px';destinationPin.style.top=p.y+'px';
-  destinationPin.hidden=p.x < -35||p.x>w+35||p.y < -35||p.y>h+35;
+  var x=p.x,y=p.y;
+  if(driving&&following){
+   var a=visualRotation*Math.PI/180,dx=x-w/2,dy=y-h/2;
+   x=w/2+dx*Math.cos(a)-dy*Math.sin(a);
+   y=h/2+dx*Math.sin(a)+dy*Math.cos(a)+visualShift;
+  }
+  destinationPin.style.left=x+'px';destinationPin.style.top=y+'px';
+  destinationPin.hidden=x < -45||x>w+45||y < -45||y>h+45;
  }else destinationPin.hidden=true;
 }
 function setDestination(lat,lon){
  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
- destination={lat:lat,lon:lon};routeGeometry=null;selecting=false;requestDraw();
+ driving=false;destination={lat:lat,lon:lon};routeGeometry=null;selecting=false;requestDraw();
 }
 function setRoute(coords){
  routeGeometry=Array.isArray(coords)?coords.filter(function(p){
@@ -100,7 +106,7 @@ function setRoute(coords){
  }).slice(0,1000):null;
  requestDraw();
 }
-function clearRoute(){routeGeometry=null;destination=null;selecting=false;requestDraw()}
+function clearRoute(){routeGeometry=null;destination=null;selecting=false;driving=false;requestDraw()}
 function enableSelection(flag){selecting=!!flag;host.style.cursor=selecting?'crosshair':'default'}
 
 function clamp(x,min,max){return Math.min(Math.max(x,min),max)}
@@ -160,8 +166,11 @@ function draw(){
  var world=mercator(center.lat,center.lon,zoom);
  var worldWidth=TILE*Math.pow(2,zoom);
  var startX=world.x-w/2,startY=world.y-h/2;
- var xMin=Math.floor(startX/TILE),yMin=Math.max(0,Math.floor(startY/TILE));
- var xMax=Math.floor((startX+w-1)/TILE),yMax=Math.min(Math.pow(2,zoom)-1,Math.floor((startY+h-1)/TILE));
+ var padding=driving&&following?Math.round(Math.min(150,Math.max(w,h)*.17)):0;
+ var xMin=Math.floor((startX-padding)/TILE),yMin=Math.max(0,Math.floor((startY-padding)/TILE));
+ var xMax=Math.floor((startX+w+padding-1)/TILE);
+ var yMax=Math.min(Math.pow(2,zoom)-1,Math.floor((startY+h+padding-1)/TILE));
+ updateWorldTransform(h);
  var keep=new Set(),needed=0,changed=false;
  for(var y=yMin;y<=yMax;y++){
   for(var x=xMin;x<=xMax;x++){
