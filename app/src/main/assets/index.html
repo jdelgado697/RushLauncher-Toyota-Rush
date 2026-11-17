@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="es" data-theme="light">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.5 · Spotify XL, navegación y control táctil</title>
+<title>Rush Launcher 4.6 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -306,6 +306,123 @@
  .album{width:60px;height:60px}.musicctrl button{width:38px;height:40px}
  .musicctrl button.primary{width:44px;height:44px}.musicnames strong{font-size:14px}
 }
+
+/* Rush 4.6 · composición basada en referencia de usuario, optimizada para 800×480.
+   Inicio: tacómetro+velocímetro, clima, mapa 2D y Spotify XL */
+:root[data-theme=dark]{--bg1:#030e1d;--bg2:#051b38;--bg3:#0b3152;--top:#061b35;
+ --text:#f1f8ff;--sub:#a8cef0;--muted:#8db3d4;--accent:#43bfff;--accent2:#177be4;
+ --glass:rgba(5,22,49,.96);--glass-strong:rgba(4,24,53,.97);--glass-soft:rgba(10,44,80,.93);
+ --line:#22b6ff85;--btn:#0c3462;--shadow:0 0 12px #0064c455}
+.screen{padding:6px 10px 6px;grid-template-rows:42px minmax(0,1fr) 56px;gap:6px;
+ background:linear-gradient(135deg,#020a17,#07162b 48%,#020d20)}
+.screen:before{display:none}
+.topbar{align-items:center;border-bottom:1px solid #1399e7;padding:0 4px 4px}
+.rush-brand{display:flex;align-items:center;gap:9px;min-width:0;white-space:nowrap}
+.toyota-mark{color:#d9edff;border:2px solid #b6d9f7;border-radius:50%;font-size:22px;
+ width:34px;height:27px;display:grid;place-items:center}
+.rush-brand>div{display:flex;align-items:center;gap:5px}
+.rush-brand strong{font-size:18px;font-style:italic;line-height:1;font-weight:950;letter-spacing:.2px}
+.rush-brand strong small{font-size:9px;font-style:normal;display:block;letter-spacing:1.4px}
+.version-pill{font-size:12px;font-weight:900;background:#e21731;padding:2px 5px;border-radius:4px;color:#fff}
+.car-model{border-left:1px solid #478ac2;padding-left:11px;margin-left:8px;font-size:13px;color:#deeeff;overflow:hidden;text-overflow:ellipsis}
+.topright{gap:10px}.top-obd{color:#c9e4ff;font-size:11px;white-space:nowrap}
+.top-obd:before{content:"●";color:#33e667;margin-right:6px}
+.top-signal{font-size:19px;color:#49ccff}.clock{font-size:17px}
+.roundsettings{width:31px;height:31px;border-radius:9px;backdrop-filter:none}
+.main{display:grid;grid-template-columns:minmax(0,35.5fr) minmax(0,64.5fr);
+ grid-template-rows:minmax(0,60%) minmax(0,40%);gap:6px;min-height:0}
+.rightarea{display:contents}
+.mapcard{grid-column:1;grid-row:1;display:flex;gap:2px;padding:0;background:transparent;
+ border:0;box-shadow:none;backdrop-filter:none;overflow:hidden}
+.mapcard .maptitle{display:none}
+.mapcard>.home-gauges{flex:1;min-height:0;gap:3px}
+.home-gauges .rush-dial{border-radius:50%;aspect-ratio:1;max-width:100%;height:auto;align-self:center;
+ background:radial-gradient(ellipse at center,#0b2343 31%,#010916 78%);border:0;box-shadow:0 0 9px #0989e3a3}
+.home-gauges .dial-svg{position:absolute;inset:0;width:100%;height:100%;max-height:100%}
+.home-gauges .dial-track{stroke:#16375d;stroke-width:8}
+.home-gauges .dial-progress{stroke:#16bbff;stroke-width:8;filter:drop-shadow(0 0 4px #20bbff)}
+.home-gauges .dial-title{top:19%;font-size:10px;color:#d2efff}
+.home-gauges .dial-number{top:40%;font-size:32px;color:#fff}
+.home-gauges .dial-unit{top:70%;font-size:11px}
+.home-gauges .dial-source{display:none}
+.mapcard>.mapcta,.mapcard>.carplay-guide{display:none}
+.home-climate{flex:none;height:66px;position:relative;border-radius:12px;padding:7px 10px;
+ box-shadow:0 0 8px #0475c488;background:linear-gradient(120deg,#04152b,#082847);display:flex;flex-direction:column;justify-content:center;gap:3px}
+.home-weather-head{display:flex;gap:10px;align-items:center;height:39px}
+.home-weather-head .wicon{font-size:35px;line-height:1}
+.home-weather-reading{display:flex;align-items:center;gap:10px;min-width:0}
+.home-weather-reading strong{font-size:27px;font-weight:900;white-space:nowrap}
+.home-weather-reading span{font-size:11px;line-height:1.2;color:#cde5ff;max-width:110px}
+.home-weather-bottom{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:13px}
+.home-weather-bottom>span{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#afcff0}
+.weather-activate{border-radius:7px;padding:2px 6px;font-size:9px;font-weight:850;color:#bfefff;background:#0b4f82;white-space:nowrap}
+.home-climate .weatherbutton{top:3px;right:4px;color:#94d8ff;font-size:15px}
+.cararea{grid-column:1;grid-row:2;position:relative;border-radius:12px;overflow:hidden;
+ background:radial-gradient(ellipse at 50% 100%,#05497875,#010d20 78%);padding:0}
+.cararea:before{display:none}
+.carphoto{width:98%;height:100%;max-height:100%;object-fit:contain;
+ filter:drop-shadow(0 4px 7px #006bce88)}
+.car-label{bottom:4px;left:5px;padding:2px 6px;font-size:9px;background:#041938c4}
+.car-badges{display:none}
+.home-map{grid-column:2;grid-row:1;position:relative;overflow:hidden;border-radius:13px;
+ background:linear-gradient(135deg,#17283d,#0b203b);box-shadow:0 0 11px #006ccc66;
+ backdrop-filter:none;touch-action:manipulation}
+.home-map-tiles{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:.88}
+.home-map-tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none}
+.home-map-grid{position:absolute;inset:0;background:
+ linear-gradient(30deg,transparent 49%,#2f649f55 49.5%,#2f649f55 50.5%,transparent 51%) 0 0/77px 60px,
+ linear-gradient(150deg,transparent 48%,#3477ad44 49%,#3477ad44 51%,transparent 52%) 0 0/81px 64px;
+ opacity:.6;pointer-events:none}
+.home-map:has(.home-map-tiles img) .home-map-grid{opacity:.11}
+.home-map-header{position:absolute;z-index:3;left:8px;right:8px;top:7px;display:flex;align-items:center;gap:8px;pointer-events:none}
+.home-map-label{background:#0ca3d9;color:#fff;padding:4px 7px;border-radius:8px;font-weight:850;font-size:13px}
+.home-map-label strong{color:#fff}
+.home-map-header>span:last-child{background:#031c36d9;border:1px solid #3095d47e;border-radius:6px;padding:3px 6px;color:#bdddff;font-size:9px}
+.home-map-route{position:absolute;left:10px;top:42px;z-index:3;padding:7px 10px;border-radius:8px;pointer-events:none;
+ background:#071b37db;color:#fff;font-size:14px;font-weight:900;border:1px solid #2b90cf82}
+.home-map-route small{display:block;font-size:9px;font-weight:500;color:#ccdef7}
+.home-map-footer{position:absolute;bottom:7px;left:9px;right:9px;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.home-map-footer>span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:5px 7px;background:#02152dcc;color:#fff;border-radius:7px}
+.home-map-open{display:flex;align-items:center;gap:4px;border-radius:10px;background:linear-gradient(90deg,#035c9c,#0c91dd);color:#fff;
+ font-size:11px;font-weight:900;padding:7px 10px;white-space:nowrap;position:relative;z-index:5}
+.home-map-open svg{height:14px;width:14px}
+.home-map-marker{position:absolute;z-index:2;left:50%;top:56%;transform:translate(-50%,-50%) rotate(45deg);
+ border:2px solid #fff;border-radius:6px;background:#178ef4;width:19px;height:19px;
+ box-shadow:0 0 7px #6cd9ff;color:transparent;pointer-events:none}
+.home-map-hit{position:absolute;inset:0;z-index:1;width:100%;height:100%}
+.widgets{grid-column:2;grid-row:2;min-height:0;display:grid;grid-template-columns:1fr}
+.music{min-height:0;height:100%;grid-template-columns:88px minmax(0,1fr);gap:10px;padding:6px 10px;
+ border-radius:13px;box-shadow:0 0 12px #007cff85;background:#04162e;border:1px solid #179bea}
+.album{width:86px;height:86px}
+.musicbody{min-height:0;align-self:center;justify-content:center}
+.musicrow{gap:7px}
+.musicnames strong{font-size:clamp(16px,2.1vw,23px)}
+.musicnames small{font-size:12px}
+.musicctrl button{width:46px;height:46px;border-radius:12px}
+.musicctrl button.primary{width:54px;height:54px}
+.musicbase{min-height:11px}
+.music-seek{min-height:18px;padding:0}
+.dock{width:100%;min-width:0;max-width:100%;height:55px;align-self:center;padding:2px 9px;
+ border-radius:26px;border:1px solid #24b2ff;background:#031b36}
+.dockbtn{min-width:0;max-width:none;min-height:45px;font-size:11px}
+.dockicon{background:transparent!important;box-shadow:none;height:28px;width:30px}
+.dockicon .icon{height:25px;width:25px}
+.dockbtn:first-child{background:#075da1;border-radius:19px;box-shadow:0 0 6px #19adff;min-height:48px}
+@media(max-width:860px){
+ .screen{grid-template-rows:39px minmax(0,1fr) 51px;gap:5px;padding:5px 8px}
+ .main{grid-template-rows:minmax(0,60%) minmax(0,40%);gap:5px}
+ .rush-brand strong{font-size:15px}.car-model{font-size:11px;margin-left:2px;padding-left:7px}
+ .topright{gap:6px}.top-obd{font-size:9px}.clock{font-size:14px}
+ .home-gauges .dial-number{font-size:30px}
+ .home-climate{height:66px;padding:4px 7px}.home-weather-head .wicon{font-size:29px}
+ .home-weather-reading strong{font-size:26px}.home-weather-reading span{font-size:10px}
+ .home-map-route{font-size:12px;max-width:64%}
+ .music{grid-template-columns:72px minmax(0,1fr);gap:7px;padding:5px 7px}
+ .album{width:71px;height:71px}
+ .musicctrl button{width:43px;height:43px}.musicctrl button.primary{width:51px;height:51px}
+ .musicnames strong{font-size:17px}
+ .dock{height:50px}.dockbtn{min-height:43px}.dockicon{height:24px;width:26px}
+}
 </style>
 </head>
 <body>
@@ -325,8 +442,9 @@
 </svg>
 <div class="screen">
 <header class="topbar">
- <div><h1 id="greeting" class="hello">Bienvenido a tu Toyota</h1><p id="today" class="date">Fecha</p></div>
- <div class="topright"><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.6</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
+ <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
 <main class="main">
  <section class="mapcard glass" aria-label="Indicadores OBD y navegación integrada">
@@ -353,10 +471,12 @@
   <small class="dial-source">Sin lectura</small>
  </div>
   </div>
-  <div class="home-obd-quick" aria-label="Temperatura de motor y voltaje de adaptador">
-   <div><span>Refrigerante</span><strong id="homeCoolant">— °C</strong></div>
-   <div><span>Voltaje ELM</span><strong id="homeVoltage">— V</strong></div>
-  </div>
+  <section class="home-climate glass" aria-label="Clima local" id="homeClimate">
+   <div class="home-weather-head"><span class="wicon" id="weatherIcon">⛅</span><div class="home-weather-reading"><strong id="weatherTemp">—°</strong><span id="weatherDescription">Clima no activado</span></div></div>
+   <div class="home-weather-bottom"><span id="weatherRange">Autoriza la ubicación para ver el tiempo</span><button type="button" id="weatherConsent" class="weather-activate" title="Activar o desactivar clima">Activar clima</button></div>
+   <button type="button" class="weatherbutton" id="weatherRefresh" aria-label="Actualizar clima">↻</button>
+   <span id="weatherToggle" hidden>Activar clima</span>
+  </section>
   <button type="button" class="mapcta" data-action="map">Abrir navegación <svg class="icon"><use href="#i-arrow"/></svg></button>
   <button type="button" class="carplay-guide" data-action="route">Buscar destino y calcular ruta</button>
  </section>
@@ -365,6 +485,16 @@
    <img id="rushVehicle" class="carphoto" src="rush_gray.webp" alt="Toyota Rush 2021 XLI gris, vehículo completo" decoding="async" loading="eager" />
    <div class="car-label">Mi Toyota Rush · 2021 XLI</div>
    <div class="car-badges"><button type="button" data-action="obdDashboard" id="obdInfo">OBD sin conectar</button><button type="button" data-action="obdDashboard" id="speedBadge">— km/h</button></div>
+    <span id="homeCoolant" hidden>— °C</span><span id="homeVoltage" hidden>— V</span>
+  </section>
+<section class="home-map glass" aria-label="Vista previa del mapa y acceso a la navegación">
+   <div id="homeMapTiles" class="home-map-tiles" aria-hidden="true"></div>
+   <div class="home-map-grid" aria-hidden="true"></div>
+   <div id="homeMapMarker" class="home-map-marker" hidden aria-label="Posición Android">◆</div>
+   <div class="home-map-header"><span class="home-map-label">RUSH <strong>NAVIGATOR</strong></span><span id="homeMapStatus">Mapa 2D · ubicación opcional</span></div>
+   <div class="home-map-route">Mapa y rutas dentro de Rush Launcher<small>Sin tráfico de Waze · ubicación Android</small></div>
+   <div class="home-map-footer"><span id="homeMapInfo">Pulsa Mapa para navegar</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+   <button type="button" class="home-map-hit" data-action="map" aria-label="Abrir mapa y navegación"></button>
   </section>
   <div class="widgets">
    <section class="music glass" aria-label="Reproductor multimedia">
@@ -404,19 +534,13 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.5 · Spotify XL</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.6 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
   <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D con búsqueda y cálculo de rutas dentro del launcher. Requiere internet y ubicación Android; la precisión depende del TBox. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
-  <div class="set-line"><h3>Clima · opcional</h3><p class="muted">El pronóstico está en Ajustes para aprovechar todo el espacio de Spotify XL.</p><section class="weather glass" aria-label="Clima actual">
-    <div class="weathertitle">Clima <button type="button" class="weatherbutton" id="weatherRefresh">↻</button></div>
-    <div class="weathercenter"><span class="wtemp" id="weatherTemp">—°</span><span class="wicon" id="weatherIcon">☀</span></div>
-    <div id="weatherDescription" class="weatherdesc">Clima desactivado</div>
-    <div id="weatherRange" class="weatherrange">Actívalo para consultar tu ubicación</div>
-    <button type="button" id="weatherConsent" class="moretext" style="text-align:left;padding:0">Activar clima</button><span id="weatherToggle" hidden>Activar clima</span>
-   </section></div>
+
   <div class="set-line">
    <h3>Botones Inicio · Atrás · Menú</h3>
    <p class="muted">Para regresar desde Xuper TV si el botón físico de Inicio no responde, puedes activar tres controles flotantes opcionales sobre aplicaciones externas.</p>
