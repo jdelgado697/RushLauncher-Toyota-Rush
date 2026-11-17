@@ -21,6 +21,8 @@
         <package android:name="com.waze" />
         <package android:name="com.google.android.youtube" />
         <package android:name="com.netflix.mediaclient" />
+        <!-- Visibility for a TTS engine on Android 11+. No audio recording. -->
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
 
     <application
@@ -45,14 +47,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="rushlauncherobd412"
+                    android:scheme="rushlauncherobd413"
                     android:host="spotify"
                     android:path="/callback" />
             </intent-filter>
         </activity>
         <!-- Disabled until the user explicitly enables it in Rush Launcher settings. -->
         <activity-alias
-            android:name="cl.rush.launcher.obd412.HomeAlias"
+            android:name="cl.rush.launcher.obd413.HomeAlias"
             android:enabled="false"
             android:exported="true"
             android:targetActivity="cl.rush.launcher.MainActivity"
