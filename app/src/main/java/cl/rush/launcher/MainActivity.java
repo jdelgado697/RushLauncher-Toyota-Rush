@@ -2,6 +2,8 @@ package cl.rush.launcher;
 
 import android.Manifest;
 import android.app.Activity;
+import android.accessibilityservice.AccessibilityServiceInfo;
+import android.view.accessibility.AccessibilityManager;
 import android.content.ComponentName;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -217,7 +219,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.4.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.5.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -229,6 +231,8 @@ public class MainActivity extends Activity implements LocationListener {
                 // El GPS se inicia solo al pulsar Activar clima o Solicitar GPS.
                 sendSpotifyState();
                 sendHomeState();
+                sendFloatingNavState();
+                dispatchExternalNavigation();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
             }
             @Override
@@ -595,7 +599,7 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void setHomeOption(boolean enabled) {
         getPackageManager().setComponentEnabledSetting(
-                new ComponentName(this, "cl.rush.launcher.HomeAlias"),
+                new ComponentName(this, "cl.rush.launcher.obd45.HomeAlias"),
                 enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                         : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
@@ -628,10 +632,53 @@ public class MainActivity extends Activity implements LocationListener {
             setHomeOption(true);
             sendHomeState();
             // Android muestra la elección si el firmware soporta apps HOME.
-            startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));
+            try {
+                startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));
+            } catch (Exception ignored) {
+                Intent home = new Intent(Intent.ACTION_MAIN);
+                home.addCategory(Intent.CATEGORY_HOME);
+                home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(home);
+            }
         } catch (Exception ex) {
             message("El firmware del TBox no ofrece la selección de inicio. No se modificó el sistema Toyota.");
         }
+    }
+
+
+    private boolean floatingControlsEnabled() {
+        try {
+            AccessibilityManager manager = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
+            if (manager == null) return false;
+            List<AccessibilityServiceInfo> services =
+                    manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            for (AccessibilityServiceInfo service : services) {
+                if (service.getResolveInfo() != null &&
+                        service.getResolveInfo().serviceInfo != null &&
+                        getPackageName().equals(service.getResolveInfo().serviceInfo.packageName) &&
+                        "cl.rush.launcher.RushNavAccessibilityService".equals(
+                                service.getResolveInfo().serviceInfo.name)) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
+    }
+    private void sendFloatingNavState() {
+        javascript("window.rushFloatingNavState(" + floatingControlsEnabled() + ");");
+    }
+    private void openFloatingNavSettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        } catch (Exception ex) {
+            message("Ajustes de accesibilidad no disponibles en este firmware.");
+        }
+    }
+    private void dispatchExternalNavigation() {
+        Intent incoming = getIntent();
+        if (incoming == null || !incoming.hasExtra("rush_open_apps") || !pageLoaded) return;
+        boolean openApps = incoming.getBooleanExtra("rush_open_apps", false);
+        incoming.removeExtra("rush_open_apps");
+        javascript("if(window.rushExternalNav)window.rushExternalNav("
+                + (openApps ? "'apps'" : "'home'") + ");");
     }
 
     private void exitToOriginalHome() {
@@ -1037,7 +1084,8 @@ public class MainActivity extends Activity implements LocationListener {
         if (spotifyConnect != null) spotifyConnect.resume();
         if (pageLoaded) {
             if (gpsRequested || mapGpsActive) startGps();
-            sendSpotifyState(); sendDockIcons(); sendHomeState();
+            sendSpotifyState(); sendDockIcons(); sendHomeState(); sendFloatingNavState();
+            dispatchExternalNavigation();
         }
     }
 
@@ -1066,15 +1114,20 @@ public class MainActivity extends Activity implements LocationListener {
         super.onNewIntent(intent);
         setIntent(intent);
         if (spotifyConnect != null) spotifyConnect.handleRedirect(intent);
+        dispatchExternalNavigation();
     }
 
     @Override
     public void onBackPressed() {
-        if (isDefaultHome()) {
-            message("Inicio activo: usa Ajustes > Restaurar inicio original para salir.");
-            return;
+        if (pageLoaded && webView != null) {
+            webView.evaluateJavascript(
+                    "window.rushHandleBack?window.rushHandleBack():false",
+                    result -> {
+                        if (!"true".equals(result) && !isDefaultHome()) moveTaskToBack(true);
+                    });
+        } else if (!isDefaultHome()) {
+            moveTaskToBack(true);
         }
-        exitToOriginalHome();
     }
 
     private final class RushBridge {
@@ -1164,6 +1217,12 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void bluetoothSettings() {
             runUi(() -> openBluetoothSettings());
+        }
+        @JavascriptInterface public void floatingNavSettings() {
+            runUi(() -> openFloatingNavSettings());
+        }
+        @JavascriptInterface public void floatingNavStatus() {
+            runUi(() -> sendFloatingNavState());
         }
     }
 }
