@@ -104,6 +104,7 @@ jobs:
           assert 'public void routeNav(double lat1,double lon1,double lat2,double lon2)' in native
           assert 'https://router.project-osrm.org/route/v1/driving/' in native
           assert 'https://nominatim.openstreetmap.org/search' in native
+          autocomplete=Path("app/src/main/assets/nav_autocomplete.js").read_text(encoding="utf-8")
           assert 'countrycodes=cl&q=' in native
           assert 'countrycode=CL' in native
           assert '&bbox=' in native
@@ -116,7 +117,7 @@ jobs:
           assert 'RushNavAccessibilityService' not in manifest
 
           assert 'navigationExecutor.shutdownNow()' in native
-          autocomplete=Path("app/src/main/assets/nav_autocomplete.js").read_text(encoding="utf-8")
+
           assert '<script src="nav_autocomplete.js"></script>' in html
           assert html.index('<script src="dashboard.js"></script>') < html.index('<script src="nav_autocomplete.js"></script>')
           assert 'aria-controls="navResults"' in html
