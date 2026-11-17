@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obd46'
+        applicationId 'cl.rush.launcher.obd47'
         minSdk 26
         targetSdk 32
-        versionCode 32
-        versionName '4.6.0-Clima'
+        versionCode 33
+        versionName '4.7.0-Segura'
     }
 
     compileOptions {
@@ -21,7 +21,7 @@ android {
 
     buildTypes {
         debug {
-            debuggable true
+            debuggable false
         }
         release {
             minifyEnabled false
