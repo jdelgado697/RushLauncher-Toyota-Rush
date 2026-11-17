@@ -17,7 +17,15 @@ var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=n
 var displayCenter=null,motionStart=null,motionGoal=null,motionStarted=0,motionDuration=820;
 var motionFrame=null,lastMotionFrame=0,lastFixAt=0,paintedAt=0,pendingCenter=null;
 var courseFrom=0,courseTarget=0,courseStarted=0,courseDuration=950;
-var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
+var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0,panReturnTimer=null;
+function cancelPanReturn(){if(panReturnTimer!==null){clearTimeout(panReturnTimer);panReturnTimer=null;}}
+function schedulePanReturn(){
+ cancelPanReturn();
+ panReturnTimer=setTimeout(function(){
+  panReturnTimer=null;
+  if(active&&!selecting){drivingMode(true);if(typeof window.rushNavFollowing==='function')window.rushNavFollowing();}
+ },15000);
+}
 var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=24,MAX_CACHED_TILES=32;
 var drawPending=false,lastStatus='Esperando ubicación Android';
 var osmtile='https://tile.openstreetmap.org/';
@@ -140,6 +148,7 @@ function beginGpsTween(lat,lon,acc){
  ensureMotionFrame();
 }
 function drivingMode(value){
+ cancelPanReturn();
  var wasDriving=driving;
  driving=!!value;following=true;selecting=false;
  if(driving){
@@ -155,7 +164,7 @@ function drivingMode(value){
  requestDraw();
 }
 function overviewRoute(){
- driving=false;following=false;
+ cancelPanReturn();driving=false;following=false;
  var coords=routeGeometry;
  if(!coords||coords.length<2){requestDraw();return;}
  var minLat=90,maxLat=-90,minLon=180,maxLon=-180;
@@ -215,6 +224,7 @@ function setRoute(coords){
 }
 function clearRoute(){routeGeometry=null;destination=null;selecting=false;requestDraw()}
 function enableSelection(flag){
+ if(flag)cancelPanReturn();
  selecting=!!flag;host.style.cursor=selecting?'crosshair':'default';
  if(selecting){
   driving=false;following=false;motionStart=null;motionGoal=null;
@@ -408,11 +418,16 @@ host.addEventListener('pointermove',function(e){
   if(pinchDistance>0&&d/pinchDistance>1.40){setZoom(zoom+1);pinchDistance=d}
   else if(pinchDistance>0&&d/pinchDistance<.72){setZoom(zoom-1);pinchDistance=d}
  }else if(pointers.size===1&&center&&!selecting){
-   if(driving){driving=false;following=false;requestDraw();if(typeof window.rushNavExploring==='function')window.rushNavExploring();}
   var dx=e.clientX-old.x,dy=e.clientY-old.y;
-  if(Math.abs(dx)+Math.abs(dy)>0.6){
-   following=false;
-   moveBy(dx,dy);
+  if(Math.abs(dx)+Math.abs(dy)>1.8){
+   if(driving){
+    driving=false;following=false;
+    motionStart=null;motionGoal=null;
+    if(displayCenter)center={lat:displayCenter.lat,lon:displayCenter.lon};
+    requestDraw();
+    if(typeof window.rushNavExploring==='function')window.rushNavExploring();
+   }
+   following=false;moveBy(dx,dy);schedulePanReturn();
   }
  }
  e.preventDefault();
@@ -455,6 +470,7 @@ function activate(){
 }
 function deactivate(){
  active=false;following=true;driving=false;hasCourse=false;
+ cancelPanReturn();
  if(motionFrame!==null){cancelAnimationFrame(motionFrame);motionFrame=null;}
  motionStart=null;motionGoal=null;displayCenter=null;pendingCenter=null;
  courseStarted=0;lastFixAt=0;lastMotionFrame=0;
