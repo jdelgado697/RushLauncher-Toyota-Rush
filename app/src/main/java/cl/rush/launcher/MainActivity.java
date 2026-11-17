@@ -221,7 +221,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.9.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.10.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -802,6 +802,11 @@ public class MainActivity extends Activity implements LocationListener {
                 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
     }
     private static String getNavText(String url, int maxBytes) throws Exception {
+        return getNavText(url,maxBytes,8500,10000);
+    }
+    // Los servidores públicos de demostración pueden tener latencias distintas.
+    private static String getNavText(String url,int maxBytes,int connectMs,int readMs)
+            throws Exception {
         HttpURLConnection c = null;
         try {
             c = (HttpURLConnection) new URL(url).openConnection();
@@ -809,8 +814,8 @@ public class MainActivity extends Activity implements LocationListener {
             c.setRequestProperty("User-Agent", RUSH_NAV_UA);
             c.setRequestProperty("Accept", "application/json");
             c.setRequestProperty("Accept-Language", "es");
-            c.setConnectTimeout(8500);
-            c.setReadTimeout(10000);
+            c.setConnectTimeout(connectMs);
+            c.setReadTimeout(readMs);
             c.setUseCaches(true);
             if(c.getResponseCode()!=200)
                 throw new java.io.IOException("Servidor HTTP " + c.getResponseCode());
@@ -986,6 +991,103 @@ public class MainActivity extends Activity implements LocationListener {
             }
         });
     }
+    // Los servidores de OSRM y Valhalla son demostrativos, sin SLA.
+    // Ambas APIs devuelven JSON OSRM, Valhalla con format=osrm.
+    private static JSONObject retrieveOsrmRoute(double aLat,double aLon,double bLat,
+                                                 double bLon) throws Exception {
+        String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
+                aLon,aLat,bLon,bLat);
+        String url="https://router.project-osrm.org/route/v1/driving/"
+                +coords+"?overview=simplified&geometries=geojson&steps=true";
+        return new JSONObject(getNavText(url,550000,4500,7000));
+    }
+    private static JSONObject retrieveValhallaRoute(double aLat,double aLon,double bLat,
+                                                    double bLon) throws Exception {
+        JSONArray locations=new JSONArray();
+        JSONObject start=new JSONObject();start.put("lat",aLat);start.put("lon",aLon);
+        JSONObject dest=new JSONObject();dest.put("lat",bLat);dest.put("lon",bLon);
+        locations.put(start);locations.put(dest);
+        JSONObject request=new JSONObject();
+        request.put("locations",locations);
+        request.put("costing","auto");
+        request.put("format","osrm");
+        request.put("shape_format","geojson");
+        request.put("directions_type","instructions");
+        request.put("language","es-ES");
+        request.put("units","kilometers");
+        String url="https://valhalla1.openstreetmap.de/route?json="
+                +URLEncoder.encode(request.toString(),"UTF-8");
+        return new JSONObject(getNavText(url,700000,6500,10000));
+    }
+    private static JSONObject normalizedRoute(JSONObject root,String provider) throws Exception {
+        String code=root.optString("code","Ok");
+        if(!"Ok".equalsIgnoreCase(code)) {
+            throw new java.io.IOException("SIN_RUTA:"+code);
+        }
+        JSONArray routes=root.optJSONArray("routes");
+        if(routes==null||routes.length()==0)throw new java.io.IOException("SIN_RUTA:Sin opciones");
+        JSONObject route=routes.getJSONObject(0);
+        JSONObject geometry=route.optJSONObject("geometry");
+        if(geometry==null)throw new java.io.IOException("FORMATO_RUTA:Sin geometría GeoJSON");
+        JSONArray raw=geometry.optJSONArray("coordinates");
+        if(raw==null||raw.length()<2)
+            throw new java.io.IOException("FORMATO_RUTA:Geometría insuficiente");
+        double meters=route.optDouble("distance",0),seconds=route.optDouble("duration",0);
+        if(!Double.isFinite(meters)||!Double.isFinite(seconds)||meters<=0||seconds<=0)
+            throw new java.io.IOException("FORMATO_RUTA:Distancia o tiempo inválido");
+        JSONArray coordsSafe=new JSONArray();
+        int jump=Math.max(1,(int)Math.ceil(raw.length()/750.0));
+        for(int i=0;i<raw.length();i+=jump){
+            JSONArray pt=raw.optJSONArray(i);
+            if(pt!=null&&pt.length()>=2&&validCoord(pt.optDouble(1,Double.NaN),
+                    pt.optDouble(0,Double.NaN)))coordsSafe.put(pt);
+        }
+        if((raw.length()-1)%jump!=0) {
+            JSONArray last=raw.optJSONArray(raw.length()-1);
+            if(last!=null&&last.length()>=2)coordsSafe.put(last);
+        }
+        JSONObject result=new JSONObject();
+        result.put("ok",true);result.put("provider",provider);
+        result.put("meters",meters);result.put("seconds",seconds);
+        result.put("geometry",coordsSafe);
+        JSONArray out=new JSONArray();
+        JSONArray legs=route.optJSONArray("legs");
+        if(legs!=null)for(int j=0;j<legs.length();j++){
+            JSONArray steps=legs.getJSONObject(j).optJSONArray("steps");
+            if(steps==null)continue;
+            for(int k=0;k<steps.length()&&out.length()<140;k++){
+                JSONObject step=steps.getJSONObject(k),turn=step.optJSONObject("maneuver");
+                if(turn==null)continue;
+                JSONArray at=turn.optJSONArray("location");
+                if(at==null||at.length()<2)continue;
+                JSONObject item=new JSONObject();
+                item.put("lat",at.optDouble(1));item.put("lon",at.optDouble(0));
+                item.put("type",turn.optString("type","turn"));
+                item.put("modifier",turn.optString("modifier","straight"));
+                item.put("road",step.optString("name",""));
+                item.put("meters",step.optDouble("distance",0));
+                out.put(item);
+            }
+        }
+        result.put("steps",out);
+        return result;
+    }
+    private static String navigationFailure(Exception e) {
+        if(e instanceof java.net.SocketTimeoutException)return "tiempo de espera agotado";
+        if(e instanceof java.net.UnknownHostException)return "DNS o servidor inaccesible";
+        if(e instanceof javax.net.ssl.SSLException)return "fallo de conexión segura";
+        if(e instanceof java.net.ConnectException)return "conexión rechazada";
+        String msg=e.getMessage();
+        if(msg!=null){
+            if(msg.startsWith("SIN_RUTA:"))return "sin ruta vial entre los puntos";
+            if(msg.startsWith("FORMATO_RUTA:"))return "respuesta de ruta no válida";
+            if(msg.startsWith("Servidor HTTP ")){
+                String status=msg.substring("Servidor HTTP ".length()).trim();
+                return "servidor HTTP "+status.replaceAll("[^0-9]","");
+            }
+        }
+        return "sin respuesta del servicio";
+    }
     private void fetchNavigationRoute(double aLat,double aLon,double bLat,double bLon) {
         if(!validCoord(aLat,aLon)||!validCoord(bLat,bLon)){
             navReply("rushNavRoute",navError("Ubicación o destino no válidos."));return;
@@ -996,59 +1098,35 @@ public class MainActivity extends Activity implements LocationListener {
         }
         lastRouteRequest=now;
         navigationExecutor.execute(()->{
-            try {
-                // API de demostración OSRM. Un solo cálculo iniciado por el usuario.
-                // El servicio no ofrece garantías ni tráfico en tiempo real.
-                String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
-                        aLon,aLat,bLon,bLat);
-                String url="https://router.project-osrm.org/route/v1/driving/"
-                        +coords+"?overview=simplified&geometries=geojson&steps=true";
-                JSONObject root=new JSONObject(getNavText(url,450000));
-                if(!"Ok".equals(root.optString("code"))){
-                    navReply("rushNavRoute",navError("No se encontró una ruta por carretera."));return;
+            String primaryFailure="";
+            try{
+                JSONObject answer=normalizedRoute(
+                        retrieveOsrmRoute(aLat,aLon,bLat,bLon),"OSRM");
+                navReply("rushNavRoute",answer);
+                return;
+            }catch(Exception osrmError){
+                primaryFailure=navigationFailure(osrmError);
+            }
+            try{
+                JSONObject progress=new JSONObject();
+                progress.put("message","OSRM no disponible. Probando Valhalla…");
+                navReply("rushNavRouteProgress",progress);
+                JSONObject answer=normalizedRoute(
+                        retrieveValhallaRoute(aLat,aLon,bLat,bLon),"Valhalla");
+                navReply("rushNavRoute",answer);
+            }catch(Exception fallbackError){
+                String secondaryFailure=navigationFailure(fallbackError);
+                String explanation;
+                if(primaryFailure.contains("sin ruta vial")&&
+                        secondaryFailure.contains("sin ruta vial")){
+                    explanation="No hay una ruta vial identificable. Comprueba que "
+                            +"origen y destino estén junto a calles transitables.";
+                }else{
+                    explanation="Fallaron los motores de rutas: OSRM ("+primaryFailure
+                            +") y Valhalla ("+secondaryFailure+"). "
+                            +"El mapa puede funcionar aunque estos servidores fallen.";
                 }
-                JSONArray routes=root.optJSONArray("routes");
-                if(routes==null||routes.length()==0){
-                    navReply("rushNavRoute",navError("No hay rutas disponibles."));return;
-                }
-                JSONObject route=routes.getJSONObject(0);
-                JSONObject result=new JSONObject();
-                result.put("ok",true);
-                result.put("meters",route.optDouble("distance",0));
-                result.put("seconds",route.optDouble("duration",0));
-                JSONArray coordsRaw=route.getJSONObject("geometry").getJSONArray("coordinates");
-                JSONArray coordsSafe=new JSONArray();
-                // La ruta simplificada limita redibujados en WebView.
-                int jump=Math.max(1,(int)Math.ceil(coordsRaw.length()/800.0));
-                for(int i=0;i<coordsRaw.length();i+=jump)coordsSafe.put(coordsRaw.getJSONArray(i));
-                if((coordsRaw.length()-1)%jump!=0)
-                    coordsSafe.put(coordsRaw.getJSONArray(coordsRaw.length()-1));
-                result.put("geometry",coordsSafe);
-                JSONArray stepsOut=new JSONArray();
-                JSONArray legs=route.optJSONArray("legs");
-                if(legs!=null)for(int j=0;j<legs.length();j++){
-                    JSONArray steps=legs.getJSONObject(j).optJSONArray("steps");
-                    if(steps==null)continue;
-                    for(int k=0;k<steps.length()&&stepsOut.length()<180;k++){
-                        JSONObject step=steps.getJSONObject(k);
-                        JSONObject turn=step.optJSONObject("maneuver");
-                        if(turn==null)continue;
-                        JSONArray at=turn.optJSONArray("location");
-                        if(at==null || at.length()<2)continue;
-                        JSONObject compact=new JSONObject();
-                        compact.put("lat",at.optDouble(1));
-                        compact.put("lon",at.optDouble(0));
-                        compact.put("type",turn.optString("type","turn"));
-                        compact.put("modifier",turn.optString("modifier","straight"));
-                        compact.put("road",step.optString("name",""));
-                        compact.put("meters",step.optDouble("distance",0));
-                        stepsOut.put(compact);
-                    }
-                }
-                result.put("steps",stepsOut);
-                navReply("rushNavRoute",result);
-            }catch(Exception ignored){
-                navReply("rushNavRoute",navError("No fue posible calcular la ruta. Revisa internet."));
+                navReply("rushNavRoute",navError(explanation));
             }
         });
     }
