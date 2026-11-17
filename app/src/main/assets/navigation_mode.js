@@ -139,6 +139,13 @@
    window.Rush.routeNav(position.lat,position.lon,dest.lat,dest.lon);
   }
  }
+ window.rushNavExploring=function(){
+  if(!data)return;
+  driving=false;
+  follow.classList.remove('active');
+  overview.classList.add('active');
+  text('navGuideMode','VISTA GENERAL');
+ };
  var oldRoute=window.rushNavRoute;
  window.rushNavRoute=function(result){
   if(!result||!result.ok){
