@@ -330,7 +330,7 @@
 .top-signal{font-size:19px;color:#49ccff}.clock{font-size:17px}
 .roundsettings{width:31px;height:31px;border-radius:9px;backdrop-filter:none}
 .main{display:grid;grid-template-columns:minmax(0,35.5fr) minmax(0,64.5fr);
- grid-template-rows:minmax(0,60%) minmax(0,40%);gap:6px;min-height:0}
+ grid-template-rows:minmax(0,3fr) minmax(0,2fr);gap:6px;min-height:0}
 .rightarea{display:contents}
 .mapcard{grid-column:1;grid-row:1;display:flex;gap:2px;padding:0;background:transparent;
  border:0;box-shadow:none;backdrop-filter:none;overflow:hidden}
@@ -373,7 +373,7 @@
  linear-gradient(30deg,transparent 49%,#2f649f55 49.5%,#2f649f55 50.5%,transparent 51%) 0 0/77px 60px,
  linear-gradient(150deg,transparent 48%,#3477ad44 49%,#3477ad44 51%,transparent 52%) 0 0/81px 64px;
  opacity:.6;pointer-events:none}
-.home-map:has(.home-map-tiles img) .home-map-grid{opacity:.11}
+.home-map.home-map-has-tiles .home-map-grid{opacity:.11}
 .home-map-header{position:absolute;z-index:3;left:8px;right:8px;top:7px;display:flex;align-items:center;gap:8px;pointer-events:none}
 .home-map-label{background:#0ca3d9;color:#fff;padding:4px 7px;border-radius:8px;font-weight:850;font-size:13px}
 .home-map-label strong{color:#fff}
@@ -390,6 +390,7 @@
  border:2px solid #fff;border-radius:6px;background:#178ef4;width:19px;height:19px;
  box-shadow:0 0 7px #6cd9ff;color:transparent;pointer-events:none}
 .home-map-hit{position:absolute;inset:0;z-index:1;width:100%;height:100%}
+.home-map-attribution{position:absolute;right:7px;bottom:42px;z-index:2;padding:2px 4px;font-size:8px;background:#031a30b5;color:#fff;border-radius:4px;pointer-events:none}
 .widgets{grid-column:2;grid-row:2;min-height:0;display:grid;grid-template-columns:1fr}
 .music{min-height:0;height:100%;grid-template-columns:88px minmax(0,1fr);gap:10px;padding:6px 10px;
  border-radius:13px;box-shadow:0 0 12px #007cff85;background:#04162e;border:1px solid #179bea}
@@ -491,6 +492,7 @@
    <div id="homeMapTiles" class="home-map-tiles" aria-hidden="true"></div>
    <div class="home-map-grid" aria-hidden="true"></div>
    <div id="homeMapMarker" class="home-map-marker" hidden aria-label="Posición Android">◆</div>
+   <span class="home-map-attribution">© OpenStreetMap contributors</span>
    <div class="home-map-header"><span class="home-map-label">RUSH <strong>NAVIGATOR</strong></span><span id="homeMapStatus">Mapa 2D · ubicación opcional</span></div>
    <div class="home-map-route">Mapa y rutas dentro de Rush Launcher<small>Sin tráfico de Waze · ubicación Android</small></div>
    <div class="home-map-footer"><span id="homeMapInfo">Pulsa Mapa para navegar</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
