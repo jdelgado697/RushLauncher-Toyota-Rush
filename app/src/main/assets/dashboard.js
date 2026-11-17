@@ -1,4 +1,4 @@
-/* Rush Launcher 4.3 · multimedia, OBD y mapa 2D bajo demanda. */
+/* Rush Launcher 4.5 · Spotify XL, navegación OBD y controles externos. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -162,9 +162,36 @@ function openMap(){
  };
  document.body.appendChild(script);
 }
+function rushReturnHome(){
+ Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){
+  if(!p.hidden)closeOverlay(p.id);
+ });
+}
+window.rushHandleBack=function(){
+ var visible=Array.prototype.filter.call(document.querySelectorAll('.scrim'),function(p){return !p.hidden;});
+ if(!visible.length)return false;
+ closeOverlay(visible[visible.length-1].id);
+ return true;
+};
+window.rushExternalNav=function(action){
+ rushReturnHome();
+ if(action==='apps')openOverlay('appsPanel');
+};
+window.rushFloatingNavState=function(active){
+ var line=$('floatingNavStatus');
+ if(!line)return;
+ line.textContent=active?
+  'Controles Rush activos: Inicio, Atrás y Menú disponibles sobre Xuper TV si el firmware los admite.':
+  'Desactivado. Autoriza «Controles Rush» en Ajustes → Accesibilidad si deseas controles sobre Xuper TV.';
+};
+$('floatingNavSettings').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.floatingNavSettings==='function')window.Rush.floatingNavSettings();
+ else notice('Controles disponibles en Android del TBox');
+});
 Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){b.addEventListener('click',function(){closeOverlay(b.getAttribute('data-close'))})});
 Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){p.addEventListener('click',function(ev){if(ev.target===p)closeOverlay(p.id)})});
 Array.prototype.forEach.call(document.querySelectorAll('[data-action]'),function(b){b.addEventListener('click',function(){var action=b.getAttribute('data-action');
+ if(action==='home'){rushReturnHome();return}
  if(action==='apps'){openOverlay('appsPanel');return}
  if(action==='route'){openOverlay('routePanel');return}
  if(action==='settings'){openOverlay('settingsPanel');return}
@@ -693,7 +720,12 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('visibilitychange',function(){
  if(document.hidden&&!$('mapPanel').hidden)closeOverlay('mapPanel');
 });
-window.addEventListener('focus',function(){if(nativeApp)window.Rush.ready()});
+window.addEventListener('focus',function(){
+ if(nativeApp){
+  window.Rush.ready();
+  if(typeof window.Rush.floatingNavStatus==='function')window.Rush.floatingNavStatus();
+ }
+});
 updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
