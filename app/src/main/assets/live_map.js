@@ -1,4 +1,4 @@
-/* Rush Launcher 4.4 — ruta y mapa ligero dentro de Rush Launcher.
+/* Rush Launcher 4.13 — seguimiento, flecha GPS y mapa rumbo arriba.
  * OpenStreetMap raster: solo teselas visibles; sin precarga ni descargas masivas.
  * Sin biblioteca remota, sin rutas simuladas, siempre muestra atribución.
  * https://operations.osmfoundation.org/policies/tiles/
@@ -15,10 +15,59 @@ if(!host||!layer||!marker)return;
 var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
 var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=null;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
-var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=18,MAX_CACHED_TILES=22;
+var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=24,MAX_CACHED_TILES=32;
 var drawPending=false,lastStatus='Esperando ubicación Android';
 var osmtile='https://tile.openstreetmap.org/';
 var routeGeometry=null,destination=null,selecting=false,downPoint=null,moved=0;
+var driving=false,courseDegrees=0,hasCourse=false,speedKmh=0,visualShift=0,visualRotation=0;
+function updateWorldTransform(h){
+ visualShift=driving&&following?Math.round(Math.min(72,Math.max(28,h*.16))):0;
+ visualRotation=driving&&following&&hasCourse?-courseDegrees:0;
+ var transform=driving&&following?
+   'translate3d(0,'+visualShift+'px,0) rotate('+visualRotation+'deg)':'';
+ layer.style.transformOrigin='50% 50%';
+ routeSvg.style.transformOrigin='50% 50%';
+ layer.style.transform=transform;routeSvg.style.transform=transform;
+ host.classList.toggle('is-navigating',driving&&following);
+ marker.classList.toggle('is-navigation',driving&&following);
+ marker.classList.toggle('is-unoriented',driving&&following&&!hasCourse);
+}
+function drivingMode(value){
+ driving=!!value;following=true;selecting=false;
+ if(driving){
+  zoom=16;
+  if(position)center={lat:position.lat,lon:position.lon};
+ }else{layer.style.transform='';routeSvg.style.transform='';}
+ requestDraw();
+}
+function overviewRoute(){
+ driving=false;following=false;
+ var coords=routeGeometry;
+ if(!coords||coords.length<2){requestDraw();return;}
+ var minLat=90,maxLat=-90,minLon=180,maxLon=-180;
+ for(var i=0;i<coords.length;i++){
+  var lon=coords[i][0],lat=coords[i][1];
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
+  minLat=Math.min(minLat,lat);maxLat=Math.max(maxLat,lat);
+  minLon=Math.min(minLon,lon);maxLon=Math.max(maxLon,lon);
+ }
+ if(minLat>maxLat){requestDraw();return;}
+ center={lat:(minLat+maxLat)/2,lon:(minLon+maxLon)/2};
+ var w=host.clientWidth||800,h=host.clientHeight||300;
+ for(var z=17;z>=3;z--){
+  var nw=mercator(maxLat,minLon,z),se=mercator(minLat,maxLon,z);
+  if(Math.abs(se.x-nw.x)<=w*.75&&Math.abs(se.y-nw.y)<=h*.68){zoom=z;break;}
+ }
+ requestDraw();
+}
+function smoothCourse(next){
+ if(!Number.isFinite(next))return;
+ next=(next%360+360)%360;
+ if(!hasCourse){courseDegrees=next;hasCourse=true;return;}
+ var diff=((next-courseDegrees+540)%360)-180;
+ courseDegrees=(courseDegrees+diff*.4+360)%360;
+}
+
 var routeShadow=document.getElementById('navRouteShadow'),routeLine=document.getElementById('navRouteLine');
 var destinationPin=document.getElementById('navDestinationPin'),routeSvg=document.getElementById('navRouteOverlay');
 function screenPoint(lat,lon,w,h,world){
