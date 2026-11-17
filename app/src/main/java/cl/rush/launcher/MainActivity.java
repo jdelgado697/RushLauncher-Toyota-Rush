@@ -38,6 +38,8 @@ import org.json.JSONArray;
 
 import java.util.List;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.util.Locale;
 import java.net.HttpURLConnection;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -66,6 +68,9 @@ public class MainActivity extends Activity implements LocationListener {
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService navigationExecutor = Executors.newSingleThreadExecutor();
+    private volatile long lastRouteRequest = 0L;
+    private volatile long lastSearchRequest = 0L;
     // Iconos del PackageManager, sin descargas ni archivos externos.
     private final ExecutorService iconExecutor = Executors.newSingleThreadExecutor();
     private final LruCache<String, String> appIconCache = new LruCache<>(128);
@@ -212,7 +217,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.3.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.4.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -763,6 +768,153 @@ public class MainActivity extends Activity implements LocationListener {
         });
     }
 
+
+    // Rush Navigator: rutas OSRM y búsqueda Nominatim bajo petición explícita.
+    // Servicios públicos de demostración sin SLA; no son el GPS de CarPlay.
+    private static final String RUSH_NAV_UA =
+            "RushLauncher/4.4 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)";
+    private static boolean validCoord(double lat, double lon) {
+        return Double.isFinite(lat) && Double.isFinite(lon)
+                && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+    }
+    private static String getNavText(String url, int maxBytes) throws Exception {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            c.setRequestMethod("GET");
+            c.setRequestProperty("User-Agent", RUSH_NAV_UA);
+            c.setRequestProperty("Accept", "application/json");
+            c.setRequestProperty("Accept-Language", "es");
+            c.setConnectTimeout(8500);
+            c.setReadTimeout(10000);
+            c.setUseCaches(true);
+            if(c.getResponseCode()!=200)
+                throw new java.io.IOException("Servidor HTTP " + c.getResponseCode());
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            try(InputStream in=c.getInputStream()){
+                byte[] buffer=new byte[4096];int count;
+                while((count=in.read(buffer))!=-1){
+                    output.write(buffer,0,count);
+                    if(output.size()>maxBytes)
+                        throw new java.io.IOException("Respuesta de navegación demasiado grande");
+                }
+            }
+            return new String(output.toByteArray(), StandardCharsets.UTF_8);
+        }finally{if(c!=null)c.disconnect();}
+    }
+    private void navReply(String method, JSONObject value) {
+        javascript("if(window."+method+")window."+method+"("+value.toString()+");");
+    }
+    private static JSONObject navError(String message) {
+        JSONObject result=new JSONObject();
+        try{result.put("ok",false);result.put("message",message);}catch(Exception ignored){}
+        return result;
+    }
+    private void searchNavigationDestination(String query) {
+        if(query==null || query.trim().length()<3 || query.length()>140){
+            navReply("rushNavSearch",navError("Escribe una dirección o lugar."));
+            return;
+        }
+        long now=System.currentTimeMillis();
+        if(now-lastSearchRequest<1800L){
+            navReply("rushNavSearch",navError("Espera unos segundos antes de buscar de nuevo."));
+            return;
+        }
+        lastSearchRequest=now;
+        final String q=query.trim();
+        navigationExecutor.execute(()->{
+            try{
+                String url="https://nominatim.openstreetmap.org/search"
+                        +"?format=jsonv2&limit=4&addressdetails=0&q="
+                        +URLEncoder.encode(q,"UTF-8");
+                JSONArray response=new JSONArray(getNavText(url,110000));
+                JSONArray items=new JSONArray();
+                for(int i=0;i<Math.min(4,response.length());i++){
+                    JSONObject hit=response.getJSONObject(i);
+                    double lat=Double.parseDouble(hit.getString("lat"));
+                    double lon=Double.parseDouble(hit.getString("lon"));
+                    if(!validCoord(lat,lon))continue;
+                    JSONObject row=new JSONObject();
+                    row.put("lat",lat);row.put("lon",lon);
+                    row.put("name",hit.optString("display_name","Destino"));
+                    items.put(row);
+                }
+                JSONObject result=new JSONObject();
+                result.put("ok",true);result.put("items",items);
+                navReply("rushNavSearch",result);
+            }catch(Exception ignored){
+                navReply("rushNavSearch",navError(
+                    "No se pudo buscar. Verifica internet o selecciona el destino en el mapa."));
+            }
+        });
+    }
+    private void fetchNavigationRoute(double aLat,double aLon,double bLat,double bLon) {
+        if(!validCoord(aLat,aLon)||!validCoord(bLat,bLon)){
+            navReply("rushNavRoute",navError("Ubicación o destino no válidos."));return;
+        }
+        long now=System.currentTimeMillis();
+        if(now-lastRouteRequest<3000L){
+            navReply("rushNavRoute",navError("Espera unos segundos antes de calcular otra ruta."));return;
+        }
+        lastRouteRequest=now;
+        navigationExecutor.execute(()->{
+            try {
+                // API de demostración OSRM. Un solo cálculo iniciado por el usuario.
+                // El servicio no ofrece garantías ni tráfico en tiempo real.
+                String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
+                        aLon,aLat,bLon,bLat);
+                String url="https://router.project-osrm.org/route/v1/driving/"
+                        +coords+"?overview=simplified&geometries=geojson&steps=true";
+                JSONObject root=new JSONObject(getNavText(url,450000));
+                if(!"Ok".equals(root.optString("code"))){
+                    navReply("rushNavRoute",navError("No se encontró una ruta por carretera."));return;
+                }
+                JSONArray routes=root.optJSONArray("routes");
+                if(routes==null||routes.length()==0){
+                    navReply("rushNavRoute",navError("No hay rutas disponibles."));return;
+                }
+                JSONObject route=routes.getJSONObject(0);
+                JSONObject result=new JSONObject();
+                result.put("ok",true);
+                result.put("meters",route.optDouble("distance",0));
+                result.put("seconds",route.optDouble("duration",0));
+                JSONArray coordsRaw=route.getJSONObject("geometry").getJSONArray("coordinates");
+                JSONArray coordsSafe=new JSONArray();
+                // La ruta simplificada limita redibujados en WebView.
+                int jump=Math.max(1,(int)Math.ceil(coordsRaw.length()/800.0));
+                for(int i=0;i<coordsRaw.length();i+=jump)coordsSafe.put(coordsRaw.getJSONArray(i));
+                if((coordsRaw.length()-1)%jump!=0)
+                    coordsSafe.put(coordsRaw.getJSONArray(coordsRaw.length()-1));
+                result.put("geometry",coordsSafe);
+                JSONArray stepsOut=new JSONArray();
+                JSONArray legs=route.optJSONArray("legs");
+                if(legs!=null)for(int j=0;j<legs.length();j++){
+                    JSONArray steps=legs.getJSONObject(j).optJSONArray("steps");
+                    if(steps==null)continue;
+                    for(int k=0;k<steps.length()&&stepsOut.length()<180;k++){
+                        JSONObject step=steps.getJSONObject(k);
+                        JSONObject turn=step.optJSONObject("maneuver");
+                        if(turn==null)continue;
+                        JSONArray at=turn.optJSONArray("location");
+                        if(at==null || at.length()<2)continue;
+                        JSONObject compact=new JSONObject();
+                        compact.put("lat",at.optDouble(1));
+                        compact.put("lon",at.optDouble(0));
+                        compact.put("type",turn.optString("type","turn"));
+                        compact.put("modifier",turn.optString("modifier","straight"));
+                        compact.put("road",step.optString("name",""));
+                        compact.put("meters",step.optDouble("distance",0));
+                        stepsOut.put(compact);
+                    }
+                }
+                result.put("steps",stepsOut);
+                navReply("rushNavRoute",result);
+            }catch(Exception ignored){
+                navReply("rushNavRoute",navError("No fue posible calcular la ruta. Revisa internet."));
+            }
+        });
+    }
+
     private void startGps() {
         boolean fine = Build.VERSION.SDK_INT < Build.VERSION_CODES.M
                 || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -898,6 +1050,7 @@ public class MainActivity extends Activity implements LocationListener {
             spotifyReceiverRegistered = false;
         }
         weatherExecutor.shutdownNow();
+        navigationExecutor.shutdownNow();
         iconExecutor.shutdownNow();
         if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
@@ -990,6 +1143,12 @@ public class MainActivity extends Activity implements LocationListener {
                     catch (SecurityException ignored) { }
                 }
             });
+        }
+        @JavascriptInterface public void searchNav(String text) {
+            searchNavigationDestination(text);
+        }
+        @JavascriptInterface public void routeNav(double lat1,double lon1,double lat2,double lon2) {
+            fetchNavigationRoute(lat1,lon1,lat2,lon2);
         }
         @JavascriptInterface public void getWeather(double latitude, double longitude) {
             runUi(() -> fetchWeather(latitude, longitude));
