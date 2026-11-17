@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls]
 
 permissions:
   contents: read
@@ -104,6 +104,16 @@ jobs:
           assert 'public void routeNav(double lat1,double lon1,double lat2,double lon2)' in native
           assert 'https://router.project-osrm.org/route/v1/driving/' in native
           assert 'https://valhalla1.openstreetmap.de/route?json=' in native
+          assert 'https://routing.openstreetmap.de/routed-car/route/v1/driving/' in native
+          assert 'retrieveFossgisRoute(' in native
+          assert 'Los tres servidores rechazaron la conexión HTTPS del TBox' in native
+          assert 'navigationFailure(Exception e)' in native
+          assert 'SSLHandshakeException' in native
+          assert 'navShowDiagnostics(problem)' in js
+          assert 'id="navDiagnostics"' in html and 'id="navDiagMessage"' in html
+          assert 'window.rushNavRouteProgress=function' in js
+          assert 'BIND_ACCESSIBILITY_SERVICE' not in manifest
+
           assert 'retrieveValhallaRoute(' in native and 'retrieveOsrmRoute(' in native
           assert 'normalizedRoute(' in native and 'navigationFailure(' in native
           assert 'request.put("format","osrm")' in native
@@ -156,8 +166,8 @@ jobs:
           assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this)' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.obd410'" in gradle
-          assert 'RushLauncher/4.10.0' in native
+          assert "applicationId 'cl.rush.launcher.obd411'" in gradle
+          assert 'RushLauncher/4.11.0' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -182,7 +192,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 36" in gradle
+          assert "versionCode 37" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -206,10 +216,10 @@ jobs:
           assert 'case "enableHome":' in native
           assert 'isDefaultHome()' in native
           assert 'android.intent.category.HOME' in manifest
-          assert 'android:name="cl.rush.launcher.obd410.HomeAlias"' in manifest
+          assert 'android:name="cl.rush.launcher.obd411.HomeAlias"' in manifest
           assert 'android:enabled="false"' in manifest
           # Corregir el fallo de HOME en 4.4: alias nativo = manifest exacto.
-          assert native.count('"cl.rush.launcher.obd410.HomeAlias"') >= 2
+          assert native.count('"cl.rush.launcher.obd411.HomeAlias"') >= 2
           assert '"cl.rush.launcher.HomeAlias"' not in native
           assert 'data-action="home"' in html
           assert 'rushReturnHome()' in js and 'window.rushHandleBack' in js
@@ -248,7 +258,7 @@ jobs:
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
           spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
-          assert 'rushlauncherobd410://spotify/callback' in spotify
+          assert 'rushlauncherobd411://spotify/callback' in spotify
           assert 'grant_type=authorization_code' in spotify
           assert 'code_challenge_method' in spotify
           assert 'grant_type=refresh_token' in spotify
@@ -258,7 +268,7 @@ jobs:
           assert '/pause' in spotify and '/play' in spotify
           assert '/next' in spotify and '/previous' in spotify
           assert '/seek?position_ms=' in spotify
-          assert 'rushlauncherobd410' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'rushlauncherobd411' in manifest and 'android.intent.action.VIEW' in manifest
           assert 'SpotifyConnectClient' in native
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
