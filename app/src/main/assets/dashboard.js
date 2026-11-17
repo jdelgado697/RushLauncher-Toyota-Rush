@@ -233,7 +233,11 @@ $('returnOriginal').addEventListener('click',function(){app('exit')});
 $('requestGps').addEventListener('click',function(){if(nativeApp)window.Rush.askGps();else notice('GPS requiere Android')});
 $('openBluetooth').addEventListener('click',function(){app('bluetoothSettings')});
 $('weatherConsent').addEventListener('click',function(){
- if(saved.weather){saved.weather=false;store('rush_weather','no');state.weather=null;updateWeather();notice('Clima desactivado');return}
+ if(saved.weather){
+  saved.weather=false;store('rush_weather','no');state.weather=null;updateWeather();
+  // El seguimiento adicional puede seguir activo si el usuario abrió Rush Navigator.
+  notice('Clima desactivado');return;
+ }
  saved.weather=true;store('rush_weather','yes');updateWeather();
  if(nativeApp)window.Rush.askGps();
  refreshWeather(true);
@@ -776,5 +780,9 @@ updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
 renderMusic(null);
-if(nativeApp){window.Rush.ready();} // Mapa y GPS se solicitan bajo demanda.
+if(nativeApp){
+ window.Rush.ready();
+ // Clima autorizado: reanudar ubicación al abrir el launcher, sin pedirla a usuarios que no optaron.
+ if(saved.weather&&typeof window.Rush.askGps==='function')window.Rush.askGps();
+}
 })();
