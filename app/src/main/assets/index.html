@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.2 · Tablero con relojes grandes y CarPlay</title>
+<title>Rush Launcher 4.3 · OBD, Mapa 2D bajo demanda y CarPlay</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -199,6 +199,42 @@
 .obd-gauge-row{height:102px}
 .obd-sheet .obd-dashboard .obd-metric{min-height:44px}
 }
+
+/* Rush 4.3: el mapa se abre bajo demanda y ocupa casi toda la pantalla.
+   Mosaicos reales OSM sin precarga y sin animación de desplazamiento continua. */
+.map-sheet{height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);
+ width:min(1000px,calc(100vw - 16px));max-width:calc(100vw - 16px);
+ padding:9px;display:flex;flex-direction:column;gap:7px;overflow:hidden;border-radius:16px}
+#mapPanel{padding:8px;backdrop-filter:none}
+.map-sheet-head,.map-sheet-footer{display:flex;align-items:center;gap:9px;flex:none;min-height:31px}
+.map-heading{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.map-heading strong{font-size:16px;line-height:1.1}
+.map-heading small{font-size:10px;color:var(--sub)}
+.map-quick-button{padding:7px 10px;border-radius:9px;background:var(--accent2);color:#fff;
+ font-weight:800;font-size:11px;white-space:nowrap}
+.map-sheet .close{padding:7px 9px;font-size:11px}
+.map-sheet .mapgraphic.realmap{flex:1;min-height:100px;min-width:0;
+ border-radius:11px;contain:layout paint;background:#dce6f3;touch-action:none}
+.map-sheet .map-tools{top:8px;right:9px;gap:8px}
+.map-sheet .map-tool{height:41px;width:41px;font-size:24px;border-radius:12px}
+.map-sheet .map-position{z-index:7}
+.map-sheet .map-loading{font-size:15px;line-height:1.35}
+.map-sheet .map-attribution{font-size:9px;padding:3px 5px}
+.map-sheet-footer{justify-content:space-between}
+#mapSubtitle{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+ font-size:11px;font-weight:700;color:var(--sub)}
+.map-sheet-footer .map-quick-button{padding:6px 9px}
+@media(max-width:860px){
+ .map-sheet{gap:5px;padding:7px}
+ .map-heading strong{font-size:14px}
+ .map-heading small{font-size:9px}
+ .map-sheet-head{min-height:30px}
+ .map-sheet-footer{min-height:25px}
+ .map-sheet-footer .map-quick-button{font-size:10px}
+ .map-sheet .map-tool{width:36px;height:36px;font-size:21px}
+ .dock{max-width:745px;padding:5px 7px}
+ .dockbtn{min-width:44px;max-width:100px}
+}
 </style>
 </head>
 <body>
@@ -291,6 +327,7 @@
  <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span><span class="dock-label">Spotify</span></button>
  <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
  <button class="dockbtn" type="button" data-action="obdDashboard"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-pin"/></svg></span>Tablero OBD</button>
+ <button class="dockbtn" type="button" data-action="map"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span>Mapa 2D</button>
  <button class="dockbtn" type="button" data-action="autokit"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">CarPlay</span></button>
 </nav>
 </div>
@@ -304,11 +341,12 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher OBD 4.2</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher OBD 4.3</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
+  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Mapa 2D de OpenStreetMap: se descarga únicamente al abrirlo, se libera al cerrarlo y depende de la ubicación disponible en Android. Para navegación guiada, utiliza CarPlay con tu iPhone.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir mapa 2D</button><button type="button" class="actionbtn" data-action="autokit">Abrir CarPlay</button></div></div>
   <div class="set-line"><h3>Clima</h3><p class="muted">Al activar el clima, se envía tu ubicación a Open-Meteo para consultar el pronóstico. Puedes desactivarlo desde el panel.</p></div>
   <div class="set-line">
    <h3>Launcher predeterminado del TBox</h3>
@@ -373,6 +411,34 @@
   </div>
   <div class="tile-buttons"><button type="button" class="actionbtn highlight" id="obdAdvancedConnect">Conectar ELM327</button><button type="button" class="actionbtn" data-action="bluetoothSettings">Bluetooth Android</button></div>
   <p class="muted">Solo datos OBD-II reales de la ECU y voltaje reportado por el adaptador. La disponibilidad depende del vehículo. No usar para diagnosticar averías ni mirar la pantalla mientras conduces.</p>
+ </div>
+</div>
+<div class="scrim" id="mapPanel" hidden>
+ <div class="sheet map-sheet" role="dialog" aria-modal="true" aria-label="Mapa 2D ligero en vivo">
+  <div class="map-sheet-head">
+   <div class="map-heading"><strong>MAPA 2D · Rush</strong><small>Solo activo mientras está abierto</small></div>
+   <button type="button" class="map-quick-button" data-action="autokit">CarPlay</button>
+   <button type="button" class="close" data-close="mapPanel">Cerrar ✕</button>
+  </div>
+  <div class="mapgraphic realmap" id="realMap" tabindex="0" aria-label="Mapa con controles táctiles, arrastrar para desplazar">
+   <div class="map-tile-layer" id="mapTileLayer" aria-hidden="true"></div>
+   <div id="mapPositionMarker" class="map-position" style="display:none" aria-label="Posición detectada">
+    <span class="map-accuracy"></span><span class="map-point"></span><span class="map-arrow"></span>
+   </div>
+   <div class="map-loading" id="mapWaiting">Esperando ubicación del TBox…</div>
+   <div class="map-tools">
+    <button type="button" id="mapRecenter" class="map-tool" aria-label="Seguir ubicación">◎</button>
+    <button type="button" id="mapZoomIn" class="map-tool" aria-label="Acercar mapa">+</button>
+    <button type="button" id="mapZoomOut" class="map-tool" aria-label="Alejar mapa">−</button>
+   </div>
+   <div class="mapnote" id="locationStatus">Sin lectura de ubicación</div>
+   <span class="map-attribution">© OpenStreetMap contributors</span>
+  </div>
+  <div class="map-sheet-footer">
+    <span id="mapSubtitle">Buscando señal de ubicación…</span>
+    <button type="button" class="map-quick-button" id="mapRetryGps">Reintentar GPS</button>
+    <button type="button" class="map-quick-button" data-action="autokit">Navegar con iPhone</button>
+  </div>
  </div>
 </div>
 <div class="scrim" id="radioPanel" hidden>
