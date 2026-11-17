@@ -309,7 +309,7 @@ window.rushGpsStatus=function(status){
 window.rushGpsData=function(speed,heading){
  state.gps=(typeof speed==='number'&&isFinite(speed))?Math.max(0,speed):null;
  if(state.gps!==null)state.gpsStatus='GPS disponible';
- if(window.RushLiveMap)window.RushLiveMap.updateHeading(heading);
+ if(window.RushLiveMap)window.RushLiveMap.updateHeading(heading,state.gps);
  renderMetrics();
 };
 
