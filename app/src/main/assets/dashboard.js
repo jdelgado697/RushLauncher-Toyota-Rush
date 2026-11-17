@@ -1,4 +1,4 @@
-/* Rush Launcher 4.7 · inicio sin accesibilidad, clima y Spotify XL. */
+/* Rush Launcher 4.14 · seguimiento GPS fluido y Spotify XL. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -70,7 +70,11 @@ function navGuidance(){
 function navSelect(lat,lon,name){
  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
  nav.destination={lat:lat,lon:lon,name:name||'Punto del mapa'};nav.route=null;nav.step=0;
- if(window.RushLiveMap){window.RushLiveMap.setDestination(lat,lon);window.RushLiveMap.enableSelection(false)}
+ if(window.RushLiveMap){
+   window.RushLiveMap.setDestination(lat,lon);
+   window.RushLiveMap.enableSelection(false);
+   window.RushLiveMap.drivingMode(true);
+ }
  $('navStartRoute').disabled=false;
  show($('navResults'),false);show($('navGuide'),false);show($('navRouteInfo'),false);
  navStatus('Destino seleccionado · pulsa Calcular ruta');
@@ -169,6 +173,7 @@ function openMap(){
  function activateMap(){
   if($('mapPanel').hidden||!window.RushLiveMap)return;
   window.RushLiveMap.activate();
+  if(typeof window.rushNavMapOpened==='function')window.rushNavMapOpened();
   if(state.location&&state.location.receivedAt&&Date.now()-state.location.receivedAt<15000){
    window.RushLiveMap.updatePosition(state.location.lat,state.location.lon,state.location.accuracy);
   }
