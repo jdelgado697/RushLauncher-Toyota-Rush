@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obdpro'
+        applicationId 'cl.rush.launcher.obd42'
         minSdk 26
         targetSdk 32
-        versionCode 27
-        versionName '4.1.0-OBD'
+        versionCode 28
+        versionName '4.2.0-OBD'
     }
 
     compileOptions {
