@@ -31,6 +31,7 @@ function store(key,value){try{localStorage.setItem(key,value)}catch(e){}}
 function openOverlay(id){show($(id),true);if(id==='appsPanel'&&nativeApp){write('appsCount','Buscando…');$('appsSearch').value='';window.Rush.listApps()}}
 function closeOverlay(id){
  if(id==='mapPanel'){
+  navClear();
   if(window.RushLiveMap)window.RushLiveMap.deactivate();
   if(nativeApp&&typeof window.Rush.stopMapGps==='function')window.Rush.stopMapGps();
  }
@@ -139,7 +140,7 @@ $('navClearRoute').addEventListener('click',navClear);
 
 function openMap(){
  openOverlay('mapPanel');
- write('mapSubtitle','Buscando ubicación del TBox…');
+ write('mapSubtitle','Busca un destino o elige un punto en el mapa');
  function activateMap(){
   if($('mapPanel').hidden||!window.RushLiveMap)return;
   window.RushLiveMap.activate();
@@ -147,7 +148,7 @@ function openMap(){
    window.RushLiveMap.updatePosition(state.location.lat,state.location.lon,state.location.accuracy);
   }
   if(nativeApp&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
-  else window.RushLiveMap.setStatus('Ubicación Android no disponible; usa CarPlay');
+  else window.RushLiveMap.setStatus('Ubicación Android no disponible');
  }
  if(mapScriptLoaded){activateMap();return;}
  if(mapScriptLoading)return;
@@ -156,8 +157,8 @@ function openMap(){
  script.onload=function(){mapScriptLoading=false;mapScriptLoaded=!!window.RushLiveMap;activateMap()};
  script.onerror=function(){
   mapScriptLoading=false;
-  write('mapSubtitle','No se pudo cargar el mapa. Abre CarPlay.');
-  write('mapWaiting','No se pudo iniciar el visor. Utiliza CarPlay para navegar.');
+  write('mapSubtitle','No se pudo cargar el mapa. Comprueba la instalación.');
+  write('mapWaiting','No se pudo iniciar el mapa integrado.');
  };
  document.body.appendChild(script);
 }
@@ -264,6 +265,8 @@ window.rushGpsData=function(speed,heading){
 window.rushPosition=function(lat,lon,accuracy){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
  var old=state.location;state.location={lat:lat,lon:lon,accuracy:accuracy,receivedAt:Date.now()};
+ write('navTopStatus',Number.isFinite(accuracy)?'±'+Math.round(accuracy)+' m':'Ubicación');
+ if(nav.route)navGuidance();
  if(window.RushLiveMap)window.RushLiveMap.updatePosition(lat,lon,accuracy);
  if(saved.weather&&(!old||Math.abs(old.lat-lat)+Math.abs(old.lon-lon)>.07))refreshWeather(false);
 };
@@ -548,11 +551,11 @@ $('mapRetryGps').addEventListener('click',function(){
 });
 $('startRoute').addEventListener('click',function(){
  closeOverlay('routePanel');
- app('autokit');
+ openMap();
 });
 $('justMap').addEventListener('click',function(){
  closeOverlay('routePanel');
- app('maps');
+ openMap();
 });
 
 /** URL local generado desde PackageManager de Android; nunca logos descargados. */
