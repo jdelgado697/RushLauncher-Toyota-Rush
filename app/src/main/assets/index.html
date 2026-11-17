@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.7 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
+<title>Rush Launcher 4.8 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -424,6 +424,31 @@
  .musicnames strong{font-size:17px}
  .dock{height:50px}.dockbtn{min-height:43px}.dockicon{height:24px;width:26px}
 }
+
+/* Autocompletado 4.8: lista seleccionable, legible y táctil a 800×480. */
+.nav-results{max-height:min(228px,56vh);overflow-y:auto;overscroll-behavior:contain;
+ background:#081d39f5;backdrop-filter:none;z-index:45;
+ border:1px solid #2aaeff;box-shadow:0 5px 18px #020d2bdd}
+.nav-suggest-heading{font-weight:850;color:#90d7ff;padding:5px 10px 3px;
+ font-size:11px;letter-spacing:.2px;border-bottom:1px solid #1b5182}
+.nav-results button.nav-suggest-option{display:flex;flex-direction:column;justify-content:center;
+ align-items:flex-start;gap:3px;min-height:48px;padding:6px 10px;width:100%;
+ color:#f5fbff;background:transparent;border-bottom:1px solid #215781}
+.nav-results button.nav-suggest-option:focus,
+.nav-results button.nav-suggest-option:active{outline:2px solid #40c6ff;background:#164c86}
+.nav-results button.nav-suggest-option strong{font-size:13px;line-height:1.12;
+ max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-results button.nav-suggest-option small{font-size:10px;color:#b6dafa;line-height:1.1;
+ max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-suggest-credit{font-size:9px;color:#9abfe4;padding:4px 9px;text-align:right}
+#navQuery{border:1px solid #369adc;box-shadow:inset 0 0 4px #0264b44d}
+#navQuery:focus{outline:2px solid #36ccff}
+@media(max-width:860px){
+ .nav-results{top:73px;max-height:min(212px,55vh)}
+ .nav-results button.nav-suggest-option{min-height:44px;padding:5px 9px}
+ .nav-results button.nav-suggest-option strong{font-size:12px}
+ .nav-results button.nav-suggest-option small{font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -443,7 +468,7 @@
 </svg>
 <div class="screen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.7</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.8</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -536,7 +561,7 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.7 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.8 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -621,11 +646,11 @@
    <button type="button" class="close" data-close="mapPanel">Inicio ✕</button>
   </div>
   <div class="nav-search">
-   <input type="text" id="navQuery" maxlength="140" placeholder="Buscar lugar, calle o dirección" aria-label="Destino" autocomplete="off">
+   <input type="text" id="navQuery" maxlength="140" placeholder="Escribe un destino… aparecen sugerencias" aria-label="Escribe destino para ver sugerencias" autocomplete="off" aria-autocomplete="list" aria-controls="navResults">
    <button type="button" id="navSearchBtn">Buscar</button>
    <button type="button" id="navSelectMap" title="Elegir destino tocando el mapa">Elegir en mapa</button>
   </div>
-  <div class="nav-results" id="navResults" hidden aria-label="Destinos encontrados"></div>
+  <div class="nav-results" id="navResults" role="listbox" hidden aria-label="Destinos sugeridos y recientes"></div>
   <div class="mapgraphic realmap" id="realMap" tabindex="0" aria-label="Mapa: deslizar o tocar para elegir un destino">
    <div class="map-tile-layer" id="mapTileLayer" aria-hidden="true"></div>
    <svg id="navRouteOverlay" class="nav-route-overlay" aria-hidden="true" preserveAspectRatio="none">
@@ -683,7 +708,7 @@
    <summary>Integración avanzada por Spotify API (opcional)</summary>
    <p class="muted">Solo para cuentas que puedan registrar una aplicación en Spotify for Developers. Permite metadatos, carátula y búsqueda de estado desde Spotify Connect con autorización OAuth PKCE.</p>
    <p class="muted">Registra exactamente esta URI de retorno:</p>
-   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherobd47://spotify/callback" readonly aria-label="Redirección Spotify"/>
+   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherobd48://spotify/callback" readonly aria-label="Redirección Spotify"/>
    <p class="muted">Introduce solamente el Client ID público (nunca Client Secret).</p>
    <input class="searchapps" id="spotifyClientId" type="text" maxlength="32" placeholder="Client ID (32 caracteres)" autocomplete="off" autocapitalize="off" spellcheck="false"/>
    <div class="tile-buttons">
@@ -720,4 +745,5 @@
 <!-- Modo multimedia: NO cargar mapas OSM ni animar teselas en segundo plano. -->
 <script src="app_categories.js"></script>
 <script src="dashboard.js"></script>
+<script src="nav_autocomplete.js"></script>
 </body></html>
