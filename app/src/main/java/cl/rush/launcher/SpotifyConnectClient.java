@@ -46,7 +46,7 @@ final class SpotifyConnectClient {
         void openBrowser(Uri uri);
     }
 
-    static final String REDIRECT_URI = "rushlauncherobd49://spotify/callback";
+    static final String REDIRECT_URI = "rushlauncherobd410://spotify/callback";
     private static final String AUTH = "https://accounts.spotify.com/authorize";
     private static final String TOKEN = "https://accounts.spotify.com/api/token";
     private static final String PLAYER = "https://api.spotify.com/v1/me/player";
@@ -216,7 +216,7 @@ final class SpotifyConnectClient {
     }
 
     boolean handles(Uri uri) {
-        return uri != null && "rushlauncherobd49".equals(uri.getScheme())
+        return uri != null && "rushlauncherobd410".equals(uri.getScheme())
                 && "spotify".equals(uri.getHost()) && "/callback".equals(uri.getPath());
     }
 
