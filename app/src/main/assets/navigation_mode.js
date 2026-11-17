@@ -1,4 +1,4 @@
-/* Rush Navigator 4.13: navegación guiada y seguimiento después de calcular.
+/* Rush Navigator 4.14: seguimiento continuo por defecto al abrir el mapa.
  * Requiere live_map.js. No reproduce tráfico, radares ni datos Waze.
  * Distancias aproximadas a trazado para detectar desvíos, tolerancia al GPS.
  */
@@ -81,11 +81,11 @@
   }
  }
  function clear(){
-  data=null;position=null;stepIndex=0;offCount=0;rerouting=false;driving=false;
+  data=null;position=null;stepIndex=0;offCount=0;rerouting=false;driving=true;
   spokenIndex=-1;spokenCloseIndex=-1;
   map.classList.remove('is-driving');panel.hidden=true;
-  if(window.RushLiveMap && typeof window.RushLiveMap.drivingMode==='function')
-    window.RushLiveMap.drivingMode(false);
+  if(!map.hidden&&window.RushLiveMap&&typeof window.RushLiveMap.drivingMode==='function')
+    window.RushLiveMap.drivingMode(true);
   if(window.Rush&&typeof window.Rush.stopNavigationSpeech==='function')
     window.Rush.stopNavigationSpeech();
  }
@@ -139,8 +139,19 @@
    window.Rush.routeNav(position.lat,position.lon,dest.lat,dest.lon);
   }
  }
+ window.rushNavMapOpened=function(){
+  driving=true;
+  if(!data){map.classList.remove('is-driving');panel.hidden=true;}
+  if(window.RushLiveMap&&typeof window.RushLiveMap.drivingMode==='function')
+   window.RushLiveMap.drivingMode(true);
+ };
+ window.rushNavFollowing=function(){
+  driving=true;
+  follow.classList.add('active');overview.classList.remove('active');
+  text('navGuideMode',data?'NAVEGANDO · GPS':'SEGUIMIENTO GPS');
+ };
  window.rushNavExploring=function(){
-  if(!data)return;
+  if(!data){driving=false;return;}
   driving=false;
   follow.classList.remove('active');
   overview.classList.add('active');
