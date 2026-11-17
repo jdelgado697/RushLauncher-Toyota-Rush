@@ -1,4 +1,4 @@
-/* Rush Launcher 4.3 — mapa ligero solo bajo demanda para Android Box 800x480.
+/* Rush Launcher 4.4 — ruta y mapa ligero dentro de Rush Launcher.
  * OpenStreetMap raster: solo teselas visibles; sin precarga ni descargas masivas.
  * Sin biblioteca remota, sin rutas simuladas, siempre muestra atribución.
  * https://operations.osmfoundation.org/policies/tiles/
@@ -18,6 +18,42 @@ var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
 var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=18,MAX_CACHED_TILES=22;
 var drawPending=false,lastStatus='Esperando ubicación Android';
 var osmtile='https://tile.openstreetmap.org/';
+var routeGeometry=null,destination=null,selecting=false,downPoint=null,moved=0;
+var routeShadow=document.getElementById('navRouteShadow'),routeLine=document.getElementById('navRouteLine');
+var destinationPin=document.getElementById('navDestinationPin'),routeSvg=document.getElementById('navRouteOverlay');
+function screenPoint(lat,lon,w,h,world){
+ var pt=mercator(lat,lon,zoom),size=TILE*Math.pow(2,zoom),dx=pt.x-world.x;
+ if(dx>size/2)dx-=size;if(dx<-size/2)dx+=size;
+ return {x:w/2+dx,y:h/2+pt.y-world.y};
+}
+function drawNavigation(w,h,world){
+ routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
+ if(routeGeometry&&routeGeometry.length>1){
+  var points=routeGeometry.map(function(c){
+   var p=screenPoint(c[1],c[0],w,h,world);
+   return p.x.toFixed(1)+','+p.y.toFixed(1);
+  }).join(' ');
+  routeLine.setAttribute('points',points);routeShadow.setAttribute('points',points);
+ }else{routeLine.setAttribute('points','');routeShadow.setAttribute('points','');}
+ if(destination){
+  var p=screenPoint(destination.lat,destination.lon,w,h,world);
+  destinationPin.style.left=p.x+'px';destinationPin.style.top=p.y+'px';
+  destinationPin.hidden=p.x < -35||p.x>w+35||p.y < -35||p.y>h+35;
+ }else destinationPin.hidden=true;
+}
+function setDestination(lat,lon){
+ if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+ destination={lat:lat,lon:lon};routeGeometry=null;selecting=false;requestDraw();
+}
+function setRoute(coords){
+ routeGeometry=Array.isArray(coords)?coords.filter(function(p){
+  return Array.isArray(p)&&p.length>=2&&Number.isFinite(p[0])&&Number.isFinite(p[1]);
+ }).slice(0,1000):null;
+ requestDraw();
+}
+function clearRoute(){routeGeometry=null;destination=null;selecting=false;requestDraw()}
+function enableSelection(flag){selecting=!!flag;host.style.cursor=selecting?'crosshair':'default'}
+
 function clamp(x,min,max){return Math.min(Math.max(x,min),max)}
 function wrapLon(lon){return ((lon+180)%360+360)%360-180}
 function mercator(lat,lon,z){
