@@ -16,7 +16,7 @@ var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true
 var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=null;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
 var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=18,MAX_CACHED_TILES=22;
-var drawPending=false,lastStatus='Esperando ubicación GPS';
+var drawPending=false,lastStatus='Esperando ubicación Android';
 var osmtile='https://tile.openstreetmap.org/';
 function clamp(x,min,max){return Math.min(Math.max(x,min),max)}
 function wrapLon(lon){return ((lon+180)%360+360)%360-180}
@@ -95,7 +95,7 @@ function draw(){
     img.onerror=function(){
      failedTiles++;
      if(loadedTiles===0&&failedTiles>2){
-      message.textContent='Mapa sin conexión: comprueba internet. Puedes abrir Waze.';
+      message.textContent='Mapa sin conexión: comprueba internet. Puedes abrir CarPlay.';
       message.hidden=false;
      }
     };
@@ -135,8 +135,8 @@ function draw(){
   message.textContent=lastStatus||'Cargando mapa…';
   message.hidden=false;
  }
- if(subtitle&&position)subtitle.textContent=following?'Mapa GPS en vivo · seguimiento activo':'Mapa GPS · desliza para explorar';
- if(note&&position)note.textContent=Number.isFinite(accuracy)?'Ubicación GPS · ±'+Math.round(accuracy)+' m':'Ubicación del TBox';
+ if(subtitle&&position)subtitle.textContent=following?'Mapa 2D · seguimiento activo':'Mapa 2D · desliza para explorar';
+ if(note&&position)note.textContent=Number.isFinite(accuracy)?'Ubicación Android · ±'+Math.round(accuracy)+' m':'Ubicación Android';
  document.getElementById('mapRecenter').classList.toggle('not-following',!following);
 }
 function updatePosition(lat,lon,acc){
@@ -153,7 +153,7 @@ function updatePosition(lat,lon,acc){
 function recenter(){
  following=true;
  if(position){setCenter(position.lat,position.lon);return}
- status('Buscando señal GPS del TBox…');
+ status('Solicitando ubicación del TBox…');
  if(window.Rush&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
 }
 document.getElementById('mapZoomIn').addEventListener('click',function(e){e.stopPropagation();setZoom(zoom+1)});
@@ -236,5 +236,5 @@ window.RushLiveMap={
  recenter:recenter,
  getState:function(){return {active:active,position:position,center:center,zoom:zoom,following:following,tiles:tiles.size}}
 };
-status('Esperando ubicación GPS real…');
+status('Esperando ubicación Android…');
 })();
