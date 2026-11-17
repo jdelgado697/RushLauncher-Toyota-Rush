@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches: [main, master, rush-launcher-4-paralelo]
 
 permissions:
   contents: read
@@ -85,7 +85,10 @@ jobs:
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
           assert 'requestAnimationFrame' in mapjs
+          gradle=Path("app/build.gradle").read_text(encoding="utf-8")
+          assert "applicationId 'cl.rush.launcher.carplay'" in gradle
           assert 'RushLauncher/4.0.0' in native
+          assert 'cl.rush.launcher.MainActivity' in manifest
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -105,7 +108,7 @@ jobs:
           assert 'case "enableHome":' in native
           assert 'isDefaultHome()' in native
           assert 'android.intent.category.HOME' in manifest
-          assert 'android:name=".HomeAlias"' in manifest
+          assert 'android:name="cl.rush.launcher.carplay.HomeAlias"' in manifest
           assert 'android:enabled="false"' in manifest
           assert ':root[data-theme=dark] .mapgraphic svg' in html
           assert 'data-theme="light"' in html and 'data-theme=dark' in html
@@ -118,7 +121,7 @@ jobs:
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
           spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
-          assert 'rushlauncherxli://spotify/callback' in spotify
+          assert 'rushlauncherxlicp://spotify/callback' in spotify
           assert 'grant_type=authorization_code' in spotify
           assert 'code_challenge_method' in spotify
           assert 'grant_type=refresh_token' in spotify
@@ -128,7 +131,7 @@ jobs:
           assert '/pause' in spotify and '/play' in spotify
           assert '/next' in spotify and '/previous' in spotify
           assert '/seek?position_ms=' in spotify
-          assert 'rushlauncherxli' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'rushlauncherxlicp' in manifest and 'android.intent.action.VIEW' in manifest
           assert 'SpotifyConnectClient' in native
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
