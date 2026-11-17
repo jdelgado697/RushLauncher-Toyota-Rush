@@ -1,4 +1,4 @@
-/* Rush Launcher 4.6 · Clima en Inicio, OBD, Rush Navigator y Spotify XL. */
+/* Rush Launcher 4.7 · inicio sin accesibilidad, clima y Spotify XL. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -177,17 +177,6 @@ window.rushExternalNav=function(action){
  rushReturnHome();
  if(action==='apps')openOverlay('appsPanel');
 };
-window.rushFloatingNavState=function(active){
- var line=$('floatingNavStatus');
- if(!line)return;
- line.textContent=active?
-  'Controles Rush activos: Inicio, Atrás y Menú disponibles sobre Xuper TV si el firmware los admite.':
-  'Desactivado. Autoriza «Controles Rush» en Ajustes → Accesibilidad si deseas controles sobre Xuper TV.';
-};
-$('floatingNavSettings').addEventListener('click',function(){
- if(nativeApp&&typeof window.Rush.floatingNavSettings==='function')window.Rush.floatingNavSettings();
- else notice('Controles disponibles en Android del TBox');
-});
 Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){b.addEventListener('click',function(){closeOverlay(b.getAttribute('data-close'))})});
 Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){p.addEventListener('click',function(ev){if(ev.target===p)closeOverlay(p.id)})});
 Array.prototype.forEach.call(document.querySelectorAll('[data-action]'),function(b){b.addEventListener('click',function(){var action=b.getAttribute('data-action');
@@ -774,7 +763,7 @@ document.addEventListener('visibilitychange',function(){
 window.addEventListener('focus',function(){
  if(nativeApp){
   window.Rush.ready();
-  if(typeof window.Rush.floatingNavStatus==='function')window.Rush.floatingNavStatus();
+
  }
 });
 updateTime();updateWeather();renderMetrics();renderObdAdvanced();
