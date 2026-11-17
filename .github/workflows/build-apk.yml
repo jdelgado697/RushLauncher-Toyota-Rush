@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow]
 
 permissions:
   contents: read
@@ -43,6 +43,7 @@ jobs:
           node --check app/src/main/assets/dashboard.js
           node --check app/src/main/assets/live_map.js
           node --check app/src/main/assets/nav_autocomplete.js
+          node --check app/src/main/assets/navigation_mode.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -94,8 +95,30 @@ jobs:
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
           assert 'requestAnimationFrame' in mapjs
-          assert 'MAX_TILES=18' in mapjs
+          assert 'MAX_TILES=24' in mapjs
           assert 'setRoute:setRoute' in mapjs and 'enableSelection:enableSelection' in mapjs
+          navigation=Path("app/src/main/assets/navigation_mode.js").read_text(encoding="utf-8")
+          assert 'drivingMode:drivingMode' in mapjs
+          assert 'overviewRoute:overviewRoute' in mapjs
+          assert 'smoothCourse(' in mapjs
+          assert 'visualRotation=driving&&following&&hasCourse' in mapjs
+          assert 'nav-car-arrow' in html
+          assert 'id="navDriveFollow"' in html and 'id="navDriveOverview"' in html
+          assert 'id="navVoiceToggle"' in html
+          assert '<script src="navigation_mode.js"></script>' in html
+          assert html.index('<script src="dashboard.js"></script>') < html.index('<script src="navigation_mode.js"></script>')
+          assert 'mode(true)' in navigation
+          assert 'window.rushNavRoute=function(result)' in navigation
+          assert 'window.rushPosition=function(lat,lon,accuracy)' in navigation
+          assert 'offCount>=3' in navigation and 'lastReroute>90000' in navigation
+          assert 'navDriveControls' in navigation and 'navDriveFollow' in navigation
+          assert 'speakNavigation' in navigation and 'stopNavigationSpeech' in navigation
+          assert 'TextToSpeech' in native and 'speakNavigationInternal(' in native
+          assert 'public void speakNavigation(String message)' in native
+          assert 'navSpeech.shutdown()' in native
+          assert 'android.intent.action.TTS_SERVICE' in manifest
+          assert 'BIND_ACCESSIBILITY_SERVICE' not in manifest
+
           assert 'id="navRouteOverlay"' in html
           assert 'id="navQuery"' in html and 'id="navSearchBtn"' in html
           assert 'id="navStartRoute"' in html and 'id="navSelectMap"' in html
@@ -171,15 +194,15 @@ jobs:
           assert 'RushNavAccessibilityService' not in manifest
           assert 'BIND_ACCESSIBILITY_SERVICE' not in manifest
 
-          assert 'MAX_CACHED_TILES=22' in mapjs
+          assert 'MAX_CACHED_TILES=32' in mapjs
           assert 'deactivate:deactivate' in mapjs
           assert 'active=false' in mapjs and 'if(!active||drawPending)return' in mapjs
           assert 'locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 2f, this)' in native
           assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this)' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.obd412'" in gradle
-          assert 'RushLauncher/4.12.0' in native
+          assert "applicationId 'cl.rush.launcher.obd413'" in gradle
+          assert 'RushLauncher/4.13.0' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -204,7 +227,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 38" in gradle
+          assert "versionCode 39" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -228,10 +251,10 @@ jobs:
           assert 'case "enableHome":' in native
           assert 'isDefaultHome()' in native
           assert 'android.intent.category.HOME' in manifest
-          assert 'android:name="cl.rush.launcher.obd412.HomeAlias"' in manifest
+          assert 'android:name="cl.rush.launcher.obd413.HomeAlias"' in manifest
           assert 'android:enabled="false"' in manifest
           # Corregir el fallo de HOME en 4.4: alias nativo = manifest exacto.
-          assert native.count('"cl.rush.launcher.obd412.HomeAlias"') >= 2
+          assert native.count('"cl.rush.launcher.obd413.HomeAlias"') >= 2
           assert '"cl.rush.launcher.HomeAlias"' not in native
           assert 'data-action="home"' in html
           assert 'rushReturnHome()' in js and 'window.rushHandleBack' in js
@@ -270,7 +293,7 @@ jobs:
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
           spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
-          assert 'rushlauncherobd412://spotify/callback' in spotify
+          assert 'rushlauncherobd413://spotify/callback' in spotify
           assert 'grant_type=authorization_code' in spotify
           assert 'code_challenge_method' in spotify
           assert 'grant_type=refresh_token' in spotify
@@ -280,7 +303,7 @@ jobs:
           assert '/pause' in spotify and '/play' in spotify
           assert '/next' in spotify and '/previous' in spotify
           assert '/seek?position_ms=' in spotify
-          assert 'rushlauncherobd412' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'rushlauncherobd413' in manifest and 'android.intent.action.VIEW' in manifest
           assert 'SpotifyConnectClient' in native
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
