@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId 'cl.rush.launcher.obd47'
         minSdk 26
-        targetSdk 32
+        targetSdk 33
         versionCode 33
         versionName '4.7.0-Segura'
     }
