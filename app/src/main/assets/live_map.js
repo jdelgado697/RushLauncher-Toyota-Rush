@@ -152,7 +152,7 @@ function drivingMode(value){
  var wasDriving=driving;
  driving=!!value;following=true;selecting=false;
  if(driving){
-  if(!wasDriving)zoom=16;
+  if(!wasDriving){zoom=16;if(displayCenter)pendingCenter={lat:displayCenter.lat,lon:displayCenter.lon};}
   if(position&&!displayCenter)displayCenter={lat:position.lat,lon:position.lon};
   if(displayCenter&&!center)center={lat:displayCenter.lat,lon:displayCenter.lon};
   applyTransform();ensureMotionFrame();
@@ -368,9 +368,9 @@ function updatePosition(lat,lon,acc){
  var previous=position;
  position={lat:lat,lon:lon};
  accuracy=Number.isFinite(acc)?Math.max(0,acc):null;
- if(driving&&previous&&!hasCourse&&accuracy!==null&&accuracy<55){
+ if(driving&&previous&&accuracy!==null&&accuracy<48 && (heading===null||speedKmh<6)){
   var distance=metersBetween(previous,position);
-  if(distance>=12&&distance<130){
+  if(distance>=10&&distance<130){
    var dy=lat-previous.lat,dx=(lon-previous.lon)*Math.cos(lat*Math.PI/180);
    smoothCourse(Math.atan2(dx,dy)*180/Math.PI);
   }
