@@ -219,6 +219,7 @@ function draw(){
   if(dx>worldWidth/2)dx-=worldWidth;
   if(dx<-worldWidth/2)dx+=worldWidth;
   var px=w/2+dx,py=h/2+(point.y-world.y);
+   if(driving&&following){px=w/2;py=h/2+visualShift;}
   marker.style.left=px+'px';
   marker.style.top=py+'px';
   marker.style.display=(px>-40&&px<w+40&&py>-40&&py<h+40)?'block':'none';
@@ -230,7 +231,9 @@ function draw(){
   message.textContent=lastStatus||'Cargando mapa…';
   message.hidden=false;
  }
- if(subtitle&&position)subtitle.textContent=following?'Mapa 2D · seguimiento activo':'Mapa 2D · desliza para explorar';
+ if(subtitle&&position)subtitle.textContent=driving&&following?
+  'NAVEGANDO · flecha GPS'+(hasCourse?' · rumbo arriba':' · rumbo pendiente'):
+  following?'Mapa 2D · seguimiento activo':'Vista general · toca Seguir';
  if(note&&position)note.textContent=Number.isFinite(accuracy)?'Ubicación Android · ±'+Math.round(accuracy)+' m':'Ubicación Android';
  document.getElementById('mapRecenter').classList.toggle('not-following',!following);
 }
@@ -239,6 +242,13 @@ function updatePosition(lat,lon,acc){
  var previous=position;
  position={lat:lat,lon:lon};
  accuracy=Number.isFinite(acc)?Math.max(0,acc):null;
+ if(driving&&previous&&!hasCourse&&accuracy!==null&&accuracy<55){
+  var distance=metersBetween(previous,position);
+  if(distance>=12&&distance<130){
+   var dy=lat-previous.lat,dx=(lon-previous.lon)*Math.cos(lat*Math.PI/180);
+   smoothCourse(Math.atan2(dx,dy)*180/Math.PI);
+  }
+ }
  if(!active)return;
  if(!center){setCenter(lat,lon)}
  else if(following){followTo(lat,lon);requestDraw()}
@@ -246,6 +256,7 @@ function updatePosition(lat,lon,acc){
  if(!loadedTiles){message.textContent='Cargando calles reales…'}
 }
 function recenter(){
+ if(routeGeometry){drivingMode(true);return;}
  following=true;
  if(position){setCenter(position.lat,position.lon);return}
  status('Solicitando ubicación del TBox…');
@@ -275,6 +286,7 @@ host.addEventListener('pointermove',function(e){
   if(pinchDistance>0&&d/pinchDistance>1.40){setZoom(zoom+1);pinchDistance=d}
   else if(pinchDistance>0&&d/pinchDistance<.72){setZoom(zoom-1);pinchDistance=d}
  }else if(pointers.size===1&&center&&!selecting){
+   if(driving){driving=false;following=false;requestDraw();}
   var dx=e.clientX-old.x,dy=e.clientY-old.y;
   if(Math.abs(dx)+Math.abs(dy)>0.6){
    following=false;
@@ -320,7 +332,7 @@ function activate(){
  message.hidden=false;requestDraw();
 }
 function deactivate(){
- active=false;following=true;
+ active=false;following=true;driving=false;hasCourse=false;
  if(drawTimer!==null){clearTimeout(drawTimer);drawTimer=null;}
  if(drawRaf!==null){cancelAnimationFrame(drawRaf);drawRaf=null;}
  drawPending=false;
@@ -339,16 +351,23 @@ window.RushLiveMap={
  activate:activate,
  deactivate:deactivate,
  updatePosition:updatePosition,
- updateHeading:function(h){heading=Number.isFinite(h)?h:null;requestDraw()},
+ updateHeading:function(h,speed){
+   heading=Number.isFinite(h)?h:null;
+   speedKmh=Number.isFinite(speed)?Math.max(0,speed):0;
+   if(speedKmh>=7&&heading!==null)smoothCourse(heading);
+   if(driving&&following)requestDraw();
+  },
  setStatus:status,
  recenter:recenter,
  setDestination:setDestination,
  setRoute:setRoute,
+ drivingMode:drivingMode,
+ overviewRoute:overviewRoute,
  clearRoute:clearRoute,
  enableSelection:enableSelection,
  getDestination:function(){return destination},
  getPosition:function(){return position},
- getState:function(){return {active:active,position:position,center:center,zoom:zoom,following:following,tiles:tiles.size,route:!!routeGeometry}}
+ getState:function(){return {active:active,position:position,center:center,zoom:zoom,following:following,tiles:tiles.size,route:!!routeGeometry,driving:driving,course:hasCourse?courseDegrees:null}}
 };
 status('Esperando ubicación Android…');
 })();
