@@ -1,6 +1,5 @@
-/* Rush Navigator 4.8: autocompletar con Photon. Solo el botón Buscar usa Nominatim.
- * Sin consultas continuas: espera 700 ms después de escribir, >=1.8 s entre
- * solicitudes al servidor de demostración y guarda 8 destinos recientes. */
+/* Rush Navigator 4.9: resultados de Chile y prioridad GPS local.
+ * Interfaz responde al instante, consulta tras 400 ms y un envío por ~1.2 s. */
 (function(){
  'use strict';
  var input=document.getElementById('navQuery');
@@ -69,6 +68,19 @@
   results.appendChild(credit);
   results.hidden=results.querySelectorAll('button').length===0;
  }
+ function pending(query){
+  results.textContent='';
+  var item=document.createElement('div');
+  item.className='nav-suggest-pending';
+  var dot=document.createElement('span');
+  dot.className='nav-suggest-spinner';
+  dot.setAttribute('aria-hidden','true');
+  var caption=document.createElement('span');
+  caption.textContent='Buscando «'+String(query).slice(0,40)+'» cerca de ti, en Chile…';
+  item.appendChild(dot);item.appendChild(caption);
+  results.appendChild(item);
+  results.hidden=false;
+ }
  function update(){
   if(mapPanel.hidden)return;
   cancel();
@@ -85,8 +97,11 @@
    return;
   }
   if(matching.length)display(matching,'Destinos recientes');
-  else results.hidden=true;
-  if(!window.Rush||typeof window.Rush.suggestNav!=='function')return;
+  else pending(q);
+  if(!window.Rush||typeof window.Rush.suggestNav!=='function'){
+   if(!matching.length)results.hidden=true;
+   return;
+  }
   var requestId=seq;
   timer=setTimeout(function(){
    timer=null;
@@ -97,23 +112,27 @@
    var valid=loc&&Number.isFinite(loc.lat)&&Number.isFinite(loc.lon)&&
       loc.receivedAt&&now-loc.receivedAt<180000;
    window.Rush.suggestNav(q,valid?loc.lat:0,valid?loc.lon:0,requestId);
-  },Math.max(700,1800-(Date.now()-lastRequestAt)));
+  },Math.max(400,1200-(Date.now()-lastRequestAt)));
  }
  window.rushNavSuggest=function(payload){
   if(!payload||mapPanel.hidden||payload.requestId!==seq||
        norm(payload.query)!==norm(input.value))return;
   if(!payload.ok){
-   if(results.hidden && typeof navStatus==='function')
-    navStatus('Sin sugerencias. Pulsa Buscar para una búsqueda completa.');
+   results.hidden=true;
+   if(typeof navStatus==='function')
+    navStatus('El servicio de Chile no respondió. Pulsa Buscar.');
    return;
   }
   var key=norm(payload.query);
   var items=Array.isArray(payload.items)?payload.items:[];
   cache[key]=items;
   if(Object.keys(cache).length>25)cache=Object.create(null);
-  if(items.length)display(items,'Sugerencias cercanas · toca una');
-  else if(results.hidden && typeof navStatus==='function')
-   navStatus('Sin coincidencias automáticas. Prueba Buscar.');
+  if(items.length)display(items,'Chile · lugares sugeridos cerca de ti');
+  else {
+   results.hidden=true;
+   if(typeof navStatus==='function')
+    navStatus('No hay lugares coincidentes en Chile. Prueba Buscar.');
+  }
  };
  input.addEventListener('input',update);
  input.addEventListener('focus',update);
