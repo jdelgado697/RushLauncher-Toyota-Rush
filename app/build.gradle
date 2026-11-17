@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obd44'
+        applicationId 'cl.rush.launcher.obd45'
         minSdk 26
         targetSdk 32
-        versionCode 30
-        versionName '4.4.0-Unificado'
+        versionCode 31
+        versionName '4.5.0-SpotifyXL'
     }
 
     compileOptions {
