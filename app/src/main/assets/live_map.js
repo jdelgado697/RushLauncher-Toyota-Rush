@@ -15,7 +15,7 @@ if(!host||!layer||!marker)return;
 var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
 var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=null;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
-var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=12,MAX_CACHED_TILES=16;
+var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=18,MAX_CACHED_TILES=22;
 var drawPending=false,lastStatus='Esperando ubicación GPS';
 var osmtile='https://tile.openstreetmap.org/';
 function clamp(x,min,max){return Math.min(Math.max(x,min),max)}
