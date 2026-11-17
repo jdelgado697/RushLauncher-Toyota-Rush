@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.carplay'
+        applicationId 'cl.rush.launcher.obdpro'
         minSdk 26
         targetSdk 32
-        versionCode 26
-        versionName '4.0.1-paralelo'
+        versionCode 27
+        versionName '4.1.0-OBD'
     }
 
     compileOptions {
