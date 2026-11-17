@@ -70,6 +70,9 @@ public class MainActivity extends Activity implements LocationListener {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService navigationExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService suggestionsExecutor = Executors.newSingleThreadExecutor();
+    private volatile int latestSuggestionRequest = 0;
+    private volatile long lastSuggestionFetchAt = 0L;
     private volatile long lastRouteRequest = 0L;
     private volatile long lastSearchRequest = 0L;
     // Iconos del PackageManager, sin descargas ni archivos externos.
@@ -218,7 +221,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.7.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.8.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -789,10 +792,11 @@ public class MainActivity extends Activity implements LocationListener {
     }
 
 
-    // Rush Navigator: rutas OSRM y búsqueda Nominatim bajo petición explícita.
-    // Servicios públicos de demostración sin SLA; no son el GPS de CarPlay.
+    // Photon admite sugerencias mientras se escribe; Nominatim solo búsqueda
+    // explícita, tal como exige la política del servidor público de Nominatim.
+    // Los dos servicios pueden limitar solicitudes; no ofrecen SLA.
     private static final String RUSH_NAV_UA =
-            "RushLauncher/4.4 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)";
+            "RushLauncher/4.8 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)";
     private static boolean validCoord(double lat, double lon) {
         return Double.isFinite(lat) && Double.isFinite(lon)
                 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
@@ -830,6 +834,77 @@ public class MainActivity extends Activity implements LocationListener {
         try{result.put("ok",false);result.put("message",message);}catch(Exception ignored){}
         return result;
     }
+    // Solicitudes con 3+ letras, intervalo mínimo de 1.5s y límite de 5
+    // opciones. No enviar solicitudes al Nominatim público para autocompletar.
+    private void suggestNavigationDestination(String query, double biasLat,
+                                              double biasLon, int requestId) {
+        if (query == null || query.trim().length() < 3 || query.length() > 100
+                || requestId <= 0) return;
+        latestSuggestionRequest = requestId;
+        final String text = query.trim();
+        final boolean biased = validCoord(biasLat,biasLon) && !(biasLat==0 && biasLon==0);
+        suggestionsExecutor.execute(() -> {
+            if(requestId != latestSuggestionRequest) return;
+            try {
+                long wait = 1600L - (System.currentTimeMillis() - lastSuggestionFetchAt);
+                if(wait>0) Thread.sleep(wait);
+                if(requestId != latestSuggestionRequest) return;
+                lastSuggestionFetchAt = System.currentTimeMillis();
+                String url = "https://photon.komoot.io/api/?q="
+                        + URLEncoder.encode(text,"UTF-8") + "&limit=5&lang=es";
+                if(biased) url += String.format(Locale.US,"&lat=%.6f&lon=%.6f",
+                        biasLat,biasLon);
+                JSONObject root = new JSONObject(getNavText(url,160000));
+                JSONArray features = root.optJSONArray("features");
+                JSONArray items = new JSONArray();
+                if(features!=null) for(int i=0;i<Math.min(8,features.length()) &&
+                        items.length()<5;i++){
+                    JSONObject entry=features.optJSONObject(i);
+                    if(entry==null)continue;
+                    JSONObject properties=entry.optJSONObject("properties");
+                    JSONObject geometry=entry.optJSONObject("geometry");
+                    if(properties==null||geometry==null)continue;
+                    JSONArray c=geometry.optJSONArray("coordinates");
+                    if(c==null||c.length()<2)continue;
+                    double lon=c.optDouble(0,Double.NaN),lat=c.optDouble(1,Double.NaN);
+                    if(!validCoord(lat,lon))continue;
+                    String name=properties.optString("name","").trim();
+                    if(name.length()==0) name=properties.optString("street","").trim();
+                    if(name.length()==0) name=properties.optString("city","").trim();
+                    if(name.length()==0)continue;
+                    StringBuilder detail=new StringBuilder();
+                    for(String key:new String[]{"housenumber","street","district","city","state","country"}){
+                        String part=properties.optString(key,"").trim();
+                        if(part.length()==0||part.equalsIgnoreCase(name))continue;
+                        // No más de 100 caracteres: lista ligera en 800x480.
+                        if(detail.length()+part.length()+2>100)continue;
+                        if(detail.length()>0)detail.append(", ");
+                        detail.append(part);
+                    }
+                    JSONObject row=new JSONObject();
+                    row.put("lat",lat);row.put("lon",lon);
+                    row.put("name",name);row.put("detail",detail.toString());
+                    items.put(row);
+                }
+                JSONObject result=new JSONObject();
+                result.put("ok",true);
+                result.put("requestId",requestId);
+                result.put("query",text);
+                result.put("items",items);
+                if(requestId==latestSuggestionRequest)
+                    navReply("rushNavSuggest",result);
+            } catch(InterruptedException interrupt){
+                Thread.currentThread().interrupt();
+            } catch(Exception ignored){
+                if(requestId!=latestSuggestionRequest)return;
+                JSONObject error=navError("Sugerencias no disponibles. Pulsa Buscar.");
+                try{error.put("requestId",requestId);error.put("query",text);}
+                catch(Exception ignored2){}
+                navReply("rushNavSuggest",error);
+            }
+        });
+    }
+
     private void searchNavigationDestination(String query) {
         if(query==null || query.trim().length()<3 || query.length()>140){
             navReply("rushNavSearch",navError("Escribe una dirección o lugar."));
@@ -1072,6 +1147,7 @@ public class MainActivity extends Activity implements LocationListener {
         }
         weatherExecutor.shutdownNow();
         navigationExecutor.shutdownNow();
+        suggestionsExecutor.shutdownNow();
         iconExecutor.shutdownNow();
         if (obdReader != null) obdReader.disconnect();
         if (webView != null) {
@@ -1184,6 +1260,10 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void searchNav(String text) {
             searchNavigationDestination(text);
+        }
+        @JavascriptInterface public void suggestNav(String text, double biasLat,
+                                                     double biasLon, int requestId) {
+            suggestNavigationDestination(text,biasLat,biasLon,requestId);
         }
         @JavascriptInterface public void routeNav(double lat1,double lon1,double lat2,double lon2) {
             fetchNavigationRoute(lat1,lon1,lat2,lon2);
