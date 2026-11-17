@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar]
 
 permissions:
   contents: read
@@ -42,6 +42,7 @@ jobs:
           node --check app/src/main/assets/app_categories.js
           node --check app/src/main/assets/dashboard.js
           node --check app/src/main/assets/live_map.js
+          node --check app/src/main/assets/nav_autocomplete.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -104,6 +105,25 @@ jobs:
           assert 'https://router.project-osrm.org/route/v1/driving/' in native
           assert 'https://nominatim.openstreetmap.org/search' in native
           assert 'navigationExecutor.shutdownNow()' in native
+          autocomplete=Path("app/src/main/assets/nav_autocomplete.js").read_text(encoding="utf-8")
+          assert '<script src="nav_autocomplete.js"></script>' in html
+          assert html.index('<script src="dashboard.js"></script>') < html.index('<script src="nav_autocomplete.js"></script>')
+          assert 'aria-controls="navResults"' in html
+          assert 'nav-suggest-option' in html
+          assert 'window.rushNavSuggest=function' in autocomplete
+          assert "window.Rush.suggestNav(q" in autocomplete
+          assert "suggest.nav" not in autocomplete
+          assert 'rush_nav_recent' in autocomplete
+          assert 'Math.max(700,1800-' in autocomplete
+          assert 'payload.requestId!==seq' in autocomplete
+          assert 'public void suggestNav(String text, double biasLat,' in native
+          assert 'https://photon.komoot.io/api/' in native
+          assert 'suggestionsExecutor.shutdownNow()' in native
+          assert '"&limit=5&lang=es"' in native
+          assert 'lastSuggestionFetchAt' in native
+          assert 'https://nominatim.openstreetmap.org/search' in native
+          assert 'RushNavAccessibilityService' not in manifest
+          assert 'BIND_ACCESSIBILITY_SERVICE' not in manifest
 
           assert 'MAX_CACHED_TILES=22' in mapjs
           assert 'deactivate:deactivate' in mapjs
@@ -112,8 +132,8 @@ jobs:
           assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this)' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.obd47'" in gradle
-          assert 'RushLauncher/4.7.0' in native
+          assert "applicationId 'cl.rush.launcher.obd48'" in gradle
+          assert 'RushLauncher/4.8.0' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -138,7 +158,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 33" in gradle
+          assert "versionCode 34" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -162,10 +182,10 @@ jobs:
           assert 'case "enableHome":' in native
           assert 'isDefaultHome()' in native
           assert 'android.intent.category.HOME' in manifest
-          assert 'android:name="cl.rush.launcher.obd47.HomeAlias"' in manifest
+          assert 'android:name="cl.rush.launcher.obd48.HomeAlias"' in manifest
           assert 'android:enabled="false"' in manifest
           # Corregir el fallo de HOME en 4.4: alias nativo = manifest exacto.
-          assert native.count('"cl.rush.launcher.obd47.HomeAlias"') >= 2
+          assert native.count('"cl.rush.launcher.obd48.HomeAlias"') >= 2
           assert '"cl.rush.launcher.HomeAlias"' not in native
           assert 'data-action="home"' in html
           assert 'rushReturnHome()' in js and 'window.rushHandleBack' in js
@@ -204,7 +224,7 @@ jobs:
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
           spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
-          assert 'rushlauncherobd47://spotify/callback' in spotify
+          assert 'rushlauncherobd48://spotify/callback' in spotify
           assert 'grant_type=authorization_code' in spotify
           assert 'code_challenge_method' in spotify
           assert 'grant_type=refresh_token' in spotify
@@ -214,7 +234,7 @@ jobs:
           assert '/pause' in spotify and '/play' in spotify
           assert '/next' in spotify and '/previous' in spotify
           assert '/seek?position_ms=' in spotify
-          assert 'rushlauncherobd47' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'rushlauncherobd48' in manifest and 'android.intent.action.VIEW' in manifest
           assert 'SpotifyConnectClient' in native
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
