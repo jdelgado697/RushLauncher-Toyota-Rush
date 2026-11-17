@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obd47'
+        applicationId 'cl.rush.launcher.obd48'
         minSdk 26
         targetSdk 33
-        versionCode 33
-        versionName '4.7.0-Segura'
+        versionCode 34
+        versionName '4.8.0-Autocompletar'
     }
 
     compileOptions {
