@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav]
 
 permissions:
   contents: read
@@ -112,8 +112,8 @@ jobs:
           assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this)' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.obd44'" in gradle
-          assert 'RushLauncher/4.4.0' in native
+          assert "applicationId 'cl.rush.launcher.obd45'" in gradle
+          assert 'RushLauncher/4.5.0' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -138,7 +138,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 30" in gradle
+          assert "versionCode 31" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -158,8 +158,32 @@ jobs:
           assert 'case "enableHome":' in native
           assert 'isDefaultHome()' in native
           assert 'android.intent.category.HOME' in manifest
-          assert 'android:name="cl.rush.launcher.obd44.HomeAlias"' in manifest
+          assert 'android:name="cl.rush.launcher.obd45.HomeAlias"' in manifest
           assert 'android:enabled="false"' in manifest
+          # Corregir el fallo de HOME en 4.4: alias nativo = manifest exacto.
+          assert native.count('"cl.rush.launcher.obd45.HomeAlias"') >= 2
+          assert '"cl.rush.launcher.HomeAlias"' not in native
+          assert 'data-action="home"' in html
+          assert 'rushReturnHome()' in js and 'window.rushHandleBack' in js
+          assert 'window.rushExternalNav' in js
+          assert 'id="floatingNavSettings"' in html
+          assert 'public void floatingNavSettings()' in native
+          assert 'android.accessibilityservice.AccessibilityService' in manifest
+          assert 'RushNavAccessibilityService' in manifest
+          assert 'android.permission.BIND_ACCESSIBILITY_SERVICE' in manifest
+          assert 'cl.rush.launcher.obd45.HomeAlias' in manifest
+          service=Path("app/src/main/java/cl/rush/launcher/RushNavAccessibilityService.java").read_text(encoding="utf-8")
+          config=Path("app/src/main/res/xml/rush_accessibility_service.xml").read_text(encoding="utf-8")
+          assert 'TYPE_ACCESSIBILITY_OVERLAY' in service
+          assert 'GLOBAL_ACTION_BACK' in service
+          assert 'rush_open_apps' in service and 'FLAG_ACTIVITY_CLEAR_TOP' in service
+          assert 'canRetrieveWindowContent="false"' in config
+          assert 'typeWindowStateChanged' in config
+          assert 'grid-template-columns:minmax(0,1fr)' in html
+          assert html.count('class="weather glass"') == 1
+          assert html.count('class="dockbtn"') == 5
+          assert 'Spotify XL' in html
+
           assert ':root[data-theme=dark] .mapgraphic svg' in html
           assert 'data-theme="light"' in html and 'data-theme=dark' in html
           for item in ['appsPanel','settingsPanel','obdPanel','weatherConsent','musicToggle','songTitle','songArtist']:
@@ -171,7 +195,7 @@ jobs:
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
           spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
-          assert 'rushlauncherobd44://spotify/callback' in spotify
+          assert 'rushlauncherobd45://spotify/callback' in spotify
           assert 'grant_type=authorization_code' in spotify
           assert 'code_challenge_method' in spotify
           assert 'grant_type=refresh_token' in spotify
@@ -181,7 +205,7 @@ jobs:
           assert '/pause' in spotify and '/play' in spotify
           assert '/next' in spotify and '/previous' in spotify
           assert '/seek?position_ms=' in spotify
-          assert 'rushlauncherobd44' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'rushlauncherobd45' in manifest and 'android.intent.action.VIEW' in manifest
           assert 'SpotifyConnectClient' in native
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
