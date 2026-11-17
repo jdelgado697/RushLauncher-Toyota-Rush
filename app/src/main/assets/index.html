@@ -220,6 +220,7 @@
 .map-sheet .map-position{z-index:7}
 .map-sheet .map-loading{font-size:15px;line-height:1.35}
 .map-sheet .map-attribution{font-size:9px;padding:3px 5px}
+:root[data-theme=dark] #mapPanel .map-tile{filter:none!important} /* evita filtros GPU pesados por tesela */
 .map-sheet-footer{justify-content:space-between}
 #mapSubtitle{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
  font-size:11px;font-weight:700;color:var(--sub)}
