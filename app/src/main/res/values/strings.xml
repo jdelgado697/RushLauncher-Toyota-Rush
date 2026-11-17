@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Rush Launcher Unificado 4.4</string>
+    <string name="app_name">Rush Launcher 4.5</string>
+    <string name="rush_nav_accessibility_title">Controles Rush · Inicio, Atrás y Menú</string>
+    <string name="rush_nav_accessibility_description">Muestra tres botones flotantes en aplicaciones externas para volver al launcher, retroceder o abrir el menú de apps. No lee textos, mensajes ni contenido de pantalla. Requiere activación voluntaria.</string>
 </resources>
