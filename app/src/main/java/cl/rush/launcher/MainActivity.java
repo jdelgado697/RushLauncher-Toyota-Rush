@@ -796,7 +796,7 @@ public class MainActivity extends Activity implements LocationListener {
     // explícita, tal como exige la política del servidor público de Nominatim.
     // Los dos servicios pueden limitar solicitudes; no ofrecen SLA.
     private static final String RUSH_NAV_UA =
-            "RushLauncher/4.8 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)";
+            "RushLauncher/4.9 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)";
     private static boolean validCoord(double lat, double lon) {
         return Double.isFinite(lat) && Double.isFinite(lon)
                 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
@@ -834,97 +834,140 @@ public class MainActivity extends Activity implements LocationListener {
         try{result.put("ok",false);result.put("message",message);}catch(Exception ignored){}
         return result;
     }
-    // Solicitudes con 3+ letras, intervalo mínimo de 1.5s y límite de 5
-    // opciones. No enviar solicitudes al Nominatim público para autocompletar.
+    // Photon está diseñado para autocompletado. Prioriza Chile por COUNTRYCODE
+    // y luego un área local en torno al GPS del TBox. Si no encuentra nada
+    // cerca, amplía una sola vez al país, sin sugerir otros países.
+    private static JSONArray photonFeatures(String q, boolean local,
+                                             double lat, double lon) throws Exception {
+        String url = "https://photon.komoot.io/api/?q="
+                + URLEncoder.encode(q,"UTF-8")
+                + "&limit=10&lang=es&countrycode=CL";
+        if(local){
+            // Caja aprox. 100 km a lo largo de la latitud y 100–150 km
+            // de longitud; se usa solo para priorizar resultados cercanos.
+            double west=Math.max(-180,lon-1.2),east=Math.min(180,lon+1.2);
+            double south=Math.max(-90,lat-.85),north=Math.min(90,lat+.85);
+            url += String.format(Locale.US,"&bbox=%.5f,%.5f,%.5f,%.5f",
+                    west,south,east,north);
+            url += String.format(Locale.US,
+                    "&lat=%.6f&lon=%.6f&zoom=12&location_bias_scale=0.8",
+                    lat,lon);
+        } else if(validCoord(lat,lon) && !(lat==0&&lon==0)){
+            url += String.format(Locale.US,
+                    "&lat=%.6f&lon=%.6f&zoom=11&location_bias_scale=0.7",
+                    lat,lon);
+        }
+        JSONObject root=new JSONObject(getNavText(url,160000));
+        JSONArray features=root.optJSONArray("features");
+        return features==null?new JSONArray():features;
+    }
+    private static JSONArray suggestionsFromFeatures(JSONArray features,int limit)
+            throws Exception {
+        JSONArray rows=new JSONArray();
+        for(int i=0;i<features.length() && rows.length()<limit;i++){
+            JSONObject item=features.optJSONObject(i);
+            if(item==null)continue;
+            JSONObject props=item.optJSONObject("properties");
+            JSONObject geometry=item.optJSONObject("geometry");
+            if(props==null||geometry==null)continue;
+            String cc=props.optString("countrycode","").toLowerCase(Locale.ROOT);
+            // Se descartan países extranjeros incluso si el proveedor
+            // llegara a omitir/aplicar incorrectamente el filtro.
+            if(cc.length()>0 && !"cl".equals(cc))continue;
+            JSONArray coords=geometry.optJSONArray("coordinates");
+            if(coords==null||coords.length()<2)continue;
+            double lon=coords.optDouble(0,Double.NaN);
+            double lat=coords.optDouble(1,Double.NaN);
+            if(!validCoord(lat,lon))continue;
+            String name=props.optString("name","").trim();
+            if(name.length()==0)name=props.optString("street","").trim();
+            if(name.length()==0)name=props.optString("city","").trim();
+            if(name.length()==0)continue;
+            StringBuilder address=new StringBuilder();
+            for(String key:new String[]{"housenumber","street","district","city","county","state"}){
+                String piece=props.optString(key,"").trim();
+                if(piece.length()==0||piece.equalsIgnoreCase(name))continue;
+                if(address.length()+piece.length()>110)continue;
+                if(address.length()>0)address.append(", ");
+                address.append(piece);
+            }
+            JSONObject row=new JSONObject();
+            row.put("lat",lat);row.put("lon",lon);
+            row.put("name",name);row.put("detail",address.toString()+", Chile");
+            rows.put(row);
+        }
+        return rows;
+    }
+    // Como los servidores públicos pueden ser lentos, se muestran
+    // inmediatamente los destinos recientes y un indicador de búsqueda.
+    // Se limita el envío en segundo plano a 1 búsqueda cada 1.2 segundos.
     private void suggestNavigationDestination(String query, double biasLat,
                                               double biasLon, int requestId) {
-        if (query == null || query.trim().length() < 3 || query.length() > 100
-                || requestId <= 0) return;
-        latestSuggestionRequest = requestId;
-        final String text = query.trim();
-        final boolean biased = validCoord(biasLat,biasLon) && !(biasLat==0 && biasLon==0);
-        suggestionsExecutor.execute(() -> {
-            if(requestId != latestSuggestionRequest) return;
-            try {
-                long wait = 1600L - (System.currentTimeMillis() - lastSuggestionFetchAt);
-                if(wait>0) Thread.sleep(wait);
-                if(requestId != latestSuggestionRequest) return;
-                lastSuggestionFetchAt = System.currentTimeMillis();
-                String url = "https://photon.komoot.io/api/?q="
-                        + URLEncoder.encode(text,"UTF-8") + "&limit=5&lang=es";
-                if(biased) url += String.format(Locale.US,"&lat=%.6f&lon=%.6f",
-                        biasLat,biasLon);
-                JSONObject root = new JSONObject(getNavText(url,160000));
-                JSONArray features = root.optJSONArray("features");
-                JSONArray items = new JSONArray();
-                if(features!=null) for(int i=0;i<Math.min(8,features.length()) &&
-                        items.length()<5;i++){
-                    JSONObject entry=features.optJSONObject(i);
-                    if(entry==null)continue;
-                    JSONObject properties=entry.optJSONObject("properties");
-                    JSONObject geometry=entry.optJSONObject("geometry");
-                    if(properties==null||geometry==null)continue;
-                    JSONArray c=geometry.optJSONArray("coordinates");
-                    if(c==null||c.length()<2)continue;
-                    double lon=c.optDouble(0,Double.NaN),lat=c.optDouble(1,Double.NaN);
-                    if(!validCoord(lat,lon))continue;
-                    String name=properties.optString("name","").trim();
-                    if(name.length()==0) name=properties.optString("street","").trim();
-                    if(name.length()==0) name=properties.optString("city","").trim();
-                    if(name.length()==0)continue;
-                    StringBuilder detail=new StringBuilder();
-                    for(String key:new String[]{"housenumber","street","district","city","state","country"}){
-                        String part=properties.optString(key,"").trim();
-                        if(part.length()==0||part.equalsIgnoreCase(name))continue;
-                        // No más de 100 caracteres: lista ligera en 800x480.
-                        if(detail.length()+part.length()+2>100)continue;
-                        if(detail.length()>0)detail.append(", ");
-                        detail.append(part);
-                    }
-                    JSONObject row=new JSONObject();
-                    row.put("lat",lat);row.put("lon",lon);
-                    row.put("name",name);row.put("detail",detail.toString());
-                    items.put(row);
-                }
-                JSONObject result=new JSONObject();
-                result.put("ok",true);
-                result.put("requestId",requestId);
-                result.put("query",text);
-                result.put("items",items);
-                if(requestId==latestSuggestionRequest)
-                    navReply("rushNavSuggest",result);
-            } catch(InterruptedException interrupt){
-                Thread.currentThread().interrupt();
-            } catch(Exception ignored){
+        if(query==null||query.trim().length()<3||query.length()>100||requestId<=0)return;
+        latestSuggestionRequest=requestId;
+        final String q=query.trim();
+        final boolean near=validCoord(biasLat,biasLon)&&!(biasLat==0&&biasLon==0)
+                && biasLat >= -56.5 && biasLat <= -17 && biasLon >= -76 && biasLon <= -66;
+        suggestionsExecutor.execute(()->{
+            if(requestId!=latestSuggestionRequest)return;
+            try{
+                long delay=1200L-(System.currentTimeMillis()-lastSuggestionFetchAt);
+                if(delay>0)Thread.sleep(delay);
                 if(requestId!=latestSuggestionRequest)return;
-                JSONObject error=navError("Sugerencias no disponibles. Pulsa Buscar.");
-                try{error.put("requestId",requestId);error.put("query",text);}
-                catch(Exception ignored2){}
-                navReply("rushNavSuggest",error);
+                lastSuggestionFetchAt=System.currentTimeMillis();
+                JSONArray nearby=photonFeatures(q,near,biasLat,biasLon);
+                JSONArray rows=suggestionsFromFeatures(nearby,5);
+                if(rows.length()==0 && near && requestId==latestSuggestionRequest) {
+                    // Búsquedas de ciudades de otra región siguen funcionando.
+                    rows=suggestionsFromFeatures(
+                            photonFeatures(q,false,biasLat,biasLon),5);
+                }
+                if(requestId!=latestSuggestionRequest)return;
+                JSONObject answer=new JSONObject();
+                answer.put("ok",true);answer.put("requestId",requestId);
+                answer.put("query",q);answer.put("items",rows);
+                navReply("rushNavSuggest",answer);
+            }catch(InterruptedException error){
+                Thread.currentThread().interrupt();
+            }catch(Exception error){
+                if(requestId!=latestSuggestionRequest)return;
+                JSONObject failure=navError(
+                        "La búsqueda de Chile no respondió. Intenta Buscar.");
+                try{failure.put("requestId",requestId);failure.put("query",q);}
+                catch(Exception ignored){}
+                navReply("rushNavSuggest",failure);
             }
         });
     }
-
     private void searchNavigationDestination(String query) {
+        searchNavigationDestination(query,0,0);
+    }
+    private void searchNavigationDestination(String query,double focusLat,double focusLon) {
         if(query==null || query.trim().length()<3 || query.length()>140){
             navReply("rushNavSearch",navError("Escribe una dirección o lugar."));
             return;
         }
         long now=System.currentTimeMillis();
         if(now-lastSearchRequest<1800L){
-            navReply("rushNavSearch",navError("Espera unos segundos antes de buscar de nuevo."));
+            navReply("rushNavSearch",navError("Espera un momento antes de buscar de nuevo."));
             return;
         }
         lastSearchRequest=now;
         final String q=query.trim();
+        final boolean near=validCoord(focusLat,focusLon)
+                && focusLat>=-56.5 && focusLat<=-17
+                && focusLon>=-76 && focusLon<=-66;
         navigationExecutor.execute(()->{
             try{
                 String url="https://nominatim.openstreetmap.org/search"
-                        +"?format=jsonv2&limit=4&addressdetails=0&q="
+                        +"?format=jsonv2&limit=6&addressdetails=0&countrycodes=cl&q="
                         +URLEncoder.encode(q,"UTF-8");
-                JSONArray response=new JSONArray(getNavText(url,110000));
+                if(near)url+=String.format(Locale.US,
+                        "&viewbox=%.5f,%.5f,%.5f,%.5f",
+                        focusLon-.75,focusLat+.6,focusLon+.75,focusLat-.6);
+                JSONArray response=new JSONArray(getNavText(url,160000));
                 JSONArray items=new JSONArray();
-                for(int i=0;i<Math.min(4,response.length());i++){
+                for(int i=0;i<Math.min(6,response.length());i++){
                     JSONObject hit=response.getJSONObject(i);
                     double lat=Double.parseDouble(hit.getString("lat"));
                     double lon=Double.parseDouble(hit.getString("lon"));
@@ -939,7 +982,7 @@ public class MainActivity extends Activity implements LocationListener {
                 navReply("rushNavSearch",result);
             }catch(Exception ignored){
                 navReply("rushNavSearch",navError(
-                    "No se pudo buscar. Verifica internet o selecciona el destino en el mapa."));
+                    "No se pudo buscar en Chile. Verifica internet o selecciona un punto."));
             }
         });
     }
@@ -1260,6 +1303,9 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void searchNav(String text) {
             searchNavigationDestination(text);
+        }
+        @JavascriptInterface public void searchNavNear(String text,double lat,double lon) {
+            searchNavigationDestination(text,lat,lon);
         }
         @JavascriptInterface public void suggestNav(String text, double biasLat,
                                                      double biasLon, int requestId) {
