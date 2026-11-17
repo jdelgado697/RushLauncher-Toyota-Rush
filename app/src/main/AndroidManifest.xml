@@ -45,14 +45,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="rushlauncherobd44"
+                    android:scheme="rushlauncherobd45"
                     android:host="spotify"
                     android:path="/callback" />
             </intent-filter>
         </activity>
         <!-- Disabled until the user explicitly enables it in Rush Launcher settings. -->
         <activity-alias
-            android:name="cl.rush.launcher.obd44.HomeAlias"
+            android:name="cl.rush.launcher.obd45.HomeAlias"
             android:enabled="false"
             android:exported="true"
             android:targetActivity="cl.rush.launcher.MainActivity"
@@ -63,5 +63,18 @@
                 <category android:name="android.intent.category.HOME" />
             </intent-filter>
         </activity-alias>
+        <!-- Servicio voluntario, sin lectura de contenido ni permisos root. -->
+        <service
+            android:name="cl.rush.launcher.RushNavAccessibilityService"
+            android:label="@string/rush_nav_accessibility_title"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/rush_accessibility_service" />
+        </service>
     </application>
 </manifest>
