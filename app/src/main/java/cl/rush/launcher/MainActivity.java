@@ -32,6 +32,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+import android.speech.tts.TextToSpeech;
 
 import com.google.android.gms.security.ProviderInstaller;
 
@@ -60,6 +61,9 @@ public class MainActivity extends Activity implements LocationListener {
     private ObdReader obdReader;
     private SpotifyConnectClient spotifyConnect;
     private SpotifyArtworkFetcher spotifyArtwork;
+    private TextToSpeech navSpeech;
+    private boolean navSpeechReady = false;
+    private String pendingNavSpeech = null;
     private WebView webView;
     private LocationManager locationManager;
     private boolean gpsRequested = false; // Solicitud manual del usuario.
@@ -225,7 +229,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.12.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.13.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1213,6 +1217,36 @@ public class MainActivity extends Activity implements LocationListener {
         });
     }
 
+    // Guía hablada bajo demanda; sin permisos especiales ni grabación de audio.
+    private void speakNavigationInternal(String message) {
+        if(message==null||message.isEmpty())return;
+        final String phrase=message.length()>220?message.substring(0,220):message;
+        if(navSpeech==null) {
+            pendingNavSpeech=phrase;
+            navSpeech=new TextToSpeech(getApplicationContext(),status -> {
+                if(status!=TextToSpeech.SUCCESS||navSpeech==null)return;
+                int lang=navSpeech.setLanguage(new Locale("es","CL"));
+                if(lang==TextToSpeech.LANG_MISSING_DATA||lang==TextToSpeech.LANG_NOT_SUPPORTED)
+                    lang=navSpeech.setLanguage(new Locale("es","ES"));
+                navSpeechReady=lang!=TextToSpeech.LANG_MISSING_DATA
+                        &&lang!=TextToSpeech.LANG_NOT_SUPPORTED;
+                if(navSpeechReady&&pendingNavSpeech!=null){
+                    navSpeech.speak(pendingNavSpeech,TextToSpeech.QUEUE_FLUSH,null,"rush-first-turn");
+                }
+                pendingNavSpeech=null;
+            });
+            return;
+        }
+        if(navSpeechReady){
+            navSpeech.speak(phrase,TextToSpeech.QUEUE_FLUSH,null,
+                    "rush-turn-"+System.currentTimeMillis());
+        }
+    }
+    private void stopNavigationSpeechInternal() {
+        pendingNavSpeech=null;
+        if(navSpeech!=null)navSpeech.stop();
+    }
+
     private void startGps() {
         boolean fine = Build.VERSION.SDK_INT < Build.VERSION_CODES.M
                 || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -1342,6 +1376,8 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onDestroy() {
+        stopNavigationSpeechInternal();
+        if(navSpeech!=null){navSpeech.shutdown();navSpeech=null;}
         if (spotifyArtwork != null) spotifyArtwork.shutdown();
         if (spotifyConnect != null) spotifyConnect.destroy();
         if (spotifyReceiverRegistered) {
@@ -1470,6 +1506,12 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public void suggestNav(String text, double biasLat,
                                                      double biasLon, int requestId) {
             suggestNavigationDestination(text,biasLat,biasLon,requestId);
+        }
+        @JavascriptInterface public void speakNavigation(String message) {
+            runUi(() -> speakNavigationInternal(message));
+        }
+        @JavascriptInterface public void stopNavigationSpeech() {
+            runUi(() -> stopNavigationSpeechInternal());
         }
         @JavascriptInterface public void routeNav(double lat1,double lon1,double lat2,double lon2) {
             fetchNavigationRoute(lat1,lon1,lat2,lon2);
