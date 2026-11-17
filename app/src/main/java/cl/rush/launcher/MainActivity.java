@@ -58,7 +58,8 @@ public class MainActivity extends Activity implements LocationListener {
     private SpotifyArtworkFetcher spotifyArtwork;
     private WebView webView;
     private LocationManager locationManager;
-    private boolean gpsRequested = false; // Solo después de un toque explícito del usuario.
+    private boolean gpsRequested = false; // GPS solicitado fuera del mapa.
+    private boolean mapGpsActive = false; // GPS temporal del MAPA 2D.
     // Filtros de antigüedad y prioridad GPS para no alternar con red imprecisa.
     private long lastFixElapsedNs = 0L;
     private long lastAccurateGpsNs = 0L;
@@ -211,7 +212,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.2.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.3.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -789,11 +790,11 @@ public class MainActivity extends Activity implements LocationListener {
             // Evita registros de ubicación duplicados al volver de Ajustes/Waze.
             locationManager.removeUpdates(this);
             if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500L, 0f, this);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 2f, this);
                 started = true;
             }
             if ((fine || coarse) && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1200L, 0f, this);
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this);
                 started = true;
             }
             // Una ubicación reciente permite mostrar el mapa al abrir el TBox.
@@ -828,7 +829,7 @@ public class MainActivity extends Activity implements LocationListener {
             for (int result : results) {
                 if (result == PackageManager.PERMISSION_GRANTED) granted = true;
             }
-            if (granted) startGps();
+            if (granted && (gpsRequested || mapGpsActive)) startGps();
             else sendGpsStatus("GPS sin permiso");
         }
     }
@@ -883,7 +884,7 @@ public class MainActivity extends Activity implements LocationListener {
         super.onResume();
         if (spotifyConnect != null) spotifyConnect.resume();
         if (pageLoaded) {
-            if (gpsRequested) startGps();
+            if (gpsRequested || mapGpsActive) startGps();
             sendSpotifyState(); sendDockIcons(); sendHomeState();
         }
     }
@@ -977,6 +978,18 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> { gpsRequested = true; startGps(); });
+        }
+        @JavascriptInterface public void startMapGps() {
+            runUi(() -> { mapGpsActive = true; startGps(); });
+        }
+        @JavascriptInterface public void stopMapGps() {
+            runUi(() -> {
+                mapGpsActive = false;
+                if (!gpsRequested && locationManager != null) {
+                    try { locationManager.removeUpdates(MainActivity.this); }
+                    catch (SecurityException ignored) { }
+                }
+            });
         }
         @JavascriptInterface public void getWeather(double latitude, double longitude) {
             runUi(() -> fetchWeather(latitude, longitude));
