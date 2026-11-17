@@ -62,8 +62,9 @@ public class MainActivity extends Activity implements LocationListener {
     private SpotifyArtworkFetcher spotifyArtwork;
     private WebView webView;
     private LocationManager locationManager;
-    private boolean gpsRequested = false; // GPS solicitado fuera del mapa.
+    private boolean gpsRequested = false; // Solicitud manual del usuario.
     private boolean mapGpsActive = false; // GPS temporal del MAPA 2D.
+    private boolean weatherGpsActive = false; // Ubicación opt-in del clima.
     // Filtros de antigüedad y prioridad GPS para no alternar con red imprecisa.
     private long lastFixElapsedNs = 0L;
     private long lastAccurateGpsNs = 0L;
@@ -1028,7 +1029,7 @@ public class MainActivity extends Activity implements LocationListener {
             for (int result : results) {
                 if (result == PackageManager.PERMISSION_GRANTED) granted = true;
             }
-            if (granted && (gpsRequested || mapGpsActive)) startGps();
+            if (granted && (gpsRequested || mapGpsActive || weatherGpsActive)) startGps();
             else sendGpsStatus("GPS sin permiso");
         }
     }
@@ -1083,7 +1084,7 @@ public class MainActivity extends Activity implements LocationListener {
         super.onResume();
         if (spotifyConnect != null) spotifyConnect.resume();
         if (pageLoaded) {
-            if (gpsRequested || mapGpsActive) startGps();
+            if (gpsRequested || mapGpsActive || weatherGpsActive) startGps();
             sendSpotifyState(); sendDockIcons(); sendHomeState(); sendFloatingNavState();
             dispatchExternalNavigation();
         }
@@ -1185,13 +1186,25 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public void askGps() {
             runUi(() -> { gpsRequested = true; startGps(); });
         }
+        @JavascriptInterface public void startWeatherGps() {
+            runUi(() -> { weatherGpsActive = true; startGps(); });
+        }
+        @JavascriptInterface public void stopWeatherGps() {
+            runUi(() -> {
+                weatherGpsActive = false;
+                if (!gpsRequested && !mapGpsActive && locationManager != null) {
+                    try { locationManager.removeUpdates(MainActivity.this); }
+                    catch (SecurityException ignored) { }
+                }
+            });
+        }
         @JavascriptInterface public void startMapGps() {
             runUi(() -> { mapGpsActive = true; startGps(); });
         }
         @JavascriptInterface public void stopMapGps() {
             runUi(() -> {
                 mapGpsActive = false;
-                if (!gpsRequested && locationManager != null) {
+                if (!gpsRequested && !weatherGpsActive && locationManager != null) {
                     try { locationManager.removeUpdates(MainActivity.this); }
                     catch (SecurityException ignored) { }
                 }
