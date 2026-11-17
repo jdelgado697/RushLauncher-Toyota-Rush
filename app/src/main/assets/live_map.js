@@ -15,7 +15,7 @@ if(!host||!layer||!marker)return;
 var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
 var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=null;
 var displayCenter=null,motionStart=null,motionGoal=null,motionStarted=0,motionDuration=820;
-var motionFrame=null,lastMotionFrame=0,lastFixAt=0,paintedAt=0;
+var motionFrame=null,lastMotionFrame=0,lastFixAt=0,paintedAt=0,pendingCenter=null;
 var courseFrom=0,courseTarget=0,courseStarted=0,courseDuration=950;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
 var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=24,MAX_CACHED_TILES=32;
@@ -107,7 +107,9 @@ function animateMotion(now){
  var offset=distanceFromPaintCenter();
  if((offset.distance>68&&now-paintedAt>580)||
     (offset.distance>18&&now-paintedAt>2300)){
-  center={lat:displayCenter.lat,lon:displayCenter.lon};
+  // Cambiar el centro ANTES del repintado causa el salto visual.
+  // Aplazar la sustitución hasta draw(), cuando las teselas se recolocan.
+  pendingCenter={lat:displayCenter.lat,lon:displayCenter.lon};
   requestDraw();
   paintedAt=now;
  }
@@ -124,7 +126,7 @@ function beginGpsTween(lat,lon,acc){
  lastFixAt=now;
  if(!Number.isFinite(delta))return;
  // Evita vibración al estar parado, sin ocultar movimiento significativo.
- var noise=Math.max(4,Math.min(13,(Number.isFinite(acc)?acc:20)*.35));
+ var noise=Math.max(3.5,Math.min(9,(Number.isFinite(acc)?acc:20)*.26));
  if(speedKmh<5&&delta<noise)return;
  // Si Android reporta un salto enorme, evita desplazar el mapa lentamente
  // varios cientos de metros: usar la posición real de forma inmediata.
@@ -275,6 +277,7 @@ function setZoom(z){
 function tileName(z,x,y){return z+':'+x+':'+y}
 function draw(){
  if(!active||!center||!host.clientWidth||!host.clientHeight)return;
+ if(pendingCenter){center=pendingCenter;pendingCenter=null;}
  var w=host.clientWidth,h=host.clientHeight;
  var world=mercator(center.lat,center.lon,zoom);
  var worldWidth=TILE*Math.pow(2,zoom);
@@ -453,7 +456,8 @@ function activate(){
 function deactivate(){
  active=false;following=true;driving=false;hasCourse=false;
  if(motionFrame!==null){cancelAnimationFrame(motionFrame);motionFrame=null;}
- motionStart=null;motionGoal=null;displayCenter=null;courseStarted=0;lastFixAt=0;lastMotionFrame=0;
+ motionStart=null;motionGoal=null;displayCenter=null;pendingCenter=null;
+ courseStarted=0;lastFixAt=0;lastMotionFrame=0;
  if(drawTimer!==null){clearTimeout(drawTimer);drawTimer=null;}
  if(drawRaf!==null){cancelAnimationFrame(drawRaf);drawRaf=null;}
  drawPending=false;
