@@ -194,8 +194,8 @@ public class MainActivity extends Activity implements LocationListener {
             @Override public void onStatus(String status) {
                 javascript("window.rushObdStatus(" + JSONObject.quote(status) + ");");
             }
-            @Override public void onData(int speed, int rpm, int coolant) {
-                javascript("window.rushObdData(" + speed + "," + rpm + "," + coolant + ");");
+            @Override public void onData(JSONObject snapshot) {
+                javascript("window.rushObdData(" + snapshot.toString() + ");");
             }
         });
         webView = new WebView(this);
