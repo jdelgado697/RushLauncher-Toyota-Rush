@@ -45,14 +45,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="rushlauncherobd"
+                    android:scheme="rushlauncherobd42"
                     android:host="spotify"
                     android:path="/callback" />
             </intent-filter>
         </activity>
         <!-- Disabled until the user explicitly enables it in Rush Launcher settings. -->
         <activity-alias
-            android:name="cl.rush.launcher.obdpro.HomeAlias"
+            android:name="cl.rush.launcher.obd42.HomeAlias"
             android:enabled="false"
             android:exported="true"
             android:targetActivity="cl.rush.launcher.MainActivity"
