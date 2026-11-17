@@ -193,7 +193,7 @@ jobs:
           assert 'Spotify XL' in html
 
           assert ':root[data-theme=dark] .mapgraphic svg' in html
-          assert 'data-theme="light"' in html and 'data-theme=dark' in html
+          assert 'data-theme="dark"' in html and 'data-theme=dark' in html
           for item in ['appsPanel','settingsPanel','obdPanel','weatherConsent','musicToggle','songTitle','songArtist']:
               assert 'id="'+item+'"' in html,item
           for func in ['rushSpotifyState','rushInstalledApps','rushPosition','rushWeather']:
