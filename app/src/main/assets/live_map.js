@@ -1,4 +1,4 @@
-/* Rush Launcher 3.9 — seguimiento GPS continuo para Android Box 800x480.
+/* Rush Launcher 4.3 — mapa ligero solo bajo demanda para Android Box 800x480.
  * OpenStreetMap raster: solo teselas visibles; sin precarga ni descargas masivas.
  * Sin biblioteca remota, sin rutas simuladas, siempre muestra atribución.
  * https://operations.osmfoundation.org/policies/tiles/
@@ -13,9 +13,9 @@ var subtitle=document.getElementById('mapSubtitle');
 var note=document.getElementById('locationStatus');
 if(!host||!layer||!marker)return;
 var zoom=14, center=null,position=null,heading=null,accuracy=null,following=true,loadedTiles=0,failedTiles=0;
-var PAN_DURATION_MS=380, MIN_FOLLOW_METERS=1.0, followAnimation=0;
+var MIN_FOLLOW_METERS=4.0, active=false, lastDrawAt=0, drawTimer=null, drawRaf=null;
 var pointers=new Map(),dragging=false,lastX=0,lastY=0,pinchDistance=0;
-var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=12,MAX_CACHED_TILES=20;
+var tiles=new Map(),TILE=256,MAX_LAT=85.05112878,MAX_TILES=12,MAX_CACHED_TILES=16;
 var drawPending=false,lastStatus='Esperando ubicación GPS';
 var osmtile='https://tile.openstreetmap.org/';
 function clamp(x,min,max){return Math.min(Math.max(x,min),max)}
@@ -28,9 +28,22 @@ function reverse(x,y,z){
  var world=TILE*Math.pow(2,z);
  return {lat:Math.atan(Math.sinh(Math.PI*(1-2*clamp(y,0,world)/world)))*180/Math.PI,lon:wrapLon(x/world*360-180)};
 }
-function status(value){lastStatus=String(value||'GPS no disponible');if(!position)message.textContent=lastStatus}
-function requestDraw(){if(drawPending)return;drawPending=true;requestAnimationFrame(function(){drawPending=false;draw()})}
-function setCenter(lat,lon){if(!Number.isFinite(lat)||!Number.isFinite(lon))return;followAnimation++;center={lat:clamp(lat,-MAX_LAT,MAX_LAT),lon:wrapLon(lon)};requestDraw()}
+function status(value){lastStatus=String(value||'GPS no disponible');if(active&&!position)message.textContent=lastStatus}
+// A lo sumo 5 repintados/segundo, sin consumir CPU en Inicio.
+function requestDraw(){
+ if(!active||drawPending)return;
+ drawPending=true;
+ var wait=Math.max(0,200-(Date.now()-lastDrawAt));
+ drawTimer=setTimeout(function(){
+  drawTimer=null;
+  drawRaf=requestAnimationFrame(function(){
+   drawRaf=null;drawPending=false;
+   if(!active)return;
+   lastDrawAt=Date.now();draw();
+  });
+ },wait);
+}
+function setCenter(lat,lon){if(!Number.isFinite(lat)||!Number.isFinite(lon))return;center={lat:clamp(lat,-MAX_LAT,MAX_LAT),lon:wrapLon(lon)};requestDraw()}
 function metersBetween(a,b){
  if(!a||!b)return Infinity;
  var radians=Math.PI/180;
@@ -38,33 +51,13 @@ function metersBetween(a,b){
  var dlon=(a.lon-b.lon)*111320*Math.cos(a.lat*radians);
  return Math.sqrt(dlat*dlat+dlon*dlon);
 }
-// Cada lectura GPS mueve el mapa; se interpola únicamente la vista
-// hacia las coordenadas confirmadas, nunca la ubicación del dispositivo.
+// Sin animación por cuadro: solo seguimos ubicaciones recibidas.
 function followTo(lat,lon){
- if(!following||!Number.isFinite(lat)||!Number.isFinite(lon))return;
- if(!center){setCenter(lat,lon);return;}
- var d=metersBetween(center,{lat:lat,lon:lon});
- if(d<MIN_FOLLOW_METERS)return;
- if(d>250){setCenter(lat,lon);return;}
- var token=++followAnimation;
- var from=mercator(center.lat,center.lon,zoom),to=mercator(lat,lon,zoom);
- var world=TILE*Math.pow(2,zoom),dx=to.x-from.x;
- if(dx>world/2)dx-=world;
- if(dx<-world/2)dx+=world;
- var dy=to.y-from.y,start=performance.now();
- function frame(now){
-  if(token!==followAnimation||!following)return;
-  var t=clamp((now-start)/PAN_DURATION_MS,0,1);
-  var eased=t*(2-t);
-  center=reverse(from.x+dx*eased,from.y+dy*eased,zoom);
-  requestDraw();
-  if(t<1)requestAnimationFrame(frame);
- }
- requestAnimationFrame(frame);
+ if(!active||!following||!Number.isFinite(lat)||!Number.isFinite(lon))return;
+ if(!center||metersBetween(center,{lat:lat,lon:lon})>=MIN_FOLLOW_METERS)setCenter(lat,lon);
 }
 function moveBy(dx,dy){
  if(!center)return;
- followAnimation++;
  var world=mercator(center.lat,center.lon,zoom);
  var next=reverse(world.x-dx,world.y-dy,zoom);
  center=next;requestDraw();
@@ -77,7 +70,7 @@ function setZoom(z){
 }
 function tileName(z,x,y){return z+':'+x+':'+y}
 function draw(){
- if(!center||!host.clientWidth||!host.clientHeight)return;
+ if(!active||!center||!host.clientWidth||!host.clientHeight)return;
  var w=host.clientWidth,h=host.clientHeight;
  var world=mercator(center.lat,center.lon,zoom);
  var worldWidth=TILE*Math.pow(2,zoom);
@@ -151,16 +144,17 @@ function updatePosition(lat,lon,acc){
  var previous=position;
  position={lat:lat,lon:lon};
  accuracy=Number.isFinite(acc)?Math.max(0,acc):null;
+ if(!active)return;
  if(!center){setCenter(lat,lon)}
  else if(following){followTo(lat,lon);requestDraw()}
- else if(!previous||metersBetween(previous,position)>1){requestDraw()}
+ else if(!previous||metersBetween(previous,position)>2){requestDraw()}
  if(!loadedTiles){message.textContent='Cargando calles reales…'}
 }
 function recenter(){
  following=true;
  if(position){setCenter(position.lat,position.lon);return}
  status('Buscando señal GPS del TBox…');
- if(window.Rush&&typeof window.Rush.askGps==='function')window.Rush.askGps();
+ if(window.Rush&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
 }
 document.getElementById('mapZoomIn').addEventListener('click',function(e){e.stopPropagation();setZoom(zoom+1)});
 document.getElementById('mapZoomOut').addEventListener('click',function(e){e.stopPropagation();setZoom(zoom-1)});
@@ -211,12 +205,36 @@ host.addEventListener('keydown',function(e){
 window.addEventListener('resize',requestDraw);
 var observer=typeof ResizeObserver==='function'?new ResizeObserver(requestDraw):null;
 if(observer)observer.observe(host);
+function activate(){
+ if(active){requestDraw();return;}
+ active=true;following=true;loadedTiles=0;failedTiles=0;
+ if(position&&!center)center={lat:position.lat,lon:position.lon};
+ message.textContent=position?'Cargando calles reales…':'Esperando ubicación del TBox…';
+ message.hidden=false;requestDraw();
+}
+function deactivate(){
+ active=false;following=true;
+ if(drawTimer!==null){clearTimeout(drawTimer);drawTimer=null;}
+ if(drawRaf!==null){cancelAnimationFrame(drawRaf);drawRaf=null;}
+ drawPending=false;
+ for(var entry of tiles){
+  var image=entry[1];image.onload=null;image.onerror=null;
+  image.removeAttribute('src');image.remove();
+ }
+ tiles.clear();loadedTiles=0;failedTiles=0;
+ position=null;center=null;heading=null;accuracy=null;
+ marker.style.display='none';message.textContent='Mapa pausado';message.hidden=false;
+ if(subtitle)subtitle.textContent='Mapa pausado · sin descargas';
+ if(note)note.textContent='Ubicación desactivada';
+}
 window.RushLiveMap={
+ activate:activate,
+ deactivate:deactivate,
  updatePosition:updatePosition,
  updateHeading:function(h){heading=Number.isFinite(h)?h:null;requestDraw()},
  setStatus:status,
  recenter:recenter,
- getState:function(){return {position:position,center:center,zoom:zoom,following:following,tiles:tiles.size,panMs:PAN_DURATION_MS}}
+ getState:function(){return {active:active,position:position,center:center,zoom:zoom,following:following,tiles:tiles.size}}
 };
 status('Esperando ubicación GPS real…');
 })();
