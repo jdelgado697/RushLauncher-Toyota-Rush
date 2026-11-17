@@ -1,10 +1,10 @@
-/* Rush Launcher 4.5 · Spotify XL, navegación OBD y controles externos. */
+/* Rush Launcher 4.6 · Clima en Inicio, OBD, Rush Navigator y Spotify XL. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
-try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'auto',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'auto',weather:false}};
+try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'dark',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'dark',weather:false}};
 var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,obd:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
@@ -238,7 +238,10 @@ $('weatherConsent').addEventListener('click',function(){
  if(nativeApp)window.Rush.askGps();
  refreshWeather(true);
 });
-$('weatherRefresh').addEventListener('click',function(){if(!saved.weather){saved.weather=true;store('rush_weather','yes')}refreshWeather(true)});
+$('weatherRefresh').addEventListener('click',function(){
+ if(!saved.weather){saved.weather=true;store('rush_weather','yes');if(nativeApp)window.Rush.askGps();}
+ refreshWeather(true);
+});
 function renderMetrics(){
  var speed=typeof state.obdSpeed==='number'&&state.obdConnected?state.obdSpeed:state.gps;
  var speedText=typeof speed==='number'&&isFinite(speed)?String(Math.round(Math.max(0,speed))):'—';
@@ -246,6 +249,7 @@ function renderMetrics(){
  write('gpsSmall',typeof speed==='number'?'Velocidad '+speedText+' km/h':'GPS sin velocidad');
  write('rpmSmall',typeof state.rpm==='number'&&state.obdConnected?state.rpm+' RPM':'OBD sin conectar');
  write('obdInfo',state.obdConnected?'OBD conectado':'OBD sin conectar');
+ write('headerObd',state.obdConnected?'OBD conectado':'OBD sin conectar');
  write('obdResult',state.obdConnected?'Conectado':'Sin conexión');
  write('coolantResult',typeof state.coolant==='number'&&state.obdConnected?state.coolant+' °C':'—');
  write('rpmResult',typeof state.rpm==='number'&&state.obdConnected?state.rpm+' rpm':'—');
@@ -289,12 +293,54 @@ window.rushGpsData=function(speed,heading){
  if(window.RushLiveMap)window.RushLiveMap.updateHeading(heading);
  renderMetrics();
 };
+
+/* Vista 2D compacta en Inicio. A lo sumo 9 mosaicos por posición, sin
+   animaciones y con umbral de actualización. No incrusta Waze. */
+var homeMapLast=null,homeMapLastTime=0;
+function updateHomeMap(lat,lon,accuracy){
+ var box=$('homeMapTiles'),host=document.querySelector('.home-map');
+ if(!box||!host||!Number.isFinite(lat)||!Number.isFinite(lon))return;
+ if(!Number.isFinite(accuracy)||accuracy>1000){
+  write('homeMapStatus','Ubicación imprecisa');return;
+ }
+ var now=Date.now();
+ if(homeMapLast && now-homeMapLastTime<30000 &&
+    Math.abs(homeMapLast.lat-lat)<.0015 && Math.abs(homeMapLast.lon-lon)<.0015)return;
+ if(!$('mapPanel').hidden)return;
+ homeMapLast={lat:lat,lon:lon};homeMapLastTime=now;
+ var w=box.clientWidth,h=box.clientHeight,zoom=14,n=Math.pow(2,zoom),tileSize=256;
+ if(w<20||h<20)return;
+ var latSafe=Math.max(-85.05112878,Math.min(85.05112878,lat));
+ var xx=(lon+180)/360*n;
+ var latRad=latSafe*Math.PI/180;
+ var yy=(1-Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n;
+ var centerX=xx*tileSize,centerY=yy*tileSize;
+ var xMin=Math.floor((centerX-w/2)/tileSize),xMax=Math.floor((centerX+w/2)/tileSize);
+ var yMin=Math.floor((centerY-h/2)/tileSize),yMax=Math.floor((centerY+h/2)/tileSize);
+ var frag=document.createDocumentFragment(),count=0;
+ for(var ty=yMin;ty<=yMax;ty++)for(var tx=xMin;tx<=xMax;tx++){
+  if(count>=9||ty<0||ty>=n)continue;
+  var img=document.createElement('img');
+  img.alt='';img.decoding='async';
+  img.style.left=(tx*tileSize-centerX+w/2)+'px';
+  img.style.top=(ty*tileSize-centerY+h/2)+'px';
+  img.src='https://tile.openstreetmap.org/'+zoom+'/'+((tx%n+n)%n)+'/'+ty+'.png';
+  frag.appendChild(img);count++;
+ }
+ box.replaceChildren(frag);
+ host.classList.add('home-map-has-tiles');
+ show($('homeMapMarker'),true);
+ write('homeMapStatus','Ubicación Android ±'+Math.round(accuracy)+' m');
+ write('homeMapInfo','Zona cercana · tocar para navegar');
+}
+
 window.rushPosition=function(lat,lon,accuracy){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
  var old=state.location;state.location={lat:lat,lon:lon,accuracy:accuracy,receivedAt:Date.now()};
  write('navTopStatus',Number.isFinite(accuracy)?'±'+Math.round(accuracy)+' m':'Ubicación');
  if(nav.route)navGuidance();
  if(window.RushLiveMap)window.RushLiveMap.updatePosition(lat,lon,accuracy);
+ updateHomeMap(lat,lon,accuracy);
  if(saved.weather&&(!old||Math.abs(old.lat-lat)+Math.abs(old.lon-lon)>.07))refreshWeather(false);
 };
 window.rushObdStatus=function(status){
