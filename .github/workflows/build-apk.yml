@@ -122,7 +122,7 @@ jobs:
           assert 'navReply("rushNavRouteProgress",progress)' in native
           assert 'window.rushNavRouteProgress=function' in js
           assert "data.provider||'motor de rutas'" in js
-          assert 'Fallaron los motores de rutas' in native
+          assert 'Sin ruta: FOSSGIS (' in native
           assert 'BIND_ACCESSIBILITY_SERVICE' not in manifest
 
           assert 'https://nominatim.openstreetmap.org/search' in native
