@@ -33,6 +33,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.google.android.gms.security.ProviderInstaller;
+
 import org.json.JSONObject;
 import org.json.JSONArray;
 
@@ -70,6 +72,8 @@ public class MainActivity extends Activity implements LocationListener {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService navigationExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean tlsProviderChecked = false;
+    private volatile String tlsProviderStatus = "Sin comprobar";
     private final ExecutorService suggestionsExecutor = Executors.newSingleThreadExecutor();
     private volatile int latestSuggestionRequest = 0;
     private volatile long lastSuggestionFetchAt = 0L;
@@ -221,7 +225,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.11.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.12.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1082,18 +1086,33 @@ public class MainActivity extends Activity implements LocationListener {
         return result;
     }
     private static String navigationFailure(Exception e) {
-        Throwable t=e;
-        while(t!=null){
-            if(t instanceof javax.net.ssl.SSLHandshakeException ||
-               t instanceof javax.net.ssl.SSLPeerUnverifiedException ||
-               t instanceof javax.net.ssl.SSLProtocolException ||
-               t instanceof java.security.cert.CertificateException)
-                return "certificado o negociación HTTPS rechazados por Android";
-            if(t instanceof java.net.SocketTimeoutException)return "tiempo de espera agotado";
-            if(t instanceof java.net.UnknownHostException)return "DNS sin resolver";
-            if(t instanceof java.net.ConnectException)return "conexión rechazada";
-            t=t.getCause();
+        Throwable cause=e;
+        boolean ssl=false;
+        String diagnostic="";
+        while(cause!=null){
+            if(cause instanceof java.security.cert.CertificateExpiredException)
+                return "certificado caducado o reloj Android incorrecto";
+            if(cause instanceof java.security.cert.CertificateNotYetValidException)
+                return "certificado aún no válido; revisa fecha y hora de Android";
+            if(cause instanceof java.security.cert.CertPathValidatorException)
+                return "cadena de confianza de certificado no válida ("+
+                        briefCause(cause)+")";
+            if(cause instanceof javax.net.ssl.SSLPeerUnverifiedException)
+                return "certificado del servidor no verificable ("+briefCause(cause)+")";
+            if(cause instanceof javax.net.ssl.SSLHandshakeException ||
+               cause instanceof javax.net.ssl.SSLProtocolException ||
+               cause instanceof javax.net.ssl.SSLException){
+                ssl=true; diagnostic=briefCause(cause);
+            }
+            if(cause instanceof java.net.SocketTimeoutException)
+                return "tiempo de espera agotado";
+            if(cause instanceof java.net.UnknownHostException)
+                return "falló DNS o no se encontró el servidor";
+            if(cause instanceof java.net.ConnectException)
+                return "conexión rechazada";
+            cause=cause.getCause();
         }
+        if(ssl)return "HTTPS/TLS: "+diagnostic;
         String msg=e.getMessage();
         if(msg!=null){
             if(msg.startsWith("SIN_RUTA:"))return "sin ruta vial entre los puntos";
@@ -1103,7 +1122,35 @@ public class MainActivity extends Activity implements LocationListener {
                 return "servidor HTTP "+status.replaceAll("[^0-9]","");
             }
         }
-        return "no se recibió respuesta utilizable";
+        return "no se recibió respuesta utilizable ("+e.getClass().getSimpleName()+")";
+    }
+    private static String briefCause(Throwable cause) {
+        if(cause==null)return "desconocido";
+        String m=cause.getMessage();
+        if(m==null||m.trim().isEmpty())return cause.getClass().getSimpleName();
+        m=m.replaceAll("[\\r\\n\\t]"," ").trim();
+        return m.length()>120?m.substring(0,120):m;
+    }
+    /**
+     * Actualiza el proveedor TLS con Google Play Services (si está presente).
+     * Corre únicamente sobre el hilo del executor de navegación.
+     * No elimina verificación de certificados ni instala CA personalizada.
+     */
+    private void ensureModernTlsProvider() {
+        if(tlsProviderChecked)return;
+        tlsProviderChecked=true;
+        try{
+            ProviderInstaller.installIfNeeded(getApplicationContext());
+            tlsProviderStatus="Proveedor TLS de Google verificado";
+        }catch(com.google.android.gms.common.GooglePlayServicesRepairableException repairable){
+            tlsProviderStatus="Google Play Services necesita actualización (código "+
+                    repairable.getConnectionStatusCode()+")";
+        }catch(com.google.android.gms.common.GooglePlayServicesNotAvailableException unavailable){
+            tlsProviderStatus="Proveedor TLS de Google no disponible (código "+
+                    unavailable.errorCode+")";
+        }catch(Exception e){
+            tlsProviderStatus="No se pudo actualizar TLS ("+e.getClass().getSimpleName()+")";
+        }
     }
     private void routeProgress(String msg){
         JSONObject progress=new JSONObject();
@@ -1120,6 +1167,9 @@ public class MainActivity extends Activity implements LocationListener {
         }
         lastRouteRequest=now;
         navigationExecutor.execute(()->{
+            routeProgress("Comprobando proveedor de seguridad HTTPS…");
+            ensureModernTlsProvider();
+            routeProgress(tlsProviderStatus+" · calculando ruta con FOSSGIS…");
             String fossgisError="";
             try{
                 JSONObject answer=normalizedRoute(
@@ -1144,9 +1194,11 @@ public class MainActivity extends Activity implements LocationListener {
                     osrmError.contains("HTTPS")&&valhallaError.contains("HTTPS");
             String message;
             if(https){
-                message="Los tres servidores rechazaron la conexión HTTPS del TBox. "
-                    +"Comprueba fecha y hora automáticas, certificados de Android "
-                    +"y actualizaciones del sistema. No desactives la seguridad SSL.";
+                message="Conexión HTTPS fallida en los tres motores. "
+                    +tlsProviderStatus+". Detalle: FOSSGIS ("+fossgisError
+                    +"), OSRM ("+osrmError+"), Valhalla ("+valhallaError
+                    +"). Verifica fecha y hora automáticas y Google Play Services. "
+                    +"No desactives la seguridad SSL.";
             }else if(fossgisError.contains("sin ruta vial")&&
                      osrmError.contains("sin ruta vial")&&
                      valhallaError.contains("sin ruta vial")){
@@ -1155,7 +1207,7 @@ public class MainActivity extends Activity implements LocationListener {
             }else{
                 message="Sin ruta: FOSSGIS ("+fossgisError+"), OSRM ("
                         +osrmError+"), Valhalla ("+valhallaError+"). "
-                        +"Verifica internet, certificados y precisión GPS.";
+                        +tlsProviderStatus+". Comprueba internet, certificados y GPS.";
             }
             navReply("rushNavRoute",navError(message));
         });
