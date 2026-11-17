@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow]
 
 permissions:
   contents: read
@@ -99,6 +99,22 @@ jobs:
           assert 'setRoute:setRoute' in mapjs and 'enableSelection:enableSelection' in mapjs
           navigation=Path("app/src/main/assets/navigation_mode.js").read_text(encoding="utf-8")
           assert 'drivingMode:drivingMode' in mapjs
+          assert 'function beginGpsTween(lat,lon,acc)' in mapjs
+          assert 'Math.max(420,Math.min(1000,dt*.88))' in mapjs
+          assert '25 fps como máximo' in mapjs
+          assert 'translate3d(' in mapjs and 'routeSvg.style.transform=transform' in mapjs
+          assert 'pendingCenter={lat:displayCenter.lat,lon:displayCenter.lon}' in mapjs
+          assert 'if(pendingCenter){center=pendingCenter;pendingCenter=null;}' in mapjs
+          assert 'active=true;following=true;driving=true;zoom=16' in mapjs
+          assert 'if(!active||motionFrame!==null||!driving||!following)return;' in mapjs
+          assert 'window.rushNavMapOpened=function()' in navigation
+          assert 'window.rushNavFollowing=function()' in navigation
+          assert "window.rushNavMapOpened==='function'" in js
+          assert 'window.RushLiveMap.drivingMode(true)' in js
+          assert 'schedulePanReturn()' in mapjs
+          assert '},15000)' in mapjs
+          assert 'BIND_ACCESSIBILITY_SERVICE' not in manifest
+
           assert 'overviewRoute:overviewRoute' in mapjs
           assert 'smoothCourse(' in mapjs
           assert 'window.rushNavExploring()' in mapjs
@@ -205,8 +221,8 @@ jobs:
           assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this)' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.obd413'" in gradle
-          assert 'RushLauncher/4.13.0' in native
+          assert "applicationId 'cl.rush.launcher.obd414'" in gradle
+          assert 'RushLauncher/4.14.0' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -231,7 +247,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 39" in gradle
+          assert "versionCode 40" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -255,10 +271,10 @@ jobs:
           assert 'case "enableHome":' in native
           assert 'isDefaultHome()' in native
           assert 'android.intent.category.HOME' in manifest
-          assert 'android:name="cl.rush.launcher.obd413.HomeAlias"' in manifest
+          assert 'android:name="cl.rush.launcher.obd414.HomeAlias"' in manifest
           assert 'android:enabled="false"' in manifest
           # Corregir el fallo de HOME en 4.4: alias nativo = manifest exacto.
-          assert native.count('"cl.rush.launcher.obd413.HomeAlias"') >= 2
+          assert native.count('"cl.rush.launcher.obd414.HomeAlias"') >= 2
           assert '"cl.rush.launcher.HomeAlias"' not in native
           assert 'data-action="home"' in html
           assert 'rushReturnHome()' in js and 'window.rushHandleBack' in js
@@ -297,7 +313,7 @@ jobs:
           assert '<uses-permission android:name="android.permission.INTERNET" />' in manifest
           assert 'android.permission.MEDIA_CONTENT_CONTROL' not in manifest
           spotify=Path("app/src/main/java/cl/rush/launcher/SpotifyConnectClient.java").read_text(encoding="utf-8")
-          assert 'rushlauncherobd413://spotify/callback' in spotify
+          assert 'rushlauncherobd414://spotify/callback' in spotify
           assert 'grant_type=authorization_code' in spotify
           assert 'code_challenge_method' in spotify
           assert 'grant_type=refresh_token' in spotify
@@ -307,7 +323,7 @@ jobs:
           assert '/pause' in spotify and '/play' in spotify
           assert '/next' in spotify and '/previous' in spotify
           assert '/seek?position_ms=' in spotify
-          assert 'rushlauncherobd413' in manifest and 'android.intent.action.VIEW' in manifest
+          assert 'rushlauncherobd414' in manifest and 'android.intent.action.VIEW' in manifest
           assert 'SpotifyConnectClient' in native
           assert 'spotifyConnect.handleRedirect(intent)' in native
           assert 'window.rushSpotifyApiPlayback' in js
