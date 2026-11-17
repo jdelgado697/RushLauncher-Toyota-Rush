@@ -601,7 +601,7 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void setHomeOption(boolean enabled) {
         getPackageManager().setComponentEnabledSetting(
-                new ComponentName(this, "cl.rush.launcher.obd49.HomeAlias"),
+                new ComponentName(this, "cl.rush.launcher.obd410.HomeAlias"),
                 enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                         : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
@@ -622,7 +622,7 @@ public class MainActivity extends Activity implements LocationListener {
         boolean available = false;
         try {
             int enabled = getPackageManager().getComponentEnabledSetting(
-                new ComponentName(this, "cl.rush.launcher.obd49.HomeAlias"));
+                new ComponentName(this, "cl.rush.launcher.obd410.HomeAlias"));
             available = enabled == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
         } catch (Exception ignored) { }
         javascript("window.rushHomeState({available:" + available
