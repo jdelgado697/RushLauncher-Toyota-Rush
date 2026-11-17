@@ -146,7 +146,11 @@ jobs:
           assert 'id="rushClip"' not in html
           assert 'mask-image:none!important' in html
           assert 'gpsRequested = false' in native
-          assert 'if (gpsRequested || mapGpsActive) startGps()' in native
+          assert 'if (gpsRequested || mapGpsActive || weatherGpsActive) startGps()' in native
+          assert 'public void startWeatherGps()' in native
+          assert 'public void stopWeatherGps()' in native
+          assert 'window.Rush.startWeatherGps()' in js
+          assert 'window.Rush.stopWeatherGps()' in js
           assert 'gpsRequested = true; startGps()' in native
           assert 'launchAutoKit()' in native
           assert 'getLaunchIntentForPackage' in native
