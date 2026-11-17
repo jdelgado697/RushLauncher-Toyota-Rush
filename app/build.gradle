@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obd411'
+        applicationId 'cl.rush.launcher.obd412'
         minSdk 26
         targetSdk 33
-        versionCode 37
-        versionName '4.11.0-DiagnosticoTLS'
+        versionCode 38
+        versionName '4.12.0-TLS-Provider'
     }
 
     compileOptions {
@@ -27,4 +27,10 @@ android {
             minifyEnabled false
         }
     }
+}
+
+// Proveedor TLS actualizado mediante Google Play Services cuando está disponible.
+// No cambia los certificados de confianza ni permite conexiones inseguras.
+dependencies {
+    implementation 'com.google.android.gms:play-services-base:18.11.1'
 }
