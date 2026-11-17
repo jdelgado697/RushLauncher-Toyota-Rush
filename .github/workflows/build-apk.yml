@@ -101,6 +101,10 @@ jobs:
           assert 'drivingMode:drivingMode' in mapjs
           assert 'overviewRoute:overviewRoute' in mapjs
           assert 'smoothCourse(' in mapjs
+          assert 'window.rushNavExploring()' in mapjs
+          assert 'window.rushNavExploring=function()' in navigation
+          assert 'window.RushLiveMap.updateHeading(heading,state.gps)' in js
+
           assert 'visualRotation=driving&&following&&hasCourse' in mapjs
           assert 'nav-car-arrow' in html
           assert 'id="navDriveFollow"' in html and 'id="navDriveOverview"' in html
