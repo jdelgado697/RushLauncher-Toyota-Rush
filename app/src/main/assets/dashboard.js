@@ -90,6 +90,33 @@ function renderMetrics(){
  write('coolantResult',typeof state.coolant==='number'&&state.obdConnected?state.coolant+' °C':'—');
  write('rpmResult',typeof state.rpm==='number'&&state.obdConnected?state.rpm+' rpm':'—');
  write('gpsDetail',state.gpsStatus);
+ renderGauges();
+}
+// Relojes SVG: únicamente actualizamos el trazo cuando llega un dato real.
+// Sin renderizado de mapas, canvases, ni bucles de animación constantes.
+function renderGauges(){
+ var info=state.obd||{};
+ var obdSpeed=state.obdConnected&&typeof state.obdSpeed==='number'&&isFinite(state.obdSpeed);
+ var gpsSpeed=typeof state.gps==='number'&&isFinite(state.gps);
+ var speed=obdSpeed?state.obdSpeed:(gpsSpeed?state.gps:null);
+ var rpm=state.obdConnected&&typeof state.rpm==='number'&&isFinite(state.rpm)?state.rpm:null;
+ var gauges=[['speed',speed,200,speed===null?'Sin lectura':obdSpeed?'ECU OBD':'GPS'],
+             ['rpm',rpm,8000,rpm===null?'Sin lectura':'ECU OBD']];
+ gauges.forEach(function(item){
+  var kind=item[0],value=item[1],max=item[2],source=item[3];
+  Array.prototype.forEach.call(document.querySelectorAll('[data-gauge-kind="'+kind+'"]'),function(box){
+   var number=box.querySelector('.dial-number');
+   var progress=box.querySelector('.dial-progress');
+   var detail=box.querySelector('.dial-source');
+   if(number)number.textContent=value===null?'—':kind==='rpm'?(value/1000).toFixed(1):String(Math.round(value));
+   if(progress)progress.setAttribute('stroke-dasharray',
+     value===null?'0 383.3':(Math.max(0,Math.min(1,value/max))*287.5).toFixed(1)+' 383.3');
+   if(detail)detail.textContent=source;
+  });
+ });
+ write('homeObdStatus',state.obdConnected?'OBD conectado · datos en vivo':gpsSpeed?'GPS · OBD sin conectar':'Conecta tu ELM327');
+ write('homeCoolant',state.obdConnected&&typeof state.coolant==='number'?Math.round(state.coolant)+' °C':'— °C');
+ write('homeVoltage',state.obdConnected&&typeof info.voltage==='number'&&isFinite(info.voltage)?info.voltage.toFixed(2)+' V':'— V');
 }
 window.rushGpsStatus=function(status){
  state.gpsStatus=String(status||'Sin información');if(/desactivado|sin permiso|no disponible|sin proveedor|requerido/i.test(state.gpsStatus))state.gps=null;
