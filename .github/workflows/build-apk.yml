@@ -255,7 +255,8 @@ jobs:
           assert 'NotificationListenerService' not in manifest
           assert 'PlaybackAccessService' not in manifest
           assert 'BIND_NOTIFICATION_LISTENER_SERVICE' not in manifest
-          assert 'ACCESSIBILITY' not in manifest
+          assert 'android.permission.BIND_ACCESSIBILITY_SERVICE' in manifest
+          assert 'android:canRetrieveWindowContent="false"' in config
           assert 'MediaSessionManager' not in native
           assert 'requestMediaAccess' not in native
           assert 'requestMediaAccess' not in js
