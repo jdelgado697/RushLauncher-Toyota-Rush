@@ -1,4 +1,4 @@
-/* Rush Launcher 3.3 · iconos originales de las aplicaciones instaladas; mapa GPS real y música Android. */
+/* Rush Launcher 4.3 · multimedia, OBD y mapa 2D bajo demanda. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -29,17 +29,50 @@ function applyTheme(){
 }
 function store(key,value){try{localStorage.setItem(key,value)}catch(e){}}
 function openOverlay(id){show($(id),true);if(id==='appsPanel'&&nativeApp){write('appsCount','Buscando…');$('appsSearch').value='';window.Rush.listApps()}}
-function closeOverlay(id){show($(id),false)}
+function closeOverlay(id){
+ if(id==='mapPanel'){
+  if(window.RushLiveMap)window.RushLiveMap.deactivate();
+  if(nativeApp&&typeof window.Rush.stopMapGps==='function')window.Rush.stopMapGps();
+ }
+ show($(id),false);
+}
+// El archivo de cartografía no se carga ni se ejecuta hasta tocar MAPA.
+var mapScriptLoading=false,mapScriptLoaded=false;
+function openMap(){
+ openOverlay('mapPanel');
+ write('mapSubtitle','Buscando ubicación del TBox…');
+ function activateMap(){
+  if($('mapPanel').hidden||!window.RushLiveMap)return;
+  window.RushLiveMap.activate();
+  if(state.location&&state.location.receivedAt&&Date.now()-state.location.receivedAt<15000){
+   window.RushLiveMap.updatePosition(state.location.lat,state.location.lon,state.location.accuracy);
+  }
+  if(nativeApp&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
+  else window.RushLiveMap.setStatus('Ubicación Android no disponible; usa CarPlay');
+ }
+ if(mapScriptLoaded){activateMap();return;}
+ if(mapScriptLoading)return;
+ mapScriptLoading=true;
+ var script=document.createElement('script');script.src='live_map.js';
+ script.onload=function(){mapScriptLoading=false;mapScriptLoaded=!!window.RushLiveMap;activateMap()};
+ script.onerror=function(){
+  mapScriptLoading=false;
+  write('mapSubtitle','No se pudo cargar el mapa. Abre CarPlay.');
+  write('mapWaiting','No se pudo iniciar el visor. Utiliza CarPlay para navegar.');
+ };
+ document.body.appendChild(script);
+}
 Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){b.addEventListener('click',function(){closeOverlay(b.getAttribute('data-close'))})});
-Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){p.addEventListener('click',function(ev){if(ev.target===p)show(p,false)})});
+Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){p.addEventListener('click',function(ev){if(ev.target===p)closeOverlay(p.id)})});
 Array.prototype.forEach.call(document.querySelectorAll('[data-action]'),function(b){b.addEventListener('click',function(){var action=b.getAttribute('data-action');
  if(action==='apps'){openOverlay('appsPanel');return}
  if(action==='route'){openOverlay('routePanel');return}
  if(action==='settings'){openOverlay('settingsPanel');return}
  if(action==='obd'){openOverlay('obdPanel');loadDevices();return}
  if(action==='obdDashboard'){openOverlay('obdDashboardPanel');renderObdAdvanced();return}
- if(action==='map'){app('waze');return}
+ if(action==='map'){openMap();return}
  if(action==='radio'){openOverlay('radioPanel');return}
+ if(action==='autokit'&&!$('mapPanel').hidden)closeOverlay('mapPanel');
  app(action);
 })});
 function switchTheme(mode){
@@ -131,7 +164,7 @@ window.rushGpsData=function(speed,heading){
 };
 window.rushPosition=function(lat,lon,accuracy){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
- var old=state.location;state.location={lat:lat,lon:lon,accuracy:accuracy};
+ var old=state.location;state.location={lat:lat,lon:lon,accuracy:accuracy,receivedAt:Date.now()};
  if(window.RushLiveMap)window.RushLiveMap.updatePosition(lat,lon,accuracy);
  if(saved.weather&&(!old||Math.abs(old.lat-lat)+Math.abs(old.lon-lon)>.07))refreshWeather(false);
 };
@@ -410,6 +443,10 @@ $('spotifyEmbedClose').addEventListener('click',function(){
  $('spotifyEmbedContainer').textContent='';
  closeOverlay('spotifyEmbedPanel');
 });
+$('mapRetryGps').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
+ if(window.RushLiveMap)window.RushLiveMap.recenter();
+});
 $('startRoute').addEventListener('click',function(){
  closeOverlay('routePanel');
  app('autokit');
@@ -548,11 +585,16 @@ window.rushInstalledApps=function(items){
  paintApps();
 };
 $('appsSearch').addEventListener('input',paintApps);
-document.addEventListener('keydown',function(e){if(e.key==='Escape')Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){show(p,false)})});
+document.addEventListener('keydown',function(e){
+ if(e.key==='Escape')Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){if(!p.hidden)closeOverlay(p.id)});
+});
+document.addEventListener('visibilitychange',function(){
+ if(document.hidden&&!$('mapPanel').hidden)closeOverlay('mapPanel');
+});
 window.addEventListener('focus',function(){if(nativeApp)window.Rush.ready()});
 updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
 renderMusic(null);
-if(nativeApp){window.Rush.ready();} // GPS solo bajo petición (clima / panel OBD).
+if(nativeApp){window.Rush.ready();} // Mapa y GPS se solicitan bajo demanda.
 })();
