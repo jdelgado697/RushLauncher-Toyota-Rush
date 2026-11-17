@@ -112,7 +112,12 @@ $('navSearchBtn').addEventListener('click',function(){
  if(!nativeApp||typeof window.Rush.searchNav!=='function'){
   navStatus('Búsqueda disponible en la APK Android');return;
  }
- show($('navResults'),false);navStatus('Buscando dirección…');window.Rush.searchNav(q);
+ show($('navResults'),false);navStatus('Buscando en Chile cerca de tu ubicación…');
+ var loc=state.location;
+ var near=loc&&loc.receivedAt&&Date.now()-loc.receivedAt<180000;
+ if(typeof window.Rush.searchNavNear==='function'){
+  window.Rush.searchNavNear(q,near?loc.lat:0,near?loc.lon:0);
+ }else window.Rush.searchNav(q);
 });
 $('navQuery').addEventListener('keydown',function(e){
  if(e.key==='Enter'){e.preventDefault();$('navSearchBtn').click();}
