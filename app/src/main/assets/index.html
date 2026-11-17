@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.4 · Navegador integrado + OBD + Multimedia</title>
+<title>Rush Launcher 4.5 · Spotify XL, navegación y control táctil</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -279,6 +279,33 @@
  .nav-guide strong{font-size:12px}
  .nav-guide span{font-size:10px}
 }
+
+/* Rush 4.5: Spotify XL ocupa la segunda fila completa; controles ampliados */
+.widgets{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.music{display:grid;grid-template-columns:90px minmax(0,1fr);gap:10px;padding:7px 11px;align-items:center;border-radius:18px;min-height:0}
+.album{width:88px;height:88px;border-radius:15px}.album .icon{width:28px;height:28px}
+.musicbody{gap:3px;justify-content:center}.musicbrand{font-size:12px}.musicrow{gap:5px}
+.musicnames strong{font-size:clamp(16px,2vw,23px)}.musicnames small{font-size:12px}
+.musicctrl{gap:6px}.musicctrl button{width:48px;height:48px;border-radius:12px}
+.musicctrl button.primary{width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#246bc7,#16408f);border:2px solid #8edbff;box-shadow:0 0 9px #2dbaff75}
+.musicctrl .icon{width:24px;height:24px}.musicctrl button.primary .icon{width:27px;height:27px}
+.songstate{font-size:11px}.music-seek{min-height:23px}.music-seek input{height:22px}
+.dock{width:min(95%,730px);min-width:0;max-width:100%;justify-content:space-between}
+.dockbtn{max-width:none;min-width:70px;min-height:52px}.dockicon{width:34px;height:34px}
+#settingsPanel .weather{min-height:115px;max-width:420px;margin:8px 0;display:flex}
+#settingsPanel .weather .weatherbutton{position:static}
+@media(max-width:860px){
+ .music{grid-template-columns:83px minmax(0,1fr);padding:6px 8px;gap:9px}
+ .album{width:82px;height:82px}.musicctrl button{width:44px;height:44px}
+ .musicctrl button.primary{width:53px;height:53px}.musicctrl{gap:5px}
+ .musicnames strong{font-size:17px}.songstate{font-size:10px}
+ .dock{height:61px;padding:6px 8px}.dockbtn{min-width:60px;font-size:10px}
+}
+@media(max-width:650px){
+ .music{grid-template-columns:61px minmax(0,1fr);gap:5px}
+ .album{width:60px;height:60px}.musicctrl button{width:38px;height:40px}
+ .musicctrl button.primary{width:44px;height:44px}.musicnames strong{font-size:14px}
+}
 </style>
 </head>
 <body>
@@ -302,7 +329,7 @@
  <div class="topright"><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
 </header>
 <main class="main">
- <section class="mapcard glass" aria-label="CarPlay y navegación desde iPhone">
+ <section class="mapcard glass" aria-label="Indicadores OBD y navegación integrada">
   <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-pin"/></svg></span><div><strong>Tablero en vivo</strong><small id="homeObdStatus">Conecta tu ELM327</small></div></div>
   <div class="home-gauges" aria-label="Velocímetro y tacómetro grandes">
    <div class="rush-dial speed-dial" data-gauge-kind="speed" role="group" aria-label="Velocidad OBD">
@@ -355,24 +382,16 @@
      </div>
     </div>
    </section>
-   <section class="weather glass" aria-label="Clima actual">
-    <div class="weathertitle">Clima <button type="button" class="weatherbutton" id="weatherRefresh">↻</button></div>
-    <div class="weathercenter"><span class="wtemp" id="weatherTemp">—°</span><span class="wicon" id="weatherIcon">☀</span></div>
-    <div id="weatherDescription" class="weatherdesc">Clima desactivado</div>
-    <div id="weatherRange" class="weatherrange">Actívalo para consultar tu ubicación</div>
-    <button type="button" id="weatherConsent" class="moretext" style="text-align:left;padding:0">Activar clima</button><span id="weatherToggle" hidden>Activar clima</span>
-   </section>
+
   </div>
  </div>
 </main>
 <nav class="dock" aria-label="Accesos principales">
- <button class="dockbtn" type="button" data-action="apps"><span class="dockicon"><svg class="icon"><use href="#i-apps"/></svg></span>Apps</button>
- <button class="dockbtn" type="button" data-action="youtube"><span class="dockicon map"><svg class="icon"><use href="#i-apps"/></svg></span><span class="dock-label">YouTube</span></button>
- <button class="dockbtn" type="button" data-action="spotify"><span class="dockicon spotify"><svg class="icon"><use href="#i-music"/></svg></span><span class="dock-label">Spotify</span></button>
- <button class="dockbtn" type="button" data-action="radio"><span class="dockicon radio"><svg class="icon"><use href="#i-radio"/></svg></span>Radio FM</button>
- <button class="dockbtn" type="button" data-action="obdDashboard"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-pin"/></svg></span>Tablero OBD</button>
- 
- <button class="dockbtn" type="button" data-action="map"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">Navegación</span></button>
+ <button class="dockbtn" type="button" data-action="home"><span class="dockicon auto"><svg class="icon"><use href="#i-auto"/></svg></span><span class="dock-label">Inicio</span></button>
+ <button class="dockbtn" type="button" data-action="map"><span class="dockicon map"><svg class="icon"><use href="#i-pin"/></svg></span><span class="dock-label">Mapa</span></button>
+ <button class="dockbtn" type="button" data-action="obdDashboard"><span class="dockicon bluetooth"><svg class="icon"><use href="#i-locate"/></svg></span><span class="dock-label">Tablero OBD</span></button>
+ <button class="dockbtn" type="button" data-action="apps"><span class="dockicon"><svg class="icon"><use href="#i-apps"/></svg></span><span class="dock-label">Apps</span></button>
+ <button class="dockbtn" type="button" data-action="settings"><span class="dockicon"><svg class="icon"><use href="#i-gear"/></svg></span><span class="dock-label">Ajustes</span></button>
 </nav>
 </div>
 <div class="scrim" id="appsPanel" hidden>
@@ -385,13 +404,26 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.4 · Unificado</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.5 · Spotify XL</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
   <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D con búsqueda y cálculo de rutas dentro del launcher. Requiere internet y ubicación Android; la precisión depende del TBox. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
-  <div class="set-line"><h3>Clima</h3><p class="muted">Al activar el clima, se envía tu ubicación a Open-Meteo para consultar el pronóstico. Puedes desactivarlo desde el panel.</p></div>
+  <div class="set-line"><h3>Clima · opcional</h3><p class="muted">El pronóstico está en Ajustes para aprovechar todo el espacio de Spotify XL.</p><section class="weather glass" aria-label="Clima actual">
+    <div class="weathertitle">Clima <button type="button" class="weatherbutton" id="weatherRefresh">↻</button></div>
+    <div class="weathercenter"><span class="wtemp" id="weatherTemp">—°</span><span class="wicon" id="weatherIcon">☀</span></div>
+    <div id="weatherDescription" class="weatherdesc">Clima desactivado</div>
+    <div id="weatherRange" class="weatherrange">Actívalo para consultar tu ubicación</div>
+    <button type="button" id="weatherConsent" class="moretext" style="text-align:left;padding:0">Activar clima</button><span id="weatherToggle" hidden>Activar clima</span>
+   </section></div>
+  <div class="set-line">
+   <h3>Botones Inicio · Atrás · Menú</h3>
+   <p class="muted">Para regresar desde Xuper TV si el botón físico de Inicio no responde, puedes activar tres controles flotantes opcionales sobre aplicaciones externas.</p>
+   <p class="muted">El servicio «Controles Rush» requiere activación manual en Accesibilidad. No lee mensajes ni el contenido de aplicaciones. Puedes desactivarlo en cualquier momento.</p>
+   <div class="tile-buttons"><button type="button" class="actionbtn highlight" id="floatingNavSettings">Configurar controles flotantes</button></div>
+   <p class="muted" id="floatingNavStatus">Desactivado hasta que lo habilites en Android.</p>
+  </div>
   <div class="set-line">
    <h3>Launcher predeterminado del TBox</h3>
    <p class="muted">Rush Launcher puede ser tu pantalla de inicio de Android. Al seleccionar esta opción, Android te permitirá elegirlo si el fabricante del TBox lo autoriza. No modifica el inicio de la radio Toyota ni el sistema del vehículo.</p>
