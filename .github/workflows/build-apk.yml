@@ -135,7 +135,7 @@ jobs:
           assert 'id="rushClip"' not in html
           assert 'mask-image:none!important' in html
           assert 'gpsRequested = false' in native
-          assert 'if (gpsRequested) startGps()' in native
+          assert 'if (gpsRequested || mapGpsActive) startGps()' in native
           assert 'gpsRequested = true; startGps()' in native
           assert 'launchAutoKit()' in native
           assert 'getLaunchIntentForPackage' in native
