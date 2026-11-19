@@ -21,6 +21,11 @@ var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.creat
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
 var maxTiles=25, tile=256, minLat=-85.05112878, maxLat=85.05112878;
 var lastGpsAt=0,lastRenderedCenter=null;
+var routeCoords=[],routeSvg=document.getElementById('homeRouteSvg'),
+    routeShadow=document.getElementById('homeRouteBorder'),
+    routeLine=document.getElementById('homeRouteLine'),
+    routeDestination=document.getElementById('homeRouteDestination');
+var longTimer=null,longTriggered=false;
 
 function clamp(n,lower,upper){return Math.min(upper,Math.max(lower,n))}
 function valid(lat,lon){return Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180}
@@ -82,11 +87,45 @@ function render(){
  });
  host.classList.add('home-map-has-tiles');
  layer.style.transform=following&&live?'rotate('+(-bearing)+'deg)':'none';
+ drawRoute(center,w,h);
  drawMarker();
  setStatus();
  lastDraw=Date.now();
  lastRenderedCenter={lat:current.lat,lon:current.lon};
 }
+function drawRoute(center,w,h){
+ if(!routeSvg||!routeLine||!routeShadow||!routeDestination)return;
+ if(routeCoords.length<2){
+  routeSvg.hidden=true;
+  routeLine.setAttribute('d','');routeShadow.setAttribute('d','');
+  routeDestination.style.display='none';return;
+ }
+ routeSvg.hidden=false;routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
+ var path='',step=Math.max(1,Math.ceil(routeCoords.length/340));
+ for(var i=0;i<routeCoords.length;i+=step){
+  var p=project(routeCoords[i].lat,routeCoords[i].lon);
+  var x=Math.round((p.x-center.x+w/2)*10)/10;
+  var y=Math.round((p.y-center.y+h/2)*10)/10;
+  path+=(path?' L':'M')+x+' '+y;
+ }
+ var last=routeCoords[routeCoords.length-1],end=project(last.lat,last.lon);
+ path+=' L'+(end.x-center.x+w/2).toFixed(1)+' '+(end.y-center.y+h/2).toFixed(1);
+ routeShadow.setAttribute('d',path);
+ routeLine.setAttribute('d',path);
+ routeDestination.style.display='';
+ routeDestination.setAttribute('cx',(end.x-center.x+w/2).toFixed(1));
+ routeDestination.setAttribute('cy',(end.y-center.y+h/2).toFixed(1));
+}
+function setRoute(points){
+ routeCoords=[];
+ if(Array.isArray(points))points.forEach(function(c){
+  if(!Array.isArray(c)||c.length<2)return;
+  var lon=Number(c[0]),lat=Number(c[1]);
+  if(valid(lat,lon))routeCoords.push({lat:lat,lon:lon});
+ });
+ queueDraw();
+}
+function clearRoute(){routeCoords=[];queueDraw()}
 function drawMarker(){
  if(!live||!position){marker.hidden=true;return;}
  var p=project(position.lat,position.lon),c=project(current.lat,current.lon);
@@ -156,14 +195,28 @@ function changeCenter(dx,dy){
 function pointerStart(event){
  if(event.button!==undefined&&event.button!==0)return;
  if(activePointer!==null)return;
+ longTriggered=false;
  activePointer={id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,lastY:event.clientY,moved:false};
  if(surface.setPointerCapture)surface.setPointerCapture(event.pointerId);
+ // Pulsación larga con vehículo detenido selecciona destino sin abrir otra pantalla.
+ longTimer=setTimeout(function(){
+  if(!activePointer||activePointer.moved||motionSpeed>5||!window.RushHomeNavigation)return;
+  var rect=host.getBoundingClientRect();
+  var dx=activePointer.x-rect.left-rect.width/2,dy=activePointer.y-rect.top-rect.height/2;
+  var radians=following&&live?bearing*Math.PI/180:0;
+  var x=dx*Math.cos(radians)-dy*Math.sin(radians);
+  var y=dx*Math.sin(radians)+dy*Math.cos(radians);
+  var c=project(current.lat,current.lon),pos=unproject(c.x+x,c.y+y);
+  longTriggered=true;
+  window.RushHomeNavigation.pickCoordinate(pos.lat,pos.lon);
+ },780);
 }
 function pointerMove(event){
  if(!activePointer||activePointer.id!==event.pointerId)return;
  var dx=event.clientX-activePointer.lastX,dy=event.clientY-activePointer.lastY;
  activePointer.lastX=event.clientX;activePointer.lastY=event.clientY;
  if(Math.abs(event.clientX-activePointer.x)+Math.abs(event.clientY-activePointer.y)>7){
+  if(longTimer!==null){clearTimeout(longTimer);longTimer=null}
   activePointer.moved=true;
   freeMove();
   changeCenter(dx,dy);
@@ -174,6 +227,8 @@ function pointerEnd(event){
  if(!activePointer||activePointer.id!==event.pointerId)return;
  var moved=activePointer.moved;
  activePointer=null;
+ if(longTimer!==null){clearTimeout(longTimer);longTimer=null}
+ if(longTriggered){longTriggered=false;return}
  if(moved){queueDraw();return}
  var now=Date.now();
  if(now-lastTouch<360)scaleZoom(1);
@@ -204,6 +259,7 @@ if(typeof ResizeObserver==='function')new ResizeObserver(queueDraw).observe(host
 
 window.RushHomeMap={
  setPosition:setPosition,setHeading:setHeading,follow:activateFollow,
+ setRoute:setRoute,clearRoute:clearRoute,
  zoomIn:function(){scaleZoom(1)},zoomOut:function(){scaleZoom(-1)},
  refresh:queueDraw,
  isFollowing:function(){return following},
