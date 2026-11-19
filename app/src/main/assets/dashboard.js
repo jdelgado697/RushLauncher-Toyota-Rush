@@ -847,12 +847,20 @@ window.addEventListener('focus',function(){
 
  }
 });
+// Mapa real en Inicio: referencia Loncoche hasta recibir una lectura GPS.
+updateHomeMap(-39.367,-72.632,30);
+homeMapLast=null;
+show($('homeMapMarker'),false);
+write('homeMapStatus','Loncoche · referencia, esperando GPS');
+write('homeMapInfo','GPS iniciándose · pulsa el mapa para conducir');
 updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
 renderMusic(null);
 if(nativeApp){
  window.Rush.ready();
+ // Solicitud de GPS al iniciar el launcher para mapa de Inicio continuo.
+ if(typeof window.Rush.askGps==='function')window.Rush.askGps();
  // Clima autorizado: reanudar ubicación al abrir el launcher, sin pedirla a usuarios que no optaron.
  if(saved.weather&&typeof window.Rush.startWeatherGps==='function')window.Rush.startWeatherGps();
 }

@@ -198,3 +198,18 @@ de ubicación dependen de señal real del TBox.
 **Identidad APK:** mantiene applicationId cl.rush.launcher.obd415, con
 versionCode 42 (superior a 4.15: 41). Si las firmas no coinciden, Android
 puede impedir actualizar; respalda los ajustes antes de desinstalar.
+
+
+## Rush Launcher 4.15.2 · conducción y mapa de Inicio
+Se mantiene la base 4.15.1, con todo el tablero OBD, Spotify, clima, CarPlay y Apps.
+El Inicio muestra un mapa 2D raster ligero de OSM desde el primer instante.
+Si no ha llegado señal GPS usa Loncoche como **mapa de referencia**, sin afirmar
+que allí esté el vehículo. El GPS se solicita al iniciar el launcher y
+el mapa se actualiza a coordenadas reales cuando llegan lecturas de Android.
+
+Rush Navigator tiene mapa nativo con TextureView para controles visibles,
+predicción de lugares chilenos al escribir (Photon), pulsación larga para
+seleccionar destino, botón explícito «Calcular ruta», respaldo de rutas
+FOSSGIS y cámara inclinada/rumbo arriba al abrir. Servicios de mapas,
+búsqueda y rutas necesitan red y son de demostración, sin SLA.
+Configuración de destinos exclusivamente con vehículo detenido.
