@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.16 · Modo Conducción · Toyota Rush</title>
+<title>Rush Launcher 4.17 · Navegación en Inicio · Toyota Rush</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -627,6 +627,60 @@
  .screen.drive-ui .music .album{display:none}
  .screen.drive-ui .music{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Rush 4.17: rutas directamente sobre el mapa compacto. El SVG usa las
+   mismas coordenadas Web Mercator y rotación que los mosaicos. */
+.home-map-tiles>img{z-index:0}
+.home-route-svg{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible}
+.home-nav-search{position:absolute;top:44px;left:9px;z-index:12;display:flex;gap:4px;
+ width:calc(100% - 147px);min-height:36px;max-width:540px}
+.home-nav-search input{background:#071d38f2;color:white;min-width:0;flex:1;
+ min-height:36px;border:1px solid #47bafa;border-radius:10px;padding:5px 9px;font-size:13px;
+ box-shadow:0 2px 8px #00172d85}
+.home-nav-search input::placeholder{color:#b7d5f2}
+.home-nav-search button{background:#0c83d5;color:#fff;border:1px solid #61cdff;
+ border-radius:9px;font-size:11px;font-weight:800;min-width:56px;padding:4px 6px}
+.home-nav-search input:disabled,.home-nav-search button:disabled{opacity:.65}
+.home-nav-results{position:absolute;top:83px;left:9px;width:min(70%,425px);
+ max-height:min(218px,58%);overflow:auto;z-index:14;background:#071a32f7;
+ border:1px solid #4bcbff;border-radius:10px;box-shadow:0 7px 20px #0009}
+.home-nav-results button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+ width:100%;min-height:43px;border-bottom:1px solid #386999;
+ text-align:left;padding:6px 9px;background:#08284a;color:#fff}
+.home-nav-results button strong{font-size:12px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.home-nav-results button small{font-size:10px;color:#bcdcff;max-width:100%;overflow:hidden;
+ white-space:nowrap;text-overflow:ellipsis}
+.home-nav-results .home-nav-msg{padding:12px;font-size:12px;color:#d6e9ff}
+.home-nav-guide{position:absolute;top:88px;left:9px;max-width:65%;min-width:210px;
+ z-index:8;padding:8px 11px;display:flex;flex-direction:column;gap:3px;
+ border:1px solid #3ec7ff;border-radius:12px;background:#061c36eb;color:white;
+ box-shadow:0 4px 14px #001b39ac}
+.home-nav-guide-title{display:flex;align-items:center;gap:8px;min-width:0}
+.home-nav-guide-title span{font-size:26px;font-weight:900;color:#71dfff;flex:none}
+.home-nav-guide-title strong{font-size:clamp(12px,1.6vw,18px);line-height:1.1}
+.home-nav-guide>span{font-size:13px;color:#9de5ff;font-weight:900}
+.home-nav-guide>small{font-size:10px;color:#d1e7ff}
+.home-nav-guide-actions{display:flex;gap:5px;margin-top:4px}
+.home-nav-guide-actions button{min-height:28px;padding:3px 8px;border-radius:8px;
+ color:white;background:#163c67;border:1px solid #51b5fa;font-size:11px;font-weight:800}
+.home-nav-guide-actions button:last-child{background:#722d51;border-color:#e96d99}
+.home-map.is-searching .home-nav-guide{display:none}
+.home-map.is-searching .home-map-route{display:none}
+.screen.drive-ui .home-map-route{display:none}
+.screen.drive-ui .home-map-tools{top:44px}
+.screen.drive-ui .home-nav-guide{top:90px}
+@media(max-width:860px){
+ .home-nav-search{top:37px;left:6px;width:calc(100% - 125px);min-height:32px}
+ .home-nav-search input{min-height:32px;font-size:11px}
+ .home-nav-search button{min-height:32px;font-size:10px;min-width:49px}
+ .home-nav-results{top:71px;left:6px;width:min(74%,350px);max-height:190px}
+ .home-nav-guide{top:76px;left:6px;min-width:175px;max-width:68%;padding:5px 8px}
+ .home-nav-guide-title span{font-size:21px}
+ .home-nav-guide-title strong{font-size:12px}
+ .home-nav-guide-actions button{min-height:25px;font-size:10px}
+ .screen.drive-ui .home-nav-guide{top:76px}
+ .screen.drive-ui .home-map-tools{top:38px}
+}
 </style>
 </head>
 <body>
@@ -646,7 +700,7 @@
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.16</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.17</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -696,14 +750,36 @@
     <span id="homeCoolant" hidden>— °C</span><span id="homeVoltage" hidden>— V</span>
   </section>
 <section class="home-map glass" aria-label="Vista previa del mapa y acceso a la navegación">
-   <div id="homeMapTiles" class="home-map-tiles" aria-hidden="true"></div>
+   <div id="homeMapTiles" class="home-map-tiles" aria-hidden="true">
+    <svg id="homeRouteSvg" class="home-route-svg" viewBox="0 0 500 300" preserveAspectRatio="none" hidden>
+     <path id="homeRouteBorder" fill="none" stroke="#031b36" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+     <path id="homeRouteLine" fill="none" stroke="#24b6ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+     <circle id="homeRouteDestination" cx="-100" cy="-100" r="8" fill="#f3467b" stroke="white" stroke-width="3" />
+    </svg>
+   </div>
    <div class="home-map-grid" aria-hidden="true"></div>
    <div class="home-map-touch" id="homeMapTouch" role="application" tabindex="0"
       aria-label="Mover mapa con el dedo. Doble toque para acercar. También puedes usar flechas." ></div>
    <div id="homeMapMarker" class="home-map-marker" hidden aria-label="Posición Android">◆</div>
    <span class="home-map-attribution">© OpenStreetMap contributors</span>
    <div class="home-map-header"><span class="home-map-label">RUSH <strong>NAVIGATOR</strong></span><span id="homeMapStatus">Cargando mapa…</span></div>
-   <div class="home-map-route">Mapa conducción<small>Arrastra para explorar · GPS rumbo arriba</small></div>
+   <div class="home-map-route">Mapa y ruta<small>GPS rumbo arriba · mantén pulsado para destino</small></div>
+   <div class="home-nav-search" role="search" aria-label="Buscar destino en Chile">
+    <input id="homeNavInput" type="search" maxlength="100" autocomplete="off"
+      aria-label="Buscar destino" placeholder="¿Adónde vamos? · Chile" />
+    <button id="homeNavSearchButton" type="button">Buscar</button>
+   </div>
+   <div id="homeNavResults" class="home-nav-results" hidden aria-label="Lugares sugeridos"></div>
+   <div id="homeNavGuide" class="home-nav-guide" hidden aria-live="polite">
+     <div class="home-nav-guide-title"><span id="homeNavTurnIcon">↑</span>
+      <strong id="homeNavInstruction">Sigue la ruta</strong></div>
+     <span id="homeNavDistance">Calculando indicaciones…</span>
+     <small id="homeNavSummary">Sin información de distancia</small>
+     <div class="home-nav-guide-actions">
+      <button id="homeNavVoice" type="button" aria-pressed="true">Voz: sí</button>
+      <button id="homeNavFinish" type="button">Finalizar ruta</button>
+     </div>
+   </div>
    <div class="home-map-tools" aria-label="Controles de mapa">
     <button type="button" id="homeMapFollow" aria-pressed="true" title="Seguir el GPS">▲ Conduciendo</button>
     <button type="button" id="homeMapZoomIn" aria-label="Acercar mapa">+</button>
@@ -956,4 +1032,5 @@
 <script src="dashboard.js"></script>
 <script src="nav_autocomplete.js"></script>
 <script src="navigation_mode.js"></script>
+<script src="home_navigation.js"></script>
 </body></html>
