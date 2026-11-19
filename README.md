@@ -175,3 +175,26 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 - **Inicio predeterminado:** en Ajustes se muestra «Elegir Rush Launcher como inicio». Activa el alias `HomeAlias` y abre `Settings.ACTION_HOME_SETTINGS`; si el firmware lo permite, el usuario debe escoger Rush Launcher manualmente. Al pulsar Atrás mientras Rush es HOME, no se deshabilita por accidente. El botón «Restaurar inicio original del TBox» deshabilita HomeAlias y regresa a Home Android. No fuerza cambios de firmware ni afecta cámara, radio o la unidad de Toyota.
 - **Límites:** los firmwares de Carlinkit pueden restringir el rol HOME. Si los ajustes de Inicio no ofrecen Rush, es una limitación del TBox; no utilizar root, permisos de accesibilidad ni desactivar Play Protect.
 - **Seguridad:** la APK no añade permisos invasivos. Las funciones de Spotify, carátulas, aplicaciones ordenadas (Xuper primero) y datos OBD permanecen. Descarga en repositorio Actions; instalar con vehículo detenido y con Play Protect activado.
+
+
+## Parche 4.15.1-NavIntegrado (base 4.15.0-GPS-Directo)
+
+Esta edición **parte de la rama rush-launcher-415-gps-watchdog**, sin
+descartar la interfaz OBD, Spotify Premium, clima, launcher HOME ni los
+controles de regreso. Conserva también los archivos del mapa web 2D 4.15.
+
+En Android, el botón «Abrir navegación» abre una Activity nativa **dentro del
+mismo APK** con MapLibre 13.7.1 y servicios públicos Photon/OSRM para
+buscar y calcular rutas. Permite regreso inmediato con «Inicio» o Atrás.
+El mapa WebView 4.15 sigue disponible solo en la previsualización HTML
+como respaldo, y no se inicia en Android por defecto.
+
+**Importante:** no se integra la app Organic Maps. El mapa vectorial precisa
+conexión y, al igual que la versión anterior, las búsquedas y rutas necesitan
+internet; no equivale a Waze ni garantiza tráfico/reporte de incidentes.
+Los servicios de rutas públicos son de prueba. La brújula y la actualización
+de ubicación dependen de señal real del TBox.
+
+**Identidad APK:** mantiene applicationId cl.rush.launcher.obd415, con
+versionCode 42 (superior a 4.15: 41). Si las firmas no coinciden, Android
+puede impedir actualizar; respalda los ajustes antes de desinstalar.

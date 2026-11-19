@@ -168,6 +168,12 @@ $('navStartRoute').addEventListener('click',function(){
 $('navClearRoute').addEventListener('click',navClear);
 
 function openMap(){
+ // En Android abre MapLibre Native dentro del mismo APK.
+ // El mapa 2D de la 4.15 se conserva como respaldo para previsualización HTML.
+ if(nativeApp){
+  app('maps');
+  return;
+ }
  navGpsMeta.started=Date.now();
  openOverlay('mapPanel');
  write('mapSubtitle','Busca un destino o elige un punto en el mapa');

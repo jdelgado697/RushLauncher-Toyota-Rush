@@ -560,34 +560,16 @@ public class MainActivity extends Activity implements LocationListener {
         }
     }
 
+    // Rush Navigator 4.15.1 se ejecuta EN ESTA misma APK, sin app externa.
     private void openMaps(String destination) {
-        String dest = destination == null ? "" : destination.trim();
-        if (dest.length() > 180) dest = dest.substring(0, 180);
-        if (dest.isEmpty()) {
-            String[] candidates = {
-                    "com.google.android.apps.maps",
-                    "com.google.android.apps.mapslite",
-                    "app.organicmaps",
-                    "net.osmand",
-                    "com.here.app.maps"
-            };
-            for (String pkg : candidates) {
-                Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
-                if (intent == null) continue;
-                try { startActivity(intent); return; }
-                catch (Exception ignored) { }
-            }
-        }
         try {
-            String url = dest.isEmpty() ? "https://www.google.com/maps" :
-                    "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="
-                    + java.net.URLEncoder.encode(dest, "UTF-8");
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            intent.addCategory(Intent.CATEGORY_BROWSABLE);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+            Intent screen = new Intent(this, NavigationActivity.class);
+            String place = destination == null ? "" : destination.trim();
+            if (!place.isEmpty())
+                screen.putExtra("rush_destination", place.substring(0, Math.min(180, place.length())));
+            startActivity(screen);
         } catch (Exception ex) {
-            message("No hay navegador o Maps compatible. Abre Apps para buscar otro.");
+            message("No se pudo iniciar el mapa nativo; comprueba compatibilidad de GPU");
         }
     }
 

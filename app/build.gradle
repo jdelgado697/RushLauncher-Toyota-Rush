@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 41
-        versionName '4.15.0-GPS-Directo'
+        versionCode 42
+        versionName '4.15.1-NavIntegrado'
     }
 
     compileOptions {
@@ -33,4 +33,5 @@ android {
 // No cambia los certificados de confianza ni permite conexiones inseguras.
 dependencies {
     implementation 'com.google.android.gms:play-services-base:18.11.1'
+    implementation 'org.maplibre.gl:android-sdk:13.7.1'
 }
