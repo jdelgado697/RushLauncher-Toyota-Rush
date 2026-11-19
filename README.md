@@ -325,3 +325,22 @@ proviene del proveedor al calcular, no se actualiza con tráfico en tiempo
 real. Requiere conexión para descargar nuevos mapas, búsqueda y rutas.
 Los proveedores comunitarios son de demostración, sin disponibilidad
 garantizada ni SLA. Ingresar destinos siempre estacionado.
+
+
+## Rush Launcher 4.17.1 — teclado del buscador y fondo automático
+Base: rama 4.17, sin reemplazar ruta en Inicio, Spotify, OBD, clima ni panel clásico.
+
+- Al tocar la búsqueda de Inicio, el mapa usa un estado visual compacto:
+  buscador arriba y resultados debajo; se ocultan mientras el teclado esté
+  abierto las etiquetas flotantes del mapa, controles, maniobras y estado que
+  antes quedaban superpuestos.
+- Después de elegir destino o cerrar la búsqueda, vuelve el mapa de conducción.
+  El teclado se oculta al pulsar Buscar; se preserva la selección de lugares
+  cercanos, indicaciones y finalización de ruta.
+- El tema de fondo arranca en **Automático** por defecto. De 07:00 a 18:59
+  muestra Día; entre 19:00 y 06:59 muestra Noche, usando reloj LOCAL del TBox.
+  Se recalcula periódicamente y al volver al launcher. Al actualizar desde
+  la 4.17 se migra el tema a Auto una sola vez; posteriormente se respetan
+  elecciones manuales Día/Noche desde Ajustes. No requiere internet.
+- Si la hora del Carlinkit es incorrecta, corregir Ajustes de fecha/hora
+  automáticas antes de diagnosticar el modo de fondo.

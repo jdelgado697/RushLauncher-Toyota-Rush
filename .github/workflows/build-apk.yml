@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto]
 
 permissions:
   contents: read
@@ -112,7 +112,7 @@ jobs:
           assert 'id="obdAutoToggle"' in html
           assert 'id="driveModeToggle"' in html
           assert 'class="screen drive-ui"' in html
-          assert 'version-pill">4.17' in html
+          assert 'version-pill">4.17.1' in html
           assert 'class="drive-obd-extra"' in html
           assert 'class="home-map glass"' in html
           assert "setDrivingMode(saved.drive,false)" in js
@@ -312,7 +312,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 47" in gradle
+          assert "versionCode 48" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -368,7 +368,12 @@ jobs:
           assert 'Spotify XL' in html
 
           assert ':root[data-theme=dark] .mapgraphic svg' in html
-          assert 'data-theme="dark"' in html and 'data-theme=dark' in html
+          assert 'data-theme="light"' in html and 'data-theme=dark' in html
+          assert "rush_theme_auto_4171" in html
+          assert 'theme:localStorage.getItem(\'rush_theme\')||\'auto\'' in js
+          assert "applyTheme();" in js
+          assert "search-keyboard" in html and "search-keyboard" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
+          assert 'query.blur();' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           for item in ['appsPanel','settingsPanel','obdPanel','weatherConsent','musicToggle','songTitle','songArtist']:
               assert 'id="'+item+'"' in html,item
           for func in ['rushSpotifyState','rushInstalledApps','rushPosition','rushWeather']:
