@@ -156,6 +156,7 @@ function selectDestination(lat,lon,name){
  // Ignorar cualquier respuesta antigua cuando cambia el destino.
  ++routeRequest;
  routeBusy=false;route=null;offRouteCount=0;currentStep=0;voiceStage='';
+ lastRouteAt=0;
  destination={lat:lat,lon:lon,name:name||'Destino seleccionado'};
  if(window.RushHomeMap)window.RushHomeMap.clearRoute();
  showing(guide,false);
@@ -172,7 +173,8 @@ function requestRoute(rerouting){
  if(!destination||routeBusy||!freshGps())return;
  if(!nativeApp){showStatus('Cálculo de rutas disponible solo en el APK Android',false);return}
  var now=Date.now();
- if(now-lastRouteAt<3500)return;
+ // No saturar proveedores públicos cuando el cálculo falla.
+ if(now-lastRouteAt<45000)return;
  routeBusy=true;lastRouteAt=now;
  var token=++routeRequest;
  showStatus(rerouting?'Fuera de ruta: recalculando…':'Calculando ruta hacia '+destination.name+'…',false);
@@ -188,7 +190,7 @@ window.rushHomeRoute=function(reply){
  if(!destination)return;
  if(!routeResultValid(reply)){
   showStatus((reply.message||'No se pudo calcular ruta')+
-    '. Comprueba internet o intenta otro destino.',false);
+    '. Comprueba internet. Puedes elegir el mismo destino de nuevo para reintentar.',false);
   return;
  }
  route=reply;currentStep=(route.steps[0]&&route.steps[0].type==='depart'&&route.steps.length>1)?1:0;
