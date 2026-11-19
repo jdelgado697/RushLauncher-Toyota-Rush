@@ -112,7 +112,7 @@ jobs:
           assert 'id="obdAutoToggle"' in html
           assert 'id="driveModeToggle"' in html
           assert 'class="screen drive-ui"' in html
-          assert 'version-pill">4.16' in html
+          assert 'version-pill">4.17' in html
           assert 'class="drive-obd-extra"' in html
           assert 'class="home-map glass"' in html
           assert "setDrivingMode(saved.drive,false)" in js
