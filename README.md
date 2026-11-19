@@ -195,3 +195,25 @@ Si no recibe posiciones GPS, revisar permisos de ubicación y señal del TBox.
 
 La versión antigua se conserva como `live_map.js` **sin cargarse** para que no
 consuma recursos ni aparezca el error «SIN GPS NUEVO».
+
+
+## Rush Launcher 4.6.0 — navegación dentro del mismo APK
+
+La pantalla `NavigationActivity` es parte de `cl.rush.launcher` y usa
+MapLibre Native Android 13.7.1 con estilo vectorial de OpenFreeMap.
+El mapa se renderiza mediante el hardware del dispositivo. No usa
+`Organic Maps`, `Waze` ni `Google Maps` instalados aparte.
+
+- Inicio ➜ Abrir navegación: pantalla nativa con regreso a Rush Launcher.
+- Buscar destinos: sugerencias de Photon (solo Chile, `countrycode=CL`).
+- Ruta automóvil: OSRM (servicio demo, sin garantías).
+- Posición Android real, indicador de antigüedad de señal, cámara de seguimiento
+  y recalculo limitado cuando hay desviaciones de ruta.
+- Se mantienen Spotify, streaming, Apple CarPlay, OBD y clima en el panel principal.
+
+**Limitaciones transparentes:** esta versión usa servidores públicos externos para
+mapas, búsqueda y rutas; NO tiene rutas offline ni tráfico en vivo de Waze.
+Los servicios de búsqueda/rutas compartidos son demostrativos, sujetos a
+disponibilidad y uso moderado; no deben tomarse como solución de navegación
+de producción hasta reemplazarlos por un servicio contratado o propio.
+No usar el dispositivo con el vehículo en marcha para escribir destinos.

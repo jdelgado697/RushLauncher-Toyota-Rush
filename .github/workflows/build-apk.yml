@@ -60,9 +60,9 @@ jobs:
           assert 'id="mapTileLayer"' not in html
           assert 'id="realMap"' not in html
           assert 'Navega desde tu iPhone' in html
-          assert 'Organic Maps' in html and 'id="navDestination"' in html
-          assert 'app.organicmaps.web' in native and 'om"' in native
-          assert 'app.organicmaps.web' in manifest
+          assert 'Rush Navigator integrado' in html and 'id="navDestination"' in html
+          assert 'NavigationActivity.class' in native and 'android:name=".NavigationActivity"' in manifest
+          assert 'MapLibre.getInstance' in Path("app/src/main/java/cl/rush/launcher/NavigationActivity.java").read_text(encoding="utf-8")
           assert 'data-action="autokit"' in html
           assert 'Abrir CarPlay' in html
           assert 'CarPlay' in html
@@ -88,7 +88,7 @@ jobs:
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
           assert 'requestAnimationFrame' in mapjs
-          assert 'RushLauncher/4.5.0' in native
+          assert 'RushLauncher/4.6.0' in native
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000

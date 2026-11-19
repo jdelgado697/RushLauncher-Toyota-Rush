@@ -193,6 +193,9 @@ public final class NavigationActivity extends Activity implements LocationListen
             }
             @Override public void afterTextChanged(Editable e) {}
         });
+        String initialDestination = getIntent().getStringExtra("rush_destination");
+        if (initialDestination != null && !initialDestination.trim().isEmpty())
+            query.setText(initialDestination.trim());
         query.setOnEditorActionListener((v, actionId, event) -> {
             search(query.getText().toString().trim());
             return true;

@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher'
         minSdk 26
         targetSdk 32
-        versionCode 50
-        versionName '4.5.0'
+        versionCode 51
+        versionName '4.6.0'
     }
 
     compileOptions {
@@ -27,4 +27,9 @@ android {
             minifyEnabled false
         }
     }
+}
+
+dependencies {
+    // Renderizado de mapa vectorial OpenGL dentro de Rush Launcher.
+    implementation 'org.maplibre.gl:android-sdk:13.7.1'
 }
