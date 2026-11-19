@@ -1,4 +1,4 @@
-/* Rush Launcher 4.14 · seguimiento GPS fluido y Spotify XL. */
+/* Rush Launcher 4.15 · GPS vivo con detección de datos obsoletos. */
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id)};
@@ -168,6 +168,7 @@ $('navStartRoute').addEventListener('click',function(){
 $('navClearRoute').addEventListener('click',navClear);
 
 function openMap(){
+ navGpsMeta.started=Date.now();
  openOverlay('mapPanel');
  write('mapSubtitle','Busca un destino o elige un punto en el mapa');
  function activateMap(){
@@ -306,6 +307,45 @@ function renderGauges(){
  write('homeCoolant',state.obdConnected&&typeof state.coolant==='number'?Math.round(state.coolant)+' °C':'— °C');
  write('homeVoltage',state.obdConnected&&typeof info.voltage==='number'&&isFinite(info.voltage)?info.voltage.toFixed(2)+' V':'— V');
 }
+// Estado GPS diagnóstico: diferencia receptor estancado de mapa sin redibujar.
+// La edad se obtiene del último paquete REAL de Android, no de la animación.
+var navGpsMeta={source:'Sin datos',counter:0,at:0,hasBearing:false,started:0};
+function updateNavGpsHealth(){
+ var box=$('navGpsHealth'),label=$('navGpsHealthText'),restart=$('navGpsRestart');
+ if(!box||!label||!restart||$('mapPanel').hidden)return;
+ var now=Date.now(),started=navGpsMeta.started||now;
+ var age=navGpsMeta.at?Math.max(0,Math.floor((now-navGpsMeta.at)/1000)):
+              Math.max(0,Math.floor((now-started)/1000));
+ var stale=age>=10;
+ box.classList.toggle('is-stale',stale);
+ restart.hidden=!stale;
+ var acc=state.location&&Number.isFinite(state.location.accuracy)?
+            ' · ±'+Math.round(state.location.accuracy)+' m':'';
+ if(navGpsMeta.at){
+  label.textContent=(stale?'SIN GPS NUEVO':'GPS '+navGpsMeta.source)+
+    ' · hace '+age+' s'+acc+(stale?' · última posición':'');
+ }else{
+  label.textContent=stale?'SIN POSICIÓN NUEVA · '+age+' s':
+                 'Esperando lectura GPS · '+age+' s';
+ }
+}
+window.rushGpsFixMeta=function(source,counter,hasBearing){
+ navGpsMeta.source=source==='GPS'?'Satélite':'Red/Wi-Fi';
+ navGpsMeta.counter=Number(counter)||0;
+ navGpsMeta.hasBearing=!!hasBearing;
+ navGpsMeta.at=Date.now();
+ updateNavGpsHealth();
+};
+if($('navGpsRestart'))$('navGpsRestart').addEventListener('click',function(){
+ navGpsMeta.at=0;navGpsMeta.started=Date.now();
+ write('navGpsHealthText','Reactivando receptor Android…');
+ updateNavGpsHealth();
+ if(nativeApp&&window.Rush&&typeof window.Rush.restartMapGps==='function')
+   window.Rush.restartMapGps();
+});
+setInterval(function(){
+ if(!$('mapPanel').hidden)updateNavGpsHealth();
+},2000);
 window.rushGpsStatus=function(status){
  state.gpsStatus=String(status||'Sin información');if(/desactivado|sin permiso|no disponible|sin proveedor|requerido/i.test(state.gpsStatus))state.gps=null;
  if(window.RushLiveMap)window.RushLiveMap.setStatus(state.gpsStatus);
@@ -643,8 +683,13 @@ $('spotifyEmbedClose').addEventListener('click',function(){
  closeOverlay('spotifyEmbedPanel');
 });
 $('mapRetryGps').addEventListener('click',function(){
- if(nativeApp&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
+ navGpsMeta.started=Date.now();
+ if(nativeApp&&typeof window.Rush.restartMapGps==='function')
+   window.Rush.restartMapGps();
+ else if(nativeApp&&typeof window.Rush.startMapGps==='function')
+   window.Rush.startMapGps();
  if(window.RushLiveMap)window.RushLiveMap.recenter();
+ updateNavGpsHealth();
 });
 $('startRoute').addEventListener('click',function(){
  closeOverlay('routePanel');
