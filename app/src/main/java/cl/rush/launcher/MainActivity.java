@@ -956,6 +956,10 @@ public class MainActivity extends Activity implements LocationListener {
     private void navReply(String method, JSONObject value) {
         javascript("if(window."+method+")window."+method+"("+value.toString()+");");
     }
+    private void navReplyWithRequest(String callback,JSONObject result,int requestId) {
+        try{if(requestId>0)result.put("requestId",requestId);}catch(Exception ignored){}
+        navReply(callback,result);
+    }
     private static JSONObject navError(String message) {
         JSONObject result=new JSONObject();
         try{result.put("ok",false);result.put("message",message);}catch(Exception ignored){}
@@ -1066,17 +1070,49 @@ public class MainActivity extends Activity implements LocationListener {
             }
         });
     }
+    private volatile int latestHomeSuggestionRequest=0;
+    private void suggestHomeNavigationDestination(String query,double lat,double lon,int requestId) {
+        if(query==null||query.trim().length()<3||query.length()>100||requestId<=0)return;
+        latestHomeSuggestionRequest=requestId;
+        final String q=query.trim();
+        final boolean near=validCoord(lat,lon)&&lat>=-56.5&&lat<=-17&&lon>=-76&&lon<=-66;
+        suggestionsExecutor.execute(()->{
+            if(requestId!=latestHomeSuggestionRequest)return;
+            try{
+                long delay=1300L-(System.currentTimeMillis()-lastSuggestionFetchAt);
+                if(delay>0)Thread.sleep(delay);
+                if(requestId!=latestHomeSuggestionRequest)return;
+                lastSuggestionFetchAt=System.currentTimeMillis();
+                JSONArray rows=suggestionsFromFeatures(photonFeatures(q,near,lat,lon),5);
+                if(rows.length()==0&&near)
+                    rows=suggestionsFromFeatures(photonFeatures(q,false,lat,lon),5);
+                if(requestId!=latestHomeSuggestionRequest)return;
+                JSONObject result=new JSONObject();
+                result.put("ok",true);result.put("items",rows);result.put("query",q);
+                navReplyWithRequest("rushHomeSuggest",result,requestId);
+            }catch(InterruptedException ignored){Thread.currentThread().interrupt();}
+             catch(Exception error){
+                if(requestId!=latestHomeSuggestionRequest)return;
+                navReplyWithRequest("rushHomeSuggest",
+                      navError("Sin sugerencias automáticas. Pulsa Buscar."),requestId);
+            }
+        });
+    }
     private void searchNavigationDestination(String query) {
         searchNavigationDestination(query,0,0);
     }
     private void searchNavigationDestination(String query,double focusLat,double focusLon) {
+        searchNavigationDestination(query,focusLat,focusLon,"rushNavSearch",0);
+    }
+    private void searchNavigationDestination(String query,double focusLat,double focusLon,
+                                              String callback,int requestId) {
         if(query==null || query.trim().length()<3 || query.length()>140){
-            navReply("rushNavSearch",navError("Escribe una dirección o lugar."));
+            navReplyWithRequest(callback,navError("Escribe una dirección o lugar."),requestId);
             return;
         }
         long now=System.currentTimeMillis();
         if(now-lastSearchRequest<1800L){
-            navReply("rushNavSearch",navError("Espera un momento antes de buscar de nuevo."));
+            navReplyWithRequest(callback,navError("Espera un momento antes de buscar de nuevo."),requestId);
             return;
         }
         lastSearchRequest=now;
@@ -1106,10 +1142,10 @@ public class MainActivity extends Activity implements LocationListener {
                 }
                 JSONObject result=new JSONObject();
                 result.put("ok",true);result.put("items",items);
-                navReply("rushNavSearch",result);
+                navReplyWithRequest(callback,result,requestId);
             }catch(Exception ignored){
-                navReply("rushNavSearch",navError(
-                    "No se pudo buscar en Chile. Verifica internet o selecciona un punto."));
+                navReplyWithRequest(callback,navError(
+                    "No se pudo buscar en Chile. Verifica internet o selecciona un punto."),requestId);
             }
         });
     }
@@ -1275,38 +1311,50 @@ public class MainActivity extends Activity implements LocationListener {
         try{progress.put("message",msg);}catch(Exception ignored){}
         navReply("rushNavRouteProgress",progress);
     }
+    private void routeReply(boolean forHome,JSONObject data,int requestId) {
+        navReplyWithRequest(forHome?"rushHomeRoute":"rushNavRoute",data,requestId);
+    }
+    private void routeProgressFor(boolean forHome,String message,int requestId) {
+        JSONObject info=new JSONObject();
+        try{info.put("message",message);}catch(Exception ignored){}
+        navReplyWithRequest(forHome?"rushHomeRouteProgress":"rushNavRouteProgress",info,requestId);
+    }
     private void fetchNavigationRoute(double aLat,double aLon,double bLat,double bLon) {
+        fetchNavigationRoute(aLat,aLon,bLat,bLon,false,0);
+    }
+    private void fetchNavigationRoute(double aLat,double aLon,double bLat,double bLon,
+                                      boolean forHome,int requestId) {
         if(!validCoord(aLat,aLon)||!validCoord(bLat,bLon)){
-            navReply("rushNavRoute",navError("Ubicación o destino no válidos."));return;
+            routeReply(forHome,navError("Ubicación o destino no válidos."),requestId);return;
         }
         long now=System.currentTimeMillis();
         if(now-lastRouteRequest<3000L){
-            navReply("rushNavRoute",navError("Espera unos segundos antes de calcular otra ruta."));return;
+            routeReply(forHome,navError("Espera unos segundos antes de calcular otra ruta."),requestId);return;
         }
         lastRouteRequest=now;
         navigationExecutor.execute(()->{
-            routeProgress("Comprobando proveedor de seguridad HTTPS…");
+            routeProgressFor(forHome,"Comprobando proveedor de seguridad HTTPS…",requestId);
             ensureModernTlsProvider();
-            routeProgress(tlsProviderStatus+" · calculando ruta con FOSSGIS…");
+            routeProgressFor(forHome,tlsProviderStatus+" · calculando ruta con FOSSGIS…",requestId);
             String fossgisError="";
             try{
                 JSONObject answer=normalizedRoute(
                         retrieveFossgisRoute(aLat,aLon,bLat,bLon),"OSRM FOSSGIS");
-                navReply("rushNavRoute",answer);return;
+                routeReply(forHome,answer,requestId);return;
             }catch(Exception e){fossgisError=navigationFailure(e);}
-            routeProgress("FOSSGIS no respondió ("+fossgisError+"). Probando OSRM…");
+            routeProgressFor(forHome,"FOSSGIS no respondió ("+fossgisError+"). Probando OSRM…",requestId);
             String osrmError="";
             try{
                 JSONObject answer=normalizedRoute(
                         retrieveOsrmRoute(aLat,aLon,bLat,bLon),"OSRM alternativo");
-                navReply("rushNavRoute",answer);return;
+                routeReply(forHome,answer,requestId);return;
             }catch(Exception e){osrmError=navigationFailure(e);}
-            routeProgress("OSRM no respondió ("+osrmError+"). Probando Valhalla…");
+            routeProgressFor(forHome,"OSRM no respondió ("+osrmError+"). Probando Valhalla…",requestId);
             String valhallaError="";
             try{
                 JSONObject answer=normalizedRoute(
                         retrieveValhallaRoute(aLat,aLon,bLat,bLon),"Valhalla");
-                navReply("rushNavRoute",answer);return;
+                routeReply(forHome,answer,requestId);return;
             }catch(Exception e){valhallaError=navigationFailure(e);}
             boolean https=fossgisError.contains("HTTPS")&&
                     osrmError.contains("HTTPS")&&valhallaError.contains("HTTPS");
@@ -1327,7 +1375,7 @@ public class MainActivity extends Activity implements LocationListener {
                         +osrmError+"), Valhalla ("+valhallaError+"). "
                         +tlsProviderStatus+". Comprueba internet, certificados y GPS.";
             }
-            navReply("rushNavRoute",navError(message));
+            routeReply(forHome,navError(message),requestId);
         });
     }
 
@@ -1689,6 +1737,16 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void routeNav(double lat1,double lon1,double lat2,double lon2) {
             fetchNavigationRoute(lat1,lon1,lat2,lon2);
+        }
+        @JavascriptInterface public void suggestHomeNav(String query,double lat,double lon,int requestId) {
+            suggestHomeNavigationDestination(query,lat,lon,requestId);
+        }
+        @JavascriptInterface public void searchHomeNav(String query,double lat,double lon,int requestId) {
+            searchNavigationDestination(query,lat,lon,"rushHomeSearch",requestId);
+        }
+        @JavascriptInterface public void routeHomeNav(double aLat,double aLon,
+                        double bLat,double bLon,int requestId) {
+            if(requestId>0)fetchNavigationRoute(aLat,aLon,bLat,bLon,true,requestId);
         }
         @JavascriptInterface public void getWeather(double latitude, double longitude) {
             runUi(() -> fetchWeather(latitude, longitude));
