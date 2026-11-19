@@ -231,8 +231,10 @@ jobs:
           assert 'MAX_CACHED_TILES=32' in mapjs
           assert 'deactivate:deactivate' in mapjs
           assert 'active=false' in mapjs and 'if(!active||drawPending)return' in mapjs
-          assert 'locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 2f, this)' in native
-          assert 'locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this)' in native
+          assert 'requestLocationUpdates(LocationManager.GPS_PROVIDER,' in native
+          assert 'requestLocationUpdates(LocationManager.NETWORK_PROVIDER,' in native
+          assert '700L,0f,this,Looper.getMainLooper()' in native
+          assert '1600L,0f,this,Looper.getMainLooper()' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
           assert "applicationId 'cl.rush.launcher.obd415'" in gradle
