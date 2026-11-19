@@ -57,10 +57,16 @@ function remember(hit){
   detail:String(hit.detail||'').slice(0,100),lat:hit.lat,lon:hit.lon});
  try{localStorage.setItem('rush_nav_recent',JSON.stringify(list.slice(0,8)))}catch(e){}
 }
+function syncSearchOverlay(){
+ // Evita texto de GPS/mapa debajo del input cuando el teclado ocupa pantalla.
+ host.classList.toggle('search-keyboard',
+   document.activeElement===query || !results.hidden);
+}
 function clearResults(){
  results.textContent='';
  showing(results,false);
  host.classList.remove('is-searching');
+ syncSearchOverlay();
 }
 function addResults(items,caption){
  results.textContent='';
@@ -89,9 +95,11 @@ function addResults(items,caption){
  if(results.querySelectorAll('button').length){
   showing(results,true);host.classList.add('is-searching');
  }
+ syncSearchOverlay();
 }
 function pending(text){write(status,text);showing(status,true)}
 function scheduleSuggestions(){
+ syncSearchOverlay();
  if(searchTimer!==null)clearTimeout(searchTimer);
  var ticket=++searchSeq,q=query.value.trim(),key=q.toLowerCase();
  if(!stopped()){clearResults();return}
@@ -131,6 +139,7 @@ window.rushHomeSuggest=function(reply){
 };
 function explicitSearch(){
  if(!stopped()){showStatus('Detén el vehículo para buscar un destino',true);return}
+ query.blur();
  var q=query.value.trim();
  if(q.length<3){showStatus('Escribe al menos tres letras',true);return}
  if(searchTimer!==null)clearTimeout(searchTimer);
@@ -330,10 +339,18 @@ voiceButton.addEventListener('click',function(){
 });
 finish.addEventListener('click',cancelRoute);
 query.addEventListener('input',scheduleSuggestions);
-query.addEventListener('focus',scheduleSuggestions);
+query.addEventListener('focus',function(){
+ syncSearchOverlay();
+ scheduleSuggestions();
+});
+query.addEventListener('blur',function(){
+ // Pequeño margen para que el toque sobre un resultado no cambie el layout
+ // antes de procesarse el click.
+ setTimeout(syncSearchOverlay,250);
+});
 query.addEventListener('keydown',function(e){
  if(e.key==='Enter'){e.preventDefault();explicitSearch()}
- if(e.key==='Escape'){clearResults();query.blur()}
+ if(e.key==='Escape'){clearResults();query.blur();syncSearchOverlay()}
 });
 find.addEventListener('click',explicitSearch);
 document.addEventListener('click',function(event){
