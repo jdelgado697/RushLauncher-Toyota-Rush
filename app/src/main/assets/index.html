@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.15 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
+<title>Rush Launcher 4.16 · Modo Conducción · Toyota Rush</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -554,6 +554,79 @@
  border-radius:0;clip-path:polygon(50% 0,96% 98%,50% 75%,4% 98%);
  background:#147df4;filter:drop-shadow(0 0 3px #ffffff);color:transparent}
 .home-map.home-map-has-tiles .home-map-grid{opacity:.07}
+
+/* Rush Launcher 4.16 — un único tablero de conducción a 800×480.
+   Cambio visual instantáneo, sin re-instanciar WebView ni el motor del mapa. */
+.driving-toggle{min-height:34px;padding:5px 12px;border:1px solid #42ccff;
+ border-radius:11px;background:linear-gradient(95deg,#06508d,#0c93d9);
+ color:#fff;font-size:12px;font-weight:850;white-space:nowrap;box-shadow:0 0 9px #086da76e}
+.driving-toggle[aria-pressed="false"]{background:var(--glass-soft);color:var(--text)}
+.drive-obd-extra{display:none;align-items:center;justify-content:space-between;gap:5px;
+ color:#e4f5ff;font-size:10px;background:#0b2446;border-radius:8px;padding:4px 8px;
+ border:1px solid #348fbd6b}
+.drive-obd-extra span{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.drive-obd-extra strong{font-variant-numeric:tabular-nums;font-size:11px}
+.screen.drive-ui .main{grid-template-columns:minmax(0,65fr) minmax(0,35fr);
+ grid-template-rows:minmax(0,59fr) minmax(0,41fr);gap:7px;min-height:0}
+.screen.drive-ui .rightarea{display:contents}
+.screen.drive-ui .cararea{display:none!important}
+.screen.drive-ui .home-map{grid-column:1;grid-row:1 / span 2;min-height:0;
+ border-radius:14px;border:1px solid #2ba7e7;box-shadow:0 0 13px #127ac655}
+.screen.drive-ui .mapcard{grid-column:2;grid-row:1;padding:6px;display:flex;
+ flex-direction:column;gap:4px;border-radius:12px;border:1px solid #2967a2;
+ background:#061e43;box-shadow:inset 0 0 6px #0077b521;overflow:hidden}
+.screen.drive-ui .widgets{grid-column:2;grid-row:2;min-height:0;min-width:0}
+.screen.drive-ui .music{height:100%;min-height:0;border-radius:12px;
+ padding:5px 7px;grid-template-columns:minmax(38px,23%) minmax(0,1fr);gap:6px}
+.screen.drive-ui .music .album{width:100%;height:auto;max-height:86px;aspect-ratio:1}
+.screen.drive-ui .musicnames strong{font-size:clamp(12px,1.7vw,17px)}
+.screen.drive-ui .musicnames small{font-size:10px}
+.screen.drive-ui .musicctrl{gap:3px}
+.screen.drive-ui .musicctrl button{width:32px;height:32px}
+.screen.drive-ui .musicctrl button.primary{width:38px;height:38px}
+.screen.drive-ui .mapcard>.mapcta,.screen.drive-ui .mapcard>.carplay-guide{display:none}
+.screen.drive-ui .maptitle{min-height:22px;flex:none}
+.screen.drive-ui .maptitle strong{font-size:13px}
+.screen.drive-ui .maptitle small{font-size:9px}
+.screen.drive-ui .home-gauges{flex:1;min-height:57px;gap:5px}
+.screen.drive-ui .rush-dial{border-radius:9px}
+.screen.drive-ui .rush-dial .dial-number{font-size:clamp(22px,2.9vw,31px)}
+.screen.drive-ui .rush-dial .dial-title{font-size:9px;top:7%}
+.screen.drive-ui .rush-dial .dial-unit{font-size:10px;top:75%}
+.screen.drive-ui .rush-dial .dial-source{font-size:8px;bottom:2px}
+.screen.drive-ui .drive-obd-extra{display:flex;flex:none}
+.screen.drive-ui .home-climate{height:auto;min-height:55px;max-height:70px;
+ flex:none;padding:4px 8px;border-radius:10px;gap:0}
+.screen.drive-ui .home-weather-reading strong{font-size:clamp(18px,2.3vw,26px)}
+.screen.drive-ui .home-weather-reading span{font-size:10px}
+.screen.drive-ui .home-weather-head .wicon{font-size:22px}
+.screen.drive-ui .home-weather-bottom span{font-size:9px}
+.screen.drive-ui #weatherConsent{font-size:9px}
+.screen.drive-ui .home-map-route{top:39px;left:9px;padding:4px 7px;
+ max-width:57%;font-size:11px;background:#061c36d1}
+.screen.drive-ui .home-map-tools{top:42px;right:7px}
+.screen.drive-ui .home-map-tools button{min-height:33px;min-width:34px}
+.screen.drive-ui .home-map-footer{bottom:7px}
+.screen.drive-ui .home-map-open{min-height:34px}
+@media(max-width:860px){
+ .driving-toggle{min-height:30px;padding:4px 8px;font-size:10px}
+ .screen.drive-ui .main{gap:5px}
+ .screen.drive-ui .mapcard{padding:4px;gap:3px}
+ .screen.drive-ui .mapcard .maptitle strong{font-size:12px}
+ .screen.drive-ui .maptitle .maplogo{display:none}
+ .screen.drive-ui .home-climate{min-height:49px;max-height:60px;padding:2px 6px}
+ .screen.drive-ui .drive-obd-extra{padding:2px 4px;font-size:9px}
+ .screen.drive-ui .drive-obd-extra strong{font-size:9px}
+ .screen.drive-ui .musicctrl button{width:30px;height:30px}
+ .screen.drive-ui .musicctrl button.primary{width:36px;height:36px}
+}
+@media(max-height:390px){
+ .screen.drive-ui .mapcard .maptitle{display:none}
+ .screen.drive-ui .drive-obd-extra{display:none}
+ .screen.drive-ui .home-map-route{display:none}
+ .screen.drive-ui .music .album{display:none}
+ .screen.drive-ui .music{grid-template-columns:minmax(0,1fr)}
+}
 </style>
 </head>
 <body>
@@ -571,10 +644,10 @@
 <symbol id="i-next" viewBox="0 0 24 24"><path d="M18 6v12M6 6l11 6-11 6Z"/></symbol>
 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
 </svg>
-<div class="screen">
+<div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.14</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
- <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.16</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
 <main class="main">
@@ -601,6 +674,10 @@
   <span class="dial-unit">×1000</span>
   <small class="dial-source">Sin lectura</small>
  </div>
+  </div>
+  <div class="drive-obd-extra" aria-label="Más información de motor">
+   <span>Motor <strong id="driveCoolantTemp">— °C</strong></span>
+   <span>Batería <strong id="driveBattery">— V</strong></span>
   </div>
   <section class="home-climate glass" aria-label="Clima local" id="homeClimate">
    <div class="home-weather-head"><span class="wicon" id="weatherIcon">⛅</span><div class="home-weather-reading"><strong id="weatherTemp">—°</strong><span id="weatherDescription">Clima no activado</span></div></div>
