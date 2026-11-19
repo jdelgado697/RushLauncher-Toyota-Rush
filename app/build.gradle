@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obd414'
+        applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 40
-        versionName '4.14.0-SeguimientoFluido'
+        versionCode 41
+        versionName '4.15.0-GPS-Directo'
     }
 
     compileOptions {
