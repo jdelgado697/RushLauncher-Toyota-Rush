@@ -71,7 +71,41 @@ public class MainActivity extends Activity implements LocationListener {
     private boolean weatherGpsActive = false; // Ubicación opt-in del clima.
     // Filtros de antigüedad y prioridad GPS para no alternar con red imprecisa.
     private long lastFixElapsedNs = 0L;
+    private long lastGpsFixNs = 0L;
+    private long lastNetworkFixNs = 0L;
     private long lastAccurateGpsNs = 0L;
+    private long lastFixReceivedMs = 0L;
+    private long gpsRegisteredMs = 0L;
+    private long lastGpsRestartMs = 0L;
+    private int gpsFixCounter = 0;
+    private boolean gpsRegistered = false;
+    private boolean gpsWatchdogRunning = false;
+    private final Runnable gpsWatchdog = new Runnable() {
+        @Override public void run() {
+            if(!mapGpsActive||isFinishing()) {
+                gpsWatchdogRunning=false;return;
+            }
+            long now=android.os.SystemClock.elapsedRealtime();
+            long stale=lastFixReceivedMs==0L?now-gpsRegisteredMs:now-lastFixReceivedMs;
+            if(stale>=10000L) {
+                sendGpsStatus("SIN POSICIÓN NUEVA · "+(stale/1000L)+" s");
+                if(stale>=15000L && now-lastGpsRestartMs>22000L){
+                    lastGpsRestartMs=now;
+                    gpsRegistered=false;
+                    startGps();
+                }
+            }
+            mainHandler.postDelayed(this,4000L);
+        }
+    };
+    private void startGpsWatchdog() {
+        if(!mapGpsActive||gpsWatchdogRunning)return;
+        gpsWatchdogRunning=true;
+        mainHandler.postDelayed(gpsWatchdog,4000L);
+    }
+    private void stopGpsWatchdog(){
+        gpsWatchdogRunning=false;mainHandler.removeCallbacks(gpsWatchdog);
+    }
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
@@ -229,7 +263,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.14.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.15.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1256,49 +1290,62 @@ public class MainActivity extends Activity implements LocationListener {
                 == PackageManager.PERMISSION_GRANTED;
         if (!fine && !coarse) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                requestPermissions(new String[] {
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
+                requestPermissions(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
                 }, LOCATION_REQUEST_CODE);
             }
-            sendGpsStatus("Permiso GPS requerido");
+            sendGpsStatus("Permiso de ubicación requerido");
             return;
         }
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        if (locationManager == null) {
-            sendGpsStatus("GPS no disponible");
-            return;
+        if(gpsRegistered) {
+            startGpsWatchdog();
+            return; // No borrar lecturas al entrar al clima, Spotify o Mapa.
         }
-        boolean started = false;
+        locationManager=(LocationManager)getSystemService(LOCATION_SERVICE);
+        if(locationManager==null){
+            sendGpsStatus("Proveedor GPS Android no disponible");return;
+        }
+        boolean started=false;
         try {
-            // Evita registros de ubicación duplicados al volver de Ajustes/Waze.
             locationManager.removeUpdates(this);
-            if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 2f, this);
-                started = true;
+            // minDistance=0, para no congelar el mapa si la precisión GNSS
+            // del TBox impide alcanzar el umbral de 2 metros de la 4.14.
+            if(fine&&locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                        700L,0f,this,Looper.getMainLooper());
+                started=true;
             }
-            if ((fine || coarse) && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, this);
-                started = true;
+            if((fine||coarse)&&locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)){
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                        1600L,0f,this,Looper.getMainLooper());
+                started=true;
             }
-            // Una ubicación reciente permite mostrar el mapa al abrir el TBox.
-            // Nunca usar una ubicación antigua como si fuera la posición actual.
-            Location recent = null;
-            if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                recent = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            gpsRegistered=started;
+            gpsRegisteredMs=android.os.SystemClock.elapsedRealtime();
+            // Una posición antigua no debe sustituir una actual.
+            Location recent=null;
+            if(fine&&locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+                recent=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             }
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                Location fromNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                if (fromNetwork != null && (recent == null
-                        || fromNetwork.getTime() > recent.getTime())) recent = fromNetwork;
+            if(recent==null&&locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)){
+                recent=locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             }
-            if (recent != null && System.currentTimeMillis() - recent.getTime() < 15000L
-                    && recent.getTime() <= System.currentTimeMillis() + 5000L
-                    && (!recent.hasAccuracy() || recent.getAccuracy() < 500f)) {
+            if(recent!=null&&System.currentTimeMillis()-recent.getTime()<12000L
+                    &&recent.getTime()<=System.currentTimeMillis()+3000L
+                    &&(!recent.hasAccuracy()||recent.getAccuracy()<250f)){
                 onLocationChanged(recent);
             }
-        } catch (SecurityException ignored) { }
-        sendGpsStatus(started ? "Buscando señal GPS…" : "Sin proveedor GPS activo");
+        }catch(SecurityException ex){
+            gpsRegistered=false;
+            sendGpsStatus("Permiso ubicación rechazado");
+        }catch(IllegalArgumentException ex){
+            gpsRegistered=false;
+            sendGpsStatus("Proveedor GPS incompatible");
+        }
+        if(started)sendGpsStatus("Esperando siguiente lectura GPS…");
+        else sendGpsStatus("GPS y red no disponibles en Android");
+        startGpsWatchdog();
     }
 
     @Override
@@ -1320,31 +1367,46 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     public void onLocationChanged(Location location) {
-        if (location == null) return;
-        // No mostrar una localización almacenada/antigua como si fuese en vivo.
-        long elapsedNs = location.getElapsedRealtimeNanos();
-        long nowNs = android.os.SystemClock.elapsedRealtimeNanos();
-        if (elapsedNs <= 0L || elapsedNs > nowNs + 1000000000L
-                || nowNs - elapsedNs > 12000000000L
-                || elapsedNs <= lastFixElapsedNs) return;
-        // Cuando hay GPS reciente y preciso, evitar saltos de red/Wi-Fi.
-        if (LocationManager.NETWORK_PROVIDER.equals(location.getProvider())
-                && lastAccurateGpsNs > 0L
-                && nowNs - lastAccurateGpsNs < 5000000000L) return;
-        if (LocationManager.GPS_PROVIDER.equals(location.getProvider())
-                && location.hasAccuracy() && location.getAccuracy() <= 65f) {
-            lastAccurateGpsNs = elapsedNs;
+        if(location==null)return;
+        long fixNs=location.getElapsedRealtimeNanos();
+        long nowNs=android.os.SystemClock.elapsedRealtimeNanos();
+        if(fixNs<=0L||fixNs>nowNs+1000000000L||
+                nowNs-fixNs>10000000000L)return;
+        boolean satellite=LocationManager.GPS_PROVIDER.equals(location.getProvider());
+        boolean network=LocationManager.NETWORK_PROVIDER.equals(location.getProvider());
+        if(!satellite&&!network)return;
+        if(satellite){
+            if(fixNs<=lastGpsFixNs)return;
+            lastGpsFixNs=fixNs;
+            if(location.hasAccuracy()&&location.getAccuracy()<=100f)
+                lastAccurateGpsNs=fixNs;
+        }else{
+            if(fixNs<=lastNetworkFixNs)return;
+            lastNetworkFixNs=fixNs;
+            // No dejar que una posición Wi-Fi menos precisa desplace la
+            // última lectura satelital reciente.
+            if(lastAccurateGpsNs>0&&nowNs-lastAccurateGpsNs<6500000000L)
+                return;
         }
-        lastFixElapsedNs = elapsedNs;
-        String speed = location.hasSpeed()
-                ? String.valueOf(Math.max(0, location.getSpeed() * 3.6f)) : "null";
-        String heading = location.hasBearing()
-                ? String.valueOf(location.getBearing()) : "null";
-        float acc = location.hasAccuracy() ? location.getAccuracy() : -1f;
-        // Un solo envío al WebView por punto: menos salto en CPU del TBox.
-        javascript("window.rushGpsData(" + speed + "," + heading + ");"
-                + "window.rushPosition(" + location.getLatitude() + ","
-                + location.getLongitude() + "," + acc + ");");
+        // Se acepta un fix del satélite aunque llegue después de un fix
+        // de red con timestamp posterior. Antes se descartaba silenciosamente.
+        if(!satellite&&fixNs<=lastFixElapsedNs)return;
+        lastFixElapsedNs=Math.max(lastFixElapsedNs,fixNs);
+        lastFixReceivedMs=android.os.SystemClock.elapsedRealtime();
+        gpsFixCounter++;
+        String speed=location.hasSpeed()?
+                String.valueOf(Math.max(0,location.getSpeed()*3.6f)):"null";
+        String heading=location.hasBearing()?
+                String.valueOf(location.getBearing()):"null";
+        float acc=location.hasAccuracy()?location.getAccuracy():-1f;
+        // Un paquete JS por lectura aceptada, con proveedor y número de fix.
+        String provider=satellite?"GPS":"Red";
+        javascript("window.rushGpsData("+speed+","+heading+");"
+                +"window.rushPosition("+location.getLatitude()+","
+                +location.getLongitude()+","+acc+");"
+                +"if(window.rushGpsFixMeta)window.rushGpsFixMeta("
+                +JSONObject.quote(provider)+","+gpsFixCounter+","+
+                (location.hasBearing()?"true":"false")+");");
     }
 
     @Override public void onProviderEnabled(String provider) { sendGpsStatus("Buscando señal GPS…"); }
@@ -1361,6 +1423,8 @@ public class MainActivity extends Activity implements LocationListener {
         if (locationManager != null) {
             try { locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
         }
+        gpsRegistered=false;
+        stopGpsWatchdog();
     }
 
     @Override
@@ -1376,6 +1440,10 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onDestroy() {
+        stopGpsWatchdog();
+        if(locationManager!=null){
+            try{locationManager.removeUpdates(this);}catch(SecurityException ignored){}
+        }
         stopNavigationSpeechInternal();
         if(navSpeech!=null){navSpeech.shutdown();navSpeech=null;}
         if (spotifyArtwork != null) spotifyArtwork.shutdown();
@@ -1482,18 +1550,34 @@ public class MainActivity extends Activity implements LocationListener {
                 if (!gpsRequested && !mapGpsActive && locationManager != null) {
                     try { locationManager.removeUpdates(MainActivity.this); }
                     catch (SecurityException ignored) { }
+                    gpsRegistered=false;
                 }
             });
         }
         @JavascriptInterface public void startMapGps() {
-            runUi(() -> { mapGpsActive = true; startGps(); });
+            runUi(() -> { mapGpsActive=true; startGps(); });
+        }
+        @JavascriptInterface public void restartMapGps() {
+            runUi(() -> {
+                if(!mapGpsActive)return;
+                if(locationManager!=null){
+                    try{locationManager.removeUpdates(MainActivity.this);}
+                    catch(SecurityException ignored){}
+                }
+                gpsRegistered=false;
+                lastGpsRestartMs=android.os.SystemClock.elapsedRealtime();
+                sendGpsStatus("Reactivando recepción GPS…");
+                startGps();
+            });
         }
         @JavascriptInterface public void stopMapGps() {
             runUi(() -> {
-                mapGpsActive = false;
-                if (!gpsRequested && !weatherGpsActive && locationManager != null) {
-                    try { locationManager.removeUpdates(MainActivity.this); }
-                    catch (SecurityException ignored) { }
+                mapGpsActive=false;
+                stopGpsWatchdog();
+                if(!gpsRequested&&!weatherGpsActive&&locationManager!=null) {
+                    try{locationManager.removeUpdates(MainActivity.this);}
+                    catch(SecurityException ignored){}
+                    gpsRegistered=false;
                 }
             });
         }
