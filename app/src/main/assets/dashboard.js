@@ -37,7 +37,7 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-action]'),function
  if(action==='route'){openOverlay('routePanel');return}
  if(action==='settings'){openOverlay('settingsPanel');return}
  if(action==='obd'){openOverlay('obdPanel');loadDevices();return}
- if(action==='map'){app('waze');return}
+ if(action==='map'){app('maps');return}
  if(action==='radio'){openOverlay('radioPanel');return}
  app(action);
 })});
@@ -343,6 +343,16 @@ $('startRoute').addEventListener('click',function(){
 $('justMap').addEventListener('click',function(){
  closeOverlay('routePanel');
  app('maps');
+});
+$('searchOrganic').addEventListener('click',function(){
+ var place=$('navDestination').value.trim();
+ if(!place){notice('Escribe un lugar o usa Abrir mapa');return}
+ if(!nativeApp){notice('La búsqueda requiere Android');return}
+ closeOverlay('routePanel');
+ window.Rush.navigate(place);
+});
+$('navDestination').addEventListener('keydown',function(ev){
+ if(ev.key==='Enter'){$('searchOrganic').click()}
 });
 
 /** URL local generado desde PackageManager de Android; nunca logos descargados. */

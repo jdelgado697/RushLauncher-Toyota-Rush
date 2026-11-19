@@ -145,16 +145,16 @@
  <div class="topright"><span class="clock" id="clock">--:--</span><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
 </header>
 <main class="main">
- <section class="mapcard glass" aria-label="CarPlay y navegación desde iPhone">
-  <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-auto"/></svg></span><div><strong>CarPlay · Navegación</strong><small>La ruta se calcula en tu iPhone</small></div></div>
-  <div class="carplay-panel" aria-label="Acceso sin mapas en segundo plano">
+ <section class="mapcard glass" aria-label="Navegación GPS Organic Maps y Apple CarPlay">
+  <div class="maptitle"><span class="maplogo"><svg class="icon"><use href="#i-auto"/></svg></span><div><strong>Rush Navigator</strong><small>Organic Maps · GPS y rutas sin conexión</small></div></div>
+  <div class="carplay-panel" aria-label="Navegador Android">
    <div class="carplay-signet"><svg class="icon"><use href="#i-auto"/></svg></div>
-   <strong>Navega desde tu iPhone</strong>
-   <p>Abre AutoKit para usar Apple Maps, Google Maps o Waze con CarPlay.</p>
-   <span class="carplay-economy">Mapa Android desactivado · Menor consumo</span>
+   <strong>Navegador GPS real</strong>
+   <p>Calcula rutas en Organic Maps y sigue el recorrido con la flecha GPS. Descarga primero el mapa de Chile.</p>
+   <span class="carplay-economy">Sin mapa web en segundo plano · Menor consumo de RAM</span>
   </div>
-  <button type="button" class="mapcta" data-action="autokit">Abrir CarPlay <svg class="icon"><use href="#i-arrow"/></svg></button>
-  <button type="button" class="carplay-guide" data-action="route">Cómo conectar el iPhone</button>
+  <button type="button" class="mapcta" data-action="maps">Abrir Organic Maps <svg class="icon"><use href="#i-arrow"/></svg></button>
+  <button type="button" class="carplay-guide" data-action="route">Buscar destino · Opciones de CarPlay</button>
  </section>
  <div class="rightarea">
   <section class="cararea" aria-label="Mi Toyota Rush">
@@ -285,11 +285,16 @@
  </div>
 </div>
 <div class="scrim" id="routePanel" hidden>
- <div class="sheet" role="dialog" aria-modal="true" aria-label="Conectar Apple CarPlay">
-  <div class="sheet-head"><h2>Conectar iPhone a CarPlay</h2><button class="close" type="button" data-close="routePanel">Cerrar ✕</button></div>
-  <p class="muted">1. Enciende Bluetooth y Wi-Fi en tu iPhone. 2. Abre AutoKit. 3. Selecciona en el iPhone el nombre Bluetooth mostrado por el TBox y confirma el emparejamiento. 4. Una vez conectado, abre tu app de navegación desde CarPlay.</p>
-  <div class="tile-buttons"><button class="actionbtn highlight" id="startRoute" type="button">Abrir AutoKit / CarPlay</button><button class="actionbtn" id="justMap" type="button">Google Maps Android (alternativa)</button></div>
-  <p class="muted">CarPlay utiliza el iPhone. Rush Launcher no inicia rutas en el teléfono automáticamente. Si AutoKit no está disponible, vuelve al inicio original del TBox y búscalo.</p>
+ <div class="sheet" role="dialog" aria-modal="true" aria-label="Navegación GPS y Apple CarPlay">
+  <div class="sheet-head"><h2>Navegación Rush</h2><button class="close" type="button" data-close="routePanel">Cerrar ✕</button></div>
+  <p class="muted">Organic Maps permite buscar destinos, calcular rutas y seguir el GPS. Descarga la región de Chile dentro de Organic Maps la primera vez.</p>
+  <label for="navDestination">Buscar destino</label>
+  <input id="navDestination" type="search" placeholder="Ej.: Plaza de Armas, Temuco, Chile" maxlength="180" autocomplete="off" style="width:100%;padding:12px;border-radius:12px;border:1px solid #8e91b0;background:var(--glass-strong);color:var(--text);margin:6px 0 12px"/>
+  <div class="tile-buttons"><button class="actionbtn highlight" id="searchOrganic" type="button">Buscar en Organic Maps</button><button class="actionbtn" id="justMap" type="button">Abrir mapa sin destino</button></div>
+  <p class="muted">Organic Maps se abre en su propia pantalla Android; Atrás o Inicio permite regresar a Rush Launcher. Si la flecha no se mueve, comprueba la señal GPS del Carlinkit.</p>
+  <p class="muted">Navega desde tu iPhone si prefieres Apple Maps, Google Maps o Waze.</p>
+  <div class="tile-buttons"><button class="actionbtn" id="startRoute" type="button">Abrir CarPlay / AutoKit</button></div>
+  <p class="muted">CarPlay utiliza el iPhone. Rush Launcher no inicia rutas en el teléfono automáticamente.</p>
  </div>
 </div>
 <div id="toast" class="toast" hidden></div>

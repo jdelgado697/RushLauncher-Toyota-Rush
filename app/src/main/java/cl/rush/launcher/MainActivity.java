@@ -211,7 +211,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.0.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.5.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -506,35 +506,71 @@ public class MainActivity extends Activity implements LocationListener {
         }
     }
 
+    /**
+     * Integración oficial mediante intent om://. El motor de navegación y sus
+     * mapas son de Organic Maps instalado en Android; no se incrustan en WebView.
+     * El usuario regresa a Rush Launcher con Atrás o Inicio del sistema.
+     */
+    private boolean launchOrganicMaps(String destination) {
+        String[] packages = {
+                "app.organicmaps.web",     // APK oficial descargada desde GitHub
+                "app.organicmaps",         // Play Store
+                "app.organicmaps.beta",
+                "app.organicmaps.debug"
+        };
+        for (String pkg : packages) {
+            Intent launcher = getPackageManager().getLaunchIntentForPackage(pkg);
+            if (launcher == null) continue;
+            if (!destination.isEmpty()) {
+                try {
+                    Uri uri = new Uri.Builder()
+                            .scheme("om").authority("search")
+                            .appendQueryParameter("query", destination)
+                            .build();
+                    Intent search = new Intent(Intent.ACTION_VIEW, uri);
+                    search.setPackage(pkg);
+                    search.addCategory(Intent.CATEGORY_BROWSABLE);
+                    if (search.resolveActivity(getPackageManager()) != null) {
+                        startActivity(search);
+                        return true;
+                    }
+                } catch (Exception ignored) {
+                    // Si esa versión no admite búsqueda externa, usar la app.
+                }
+            }
+            try {
+                startActivity(launcher);
+                if (!destination.isEmpty())
+                    message("Busca el destino en Organic Maps");
+                return true;
+            } catch (Exception ignored) {
+                // Seguir probando las otras ediciones conocidas.
+            }
+        }
+        return false;
+    }
+
     private void openMaps(String destination) {
         String dest = destination == null ? "" : destination.trim();
         if (dest.length() > 180) dest = dest.substring(0, 180);
-        if (dest.isEmpty()) {
-            String[] candidates = {
-                    "com.google.android.apps.maps",
-                    "com.google.android.apps.mapslite",
-                    "app.organicmaps",
-                    "net.osmand",
-                    "com.here.app.maps"
-            };
-            for (String pkg : candidates) {
-                Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
-                if (intent == null) continue;
-                try { startActivity(intent); return; }
-                catch (Exception ignored) { }
-            }
-        }
-        try {
-            String url = dest.isEmpty() ? "https://www.google.com/maps" :
-                    "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="
-                    + java.net.URLEncoder.encode(dest, "UTF-8");
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            intent.addCategory(Intent.CATEGORY_BROWSABLE);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        } catch (Exception ex) {
-            message("No hay navegador o Maps compatible. Abre Apps para buscar otro.");
-        }
+        if (launchOrganicMaps(dest)) return;
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Organic Maps no está instalado")
+                .setMessage("Para navegar con GPS sin depender de las teselas de Rush Navigator, "
+                        + "instala Organic Maps desde la versión oficial de GitHub. "
+                        + "Después vuelve a Rush Launcher y pulsa Abrir navegador.")
+                .setPositiveButton("Obtener APK oficial", (dialog, which) -> {
+                    try {
+                        Intent site = new Intent(Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/organicmaps/organicmaps/releases"));
+                        site.addCategory(Intent.CATEGORY_BROWSABLE);
+                        startActivity(site);
+                    } catch (Exception ex) {
+                        message("Abre github.com/organicmaps/organicmaps/releases");
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void openRoute(String action) {

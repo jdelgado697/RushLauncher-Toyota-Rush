@@ -19,6 +19,10 @@
         <package android:name="com.spotify.music" />
         <package android:name="com.google.android.apps.maps" />
         <package android:name="com.waze" />
+        <package android:name="app.organicmaps" />
+        <package android:name="app.organicmaps.web" />
+        <package android:name="app.organicmaps.beta" />
+        <package android:name="app.organicmaps.debug" />
         <package android:name="com.google.android.youtube" />
         <package android:name="com.netflix.mediaclient" />
     </queries>

@@ -175,3 +175,23 @@ Esta versión usa la API oficial de Spotify para mostrar canción, artista, álb
 - **Inicio predeterminado:** en Ajustes se muestra «Elegir Rush Launcher como inicio». Activa el alias `HomeAlias` y abre `Settings.ACTION_HOME_SETTINGS`; si el firmware lo permite, el usuario debe escoger Rush Launcher manualmente. Al pulsar Atrás mientras Rush es HOME, no se deshabilita por accidente. El botón «Restaurar inicio original del TBox» deshabilita HomeAlias y regresa a Home Android. No fuerza cambios de firmware ni afecta cámara, radio o la unidad de Toyota.
 - **Límites:** los firmwares de Carlinkit pueden restringir el rol HOME. Si los ajustes de Inicio no ofrecen Rush, es una limitación del TBox; no utilizar root, permisos de accesibilidad ni desactivar Play Protect.
 - **Seguridad:** la APK no añade permisos invasivos. Las funciones de Spotify, carátulas, aplicaciones ordenadas (Xuper primero) y datos OBD permanecen. Descarga en repositorio Actions; instalar con vehículo detenido y con Play Protect activado.
+
+
+## Rush Launcher 4.5.0: navegación con Organic Maps
+
+La opción **Abrir Organic Maps** en la pantalla principal sustituye el mapa
+experimental de Rush como motor de navegación. El botón **Buscar destino**
+envía una consulta a Organic Maps mediante su API de enlaces `om://search`.
+
+**Requisito:** instalar por separado Organic Maps desde la [página de versiones
+oficiales](https://github.com/organicmaps/organicmaps/releases) en el Carlinkit;
+el APK de Rush no instala otras apps automáticamente.
+
+Organic Maps muestra su propia pantalla Android (no es un mapa incrustado en el
+WebView del launcher). Al volver a Inicio se mantiene Rush Launcher como
+pantalla principal, si se ha configurado como HOME. Para navegación sin internet,
+descargar el mapa de la región de Chile desde Organic Maps antes de circular.
+Si no recibe posiciones GPS, revisar permisos de ubicación y señal del TBox.
+
+La versión antigua se conserva como `live_map.js` **sin cargarse** para que no
+consuma recursos ni aparezca el error «SIN GPS NUEVO».
