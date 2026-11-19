@@ -9,6 +9,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.GradientDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -55,6 +57,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -71,8 +75,13 @@ public final class NavigationActivity extends Activity implements LocationListen
     private static final String MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
     private static final String SEARCH = "https://photon.komoot.io/api/";
     private static final String ROUTE = "https://router.project-osrm.org/route/v1/driving/";
-    private static final String USER_AGENT = "RushLauncher/4.15.2 (personal Android car navigation; github.com/jdelgado697/RushLauncher-Toyota-Rush)";
+    private static final String USER_AGENT = "RushLauncher/4.15.3 (personal Android car navigation; github.com/jdelgado697/RushLauncher-Toyota-Rush)";
     private static final int BLUE = Color.rgb(55, 129, 255);
+    private static final String NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
+    // Público, sin SLA: el servidor Photon puede aplicar cuotas/errores temporales.
+    private long photonRetryAfterMs = 0L;
+    private long lastNominatimRequestMs = 0L;
+    private final Map<String, List<SearchHit>> manualSearchCache = new LinkedHashMap<>();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService network = Executors.newSingleThreadExecutor();
     private final ExecutorService searchNetwork = Executors.newFixedThreadPool(2);
@@ -108,6 +117,27 @@ public final class NavigationActivity extends Activity implements LocationListen
         double lat, lon;
         Step(String text, double latitude, double longitude) {
             instruction = text; lat = latitude; lon = longitude;
+        }
+    }
+
+    /** Solo lugares reales devueltos por proveedores de mapas o geocodificación. */
+    private static final class SearchHit {
+        final String name;
+        final Point point;
+        SearchHit(String name, Point point) {
+            this.name = name;
+            this.point = point;
+        }
+    }
+
+    private static final class SearchAnswer {
+        final List<SearchHit> hits;
+        final String provider;
+        final String diagnostic;
+        SearchAnswer(List<SearchHit> hits, String provider, String diagnostic) {
+            this.hits = hits;
+            this.provider = provider;
+            this.diagnostic = diagnostic;
         }
     }
 
@@ -170,6 +200,15 @@ public final class NavigationActivity extends Activity implements LocationListen
         LinearLayout.LayoutParams qp = new LinearLayout.LayoutParams(0, -1, 1);
         qp.setMargins(dp(7), 0, dp(7), 0);
         searchRow.addView(query, qp);
+        Button find = button("Buscar");
+        LinearLayout.LayoutParams findSize = new LinearLayout.LayoutParams(dp(76), -1);
+        findSize.rightMargin = dp(5);
+        searchRow.addView(find, findSize);
+        find.setOnClickListener(v -> {
+            String destinationText = query.getText().toString().trim();
+            if (pendingSearch != null) handler.removeCallbacks(pendingSearch);
+            search(destinationText, true);
+        });
         Button center = button("▲ Conducir");
         searchRow.addView(center, new LinearLayout.LayoutParams(dp(96), -1));
         center.setOnClickListener(v -> {
@@ -232,7 +271,8 @@ public final class NavigationActivity extends Activity implements LocationListen
         if (initialDestination != null && !initialDestination.trim().isEmpty())
             query.setText(initialDestination.trim());
         query.setOnEditorActionListener((v, actionId, event) -> {
-            search(query.getText().toString().trim());
+            if (pendingSearch != null) handler.removeCallbacks(pendingSearch);
+            search(query.getText().toString().trim(), true);
             return true;
         });
         mapView.getMapAsync(ready -> {
@@ -299,64 +339,190 @@ public final class NavigationActivity extends Activity implements LocationListen
     }
 
     private void search(String term) {
-        if (term.length() < 2) return;
+        search(term, false);
+    }
+
+    private void search(String term, boolean explicit) {
+        final String cleaned = term == null ? "" : term.trim();
+        if (cleaned.length() < 2) {
+            status.setText("Escribe al menos 2 letras para buscar");
+            hideSuggestions();
+            return;
+        }
+        // Un resultado antiguo no debe reemplazar otro término recién escrito.
         final int ticket = ++searchRequest;
-        lastSearchStartedAt=SystemClock.elapsedRealtime();
+        lastSearchStartedAt = SystemClock.elapsedRealtime();
         final double lat = fix != null ? fix.getLatitude() : -39.367;
         final double lon = fix != null ? fix.getLongitude() : -72.632;
-        status.setText("Buscando destinos en Chile…");
+        status.setText(explicit ? "Buscando destino en Chile…" : "Prediciendo lugares cercanos…");
         searchNetwork.execute(() -> {
-            try {
-                String url = SEARCH + "?q=" + URLEncoder.encode(term, "UTF-8")
-                        + "&limit=8&lang=es&countrycode=CL&lat="
-                        + lat + "&lon=" + lon;
-                JSONObject json = getJson(url);
-                JSONArray found = json.optJSONArray("features");
-                List<String> titles = new ArrayList<>();
-                List<Point> coords = new ArrayList<>();
-                if (found != null) for (int i = 0; i < found.length(); i++) {
-                    JSONObject f = found.optJSONObject(i);
-                    if (f == null) continue;
-                    JSONObject prop = f.optJSONObject("properties");
-                    JSONObject geo = f.optJSONObject("geometry");
-                    if (prop == null || geo == null) continue;
-                    JSONArray c = geo.optJSONArray("coordinates");
-                    if (c == null || c.length() < 2) continue;
-                    String name = prop.optString("name", "Lugar");
-                    String city = prop.optString("city", prop.optString("state", ""));
-                    titles.add(name + (city.isEmpty() ? "" : " · " + city));
-                    coords.add(Point.fromLngLat(c.optDouble(0), c.optDouble(1)));
-                }
-                runOnUiThread(() -> {
-                    if (ticket != searchRequest || isFinishing()) return;
-                    suggestionBox.removeAllViews();
-                    if (titles.isEmpty()) {
-                        TextView t = text("Sin coincidencias. Prueba otro nombre.", 13, Color.WHITE);
-                        suggestionBox.addView(t);
-                    }
-                    int shown=Math.min(8,titles.size());
-                    for (int i = 0; i < shown; i++) {
-                        final int index = i;
-                        Button option = button(titles.get(i));
-                        option.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-                        option.setBackground(bg(0xFF1C294C, 6));
-                        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, dp(44));
-                        p.setMargins(0, dp(2), 0, dp(2));
-                        suggestionBox.addView(option, p);
-                        option.setOnClickListener(v -> selectDestination(coords.get(index), titles.get(index)));
-                    }
-                    resultsScroll.getLayoutParams().height=dp(Math.min(185,Math.max(45,shown*45)));
+            SearchAnswer result = searchWithFallback(cleaned, lat, lon, explicit);
+            runOnUiThread(() -> {
+                if (ticket != searchRequest || isFinishing()) return;
+                suggestionBox.removeAllViews();
+                if (result.hits.isEmpty()) {
+                    String label = result.diagnostic.isEmpty()
+                            ? "Sin coincidencias. Prueba con nombre y ciudad."
+                            : "Sin resultados · " + result.diagnostic;
+                    suggestionBox.addView(text(label, 12, Color.WHITE));
+                    resultsScroll.getLayoutParams().height = dp(60);
                     resultsScroll.setVisibility(View.VISIBLE);
-                    resultsScroll.scrollTo(0,0);
-                    status.setText("Sugerencias cercanas · pulsa un lugar");
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    if (ticket == searchRequest && !isFinishing())
-                        status.setText("Error de búsqueda: revisa Internet o Photon");
-                });
-            }
+                    guidance.setText(explicit ? "No se encontró el lugar. Prueba otra dirección o mantén pulsado el mapa."
+                            : "MODO CONDUCCIÓN · GPS y rumbo arriba");
+                    status.setText(result.diagnostic.isEmpty() ? "No hay coincidencias" : result.diagnostic);
+                    return;
+                }
+                int count = Math.min(8, result.hits.size());
+                for (int i = 0; i < count; i++) {
+                    final SearchHit found = result.hits.get(i);
+                    Button option = button(found.name);
+                    option.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+                    option.setBackground(bg(0xFF1C294C, 6));
+                    LinearLayout.LayoutParams row = new LinearLayout.LayoutParams(-1, dp(44));
+                    row.setMargins(0, dp(2), 0, dp(2));
+                    suggestionBox.addView(option, row);
+                    option.setOnClickListener(v -> selectDestination(found.point, found.name));
+                }
+                resultsScroll.getLayoutParams().height = dp(Math.min(185, Math.max(45, count * 45)));
+                resultsScroll.scrollTo(0, 0);
+                resultsScroll.setVisibility(View.VISIBLE);
+                status.setText(count + " destinos · " + result.provider
+                        + ("Nominatim".equals(result.provider) ? " · © OpenStreetMap" : ""));
+            });
         });
+    }
+
+    /**
+     * Orden: Photon (autocompletar), Geocoder nativo Android,
+     * y SOLO en búsquedas explícitas Nominatim (sin autocomplete).
+     * Nunca se falsifican sugerencias.
+     */
+    private SearchAnswer searchWithFallback(String term, double lat, double lon, boolean explicit) {
+        String errors = "";
+        List<SearchHit> hits = new ArrayList<>();
+        if (SystemClock.elapsedRealtime() >= photonRetryAfterMs) {
+            try {
+                // Consultas mínimas; algunos despliegues de Photon rechazan lang/countrycode.
+                String endpoint = SEARCH + "?q=" + URLEncoder.encode(term, "UTF-8")
+                        + "&limit=8&lat=" + lat + "&lon=" + lon + "&zoom=14";
+                JSONObject json = getJson(endpoint);
+                JSONArray found = json.optJSONArray("features");
+                if (found == null) throw new Exception("Respuesta Photon sin features");
+                for (int i = 0; i < found.length() && hits.size() < 8; i++) {
+                    JSONObject item = found.optJSONObject(i);
+                    if (item == null) continue;
+                    JSONObject p = item.optJSONObject("properties");
+                    JSONObject geom = item.optJSONObject("geometry");
+                    if (p == null || geom == null) continue;
+                    String country = p.optString("countrycode", "");
+                    if (!country.isEmpty() && !"CL".equalsIgnoreCase(country)) continue;
+                    JSONArray c = geom.optJSONArray("coordinates");
+                    if (c == null || c.length() < 2) continue;
+                    double longitude = c.optDouble(0, Double.NaN);
+                    double latitude = c.optDouble(1, Double.NaN);
+                    if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) continue;
+                    if (latitude < -57 || latitude > -17 || longitude < -78 || longitude > -66) continue;
+                    String name = p.optString("name", p.optString("street", "Lugar"));
+                    String local = p.optString("city", p.optString("county", p.optString("state", "")));
+                    String full = name + (local.isEmpty() ? "" : " · " + local);
+                    if (!name.isEmpty()) hits.add(new SearchHit(full, Point.fromLngLat(longitude, latitude)));
+                }
+                if (!hits.isEmpty()) return new SearchAnswer(hits, "Photon", "");
+            } catch (Exception e) {
+                errors = "Photon " + shortSearchError(e);
+                // Evita bombardear la API pública si está temporalmente caída.
+                photonRetryAfterMs = SystemClock.elapsedRealtime() + 25000L;
+            }
+        } else errors = "Photon en pausa por error reciente";
+
+        // Android Geocoder aprovecha el servicio de geocodificación del sistema si existe.
+        try {
+            if (Geocoder.isPresent()) {
+                Geocoder geocoder = new Geocoder(this, new Locale("es", "CL"));
+                @SuppressWarnings("deprecation")
+                List<Address> results = geocoder.getFromLocationName(term, 8,
+                        -56.5, -77.0, -17.0, -66.0);
+                if (results != null) for (Address address : results) {
+                    if (!address.hasLatitude() || !address.hasLongitude()) continue;
+                    String title = address.getAddressLine(0);
+                    if (title == null || title.trim().isEmpty()) {
+                        title = address.getFeatureName();
+                        if (title == null || title.trim().isEmpty()) title = term;
+                    }
+                    hits.add(new SearchHit(title, Point.fromLngLat(
+                            address.getLongitude(), address.getLatitude())));
+                    if (hits.size() >= 8) break;
+                }
+                if (!hits.isEmpty()) return new SearchAnswer(hits, "Geocoder Android", "");
+            }
+        } catch (Exception e) {
+            errors += (errors.isEmpty() ? "" : " · ") + "Android " + shortSearchError(e);
+        }
+
+        if (explicit) {
+            String key = term.toLowerCase(Locale.ROOT);
+            List<SearchHit> cached = manualSearchCache.get(key);
+            if (cached != null && !cached.isEmpty()) return new SearchAnswer(cached, "Caché", "");
+            // La política de Nominatim prohíbe su uso como autocomplete.
+            // Solo buscar cuando el usuario pulsa Buscar/Enter, con uso moderado.
+            long now = SystemClock.elapsedRealtime();
+            if (now - lastNominatimRequestMs >= 2500L) {
+                lastNominatimRequestMs = now;
+                try {
+                    String url = NOMINATIM_SEARCH + "?format=jsonv2&limit=7&countrycodes=cl&q="
+                            + URLEncoder.encode(term, "UTF-8");
+                    JSONArray results = getJsonArray(url);
+                    for (int i = 0; i < results.length(); i++) {
+                        JSONObject hit = results.optJSONObject(i);
+                        if (hit == null) continue;
+                        double hlat = hit.optDouble("lat", Double.NaN);
+                        double hlon = hit.optDouble("lon", Double.NaN);
+                        if (!Double.isFinite(hlat) || !Double.isFinite(hlon)) continue;
+                        String title = hit.optString("display_name", "");
+                        if (title.isEmpty()) continue;
+                        hits.add(new SearchHit(title, Point.fromLngLat(hlon, hlat)));
+                    }
+                    if (!hits.isEmpty()) {
+                        if (manualSearchCache.size() > 16) manualSearchCache.clear();
+                        manualSearchCache.put(key, new ArrayList<>(hits));
+                        return new SearchAnswer(hits, "Nominatim", "");
+                    }
+                } catch (Exception e) {
+                    errors += (errors.isEmpty() ? "" : " · ") + "Nominatim " + shortSearchError(e);
+                }
+            } else errors += (errors.isEmpty() ? "" : " · ") + "Espera para buscar otra vez";
+        }
+        return new SearchAnswer(hits, "", errors);
+    }
+
+    private String shortSearchError(Exception e) {
+        String detail = e.getMessage();
+        if (detail != null && detail.matches("HTTP \\d{3}")) return detail;
+        String kind = e.getClass().getSimpleName();
+        if (kind.contains("Timeout")) return "tiempo agotado";
+        if (kind.contains("UnknownHost")) return "sin DNS";
+        if (kind.contains("SSL")) return "error TLS";
+        return kind;
+    }
+
+    private JSONArray getJsonArray(String endpoint) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(endpoint).openConnection();
+        conn.setConnectTimeout(7000);
+        conn.setReadTimeout(9000);
+        conn.setRequestProperty("User-Agent", USER_AGENT);
+        conn.setRequestProperty("Accept", "application/json");
+        try {
+            int statusCode = conn.getResponseCode();
+            if (statusCode < 200 || statusCode >= 300) throw new Exception("HTTP " + statusCode);
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            StringBuilder body = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null && body.length() < 400000)
+                body.append(line);
+            reader.close();
+            return new JSONArray(body.toString());
+        } finally { conn.disconnect(); }
     }
 
     private void selectDestination(Point point, String title) {
@@ -364,10 +530,10 @@ public final class NavigationActivity extends Activity implements LocationListen
         routePoints.clear();instructions.clear();
         if(lineSource!=null)lineSource.setGeoJson(FeatureCollection.fromFeatures(new Feature[0]));
         routeButton.setEnabled(true);routeButton.setAlpha(1f);
-        hideSuggestions();
         query.setText(title);
         if (pendingSearch != null) handler.removeCallbacks(pendingSearch);
         ++searchRequest; // invalida cualquier búsqueda antigua
+        hideSuggestions();
         ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
                 .hideSoftInputFromWindow(query.getWindowToken(), 0);
         query.clearFocus();
