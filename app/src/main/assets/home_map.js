@@ -96,11 +96,11 @@ function render(){
 function drawRoute(center,w,h){
  if(!routeSvg||!routeLine||!routeShadow||!routeDestination)return;
  if(routeCoords.length<2){
-  routeSvg.hidden=true;
+  routeSvg.setAttribute('hidden','');
   routeLine.setAttribute('d','');routeShadow.setAttribute('d','');
   routeDestination.style.display='none';return;
  }
- routeSvg.hidden=false;routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
+ routeSvg.removeAttribute('hidden');routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
  var path='',step=Math.max(1,Math.ceil(routeCoords.length/340));
  for(var i=0;i<routeCoords.length;i+=step){
   var p=project(routeCoords[i].lat,routeCoords[i].lon);
