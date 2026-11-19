@@ -213,3 +213,29 @@ seleccionar destino, botón explícito «Calcular ruta», respaldo de rutas
 FOSSGIS y cámara inclinada/rumbo arriba al abrir. Servicios de mapas,
 búsqueda y rutas necesitan red y son de demostración, sin SLA.
 Configuración de destinos exclusivamente con vehículo detenido.
+
+
+## Rush Launcher 4.15.3 — solución al error de búsqueda
+
+Basada en 4.15.2 y conservando el mapa nativo MapLibre, Inicio, modo conducción,
+tablero OBD, Spotify y aplicaciones.
+
+**Búsqueda por prioridad**:
+1. Autocompletado al teclear mediante Photon, con consulta mínima (q, limit,
+   lat, lon y zoom), eliminando los parámetros de idioma/país que podrían
+   provocar rechazo en determinados despliegues; filtrado local a Chile.
+   Pausa de 25 segundos si el proveedor lanza excepción.
+2. Si Photon falla o no encuentra lugares, Geocoder Android (solo cuando
+   el servicio del sistema está disponible en el Carlinkit).
+3. **Solo al tocar Buscar o pulsar Enter:** búsqueda puntual por Nominatim,
+   geográficamente restringida a Chile, con limitación temporal y caché local
+   de la sesión. No se utiliza Nominatim para autocompletar: lo prohíbe
+   su política pública.
+4. Los errores de HTTP, DNS, TLS y espera se distinguen en pantalla. Si
+   ningún proveedor responde, se puede elegir destino con pulsación larga
+   en el mapa. Se eliminó el mensaje «Buscando...» que quedaba visible
+   después de un fallo de servicio.
+
+No hay garantías de disponibilidad de servidores públicos; para
+navegación fiable en producción debe contratarse o desplegarse un servicio
+de geocodificación propio. Siempre preparar el destino con vehículo detenido.
