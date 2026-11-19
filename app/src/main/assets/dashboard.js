@@ -12,14 +12,40 @@ try{
  }
  saved={name:localStorage.getItem('rush_user_name')||'',
         theme:localStorage.getItem('rush_theme')||'dark',
-        weather:localStorage.getItem('rush_weather')!=='no'};
-}catch(e){saved={name:'',theme:'dark',weather:true}};
+        weather:localStorage.getItem('rush_weather')!=='no',
+        drive:localStorage.getItem('rush_drive_ui')!=='no'};
+}catch(e){saved={name:'',theme:'dark',weather:true,drive:true}};
 var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,obd:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
 function app(action){if(nativeApp)window.Rush.open(action);else notice('Disponible al instalar en Android')}
 function notice(message){var e=$('toast');e.textContent=message;show(e,true);clearTimeout(notice.timer);notice.timer=setTimeout(function(){show(e,false)},2800)}
 function greeting(hour){return hour>=6&&hour<12?'Buenos días':hour>=12&&hour<20?'Buenas tardes':'Buenas noches'}
+function setDrivingMode(enabled, persist) {
+ saved.drive = enabled !== false;
+ var screen = $('rushScreen');
+ if (screen) screen.classList.toggle('drive-ui', saved.drive);
+ var button = $('driveModeToggle');
+ if (button) {
+  button.textContent = saved.drive ? 'Panel clásico' : 'Modo conducción';
+  button.setAttribute('aria-pressed', saved.drive ? 'true' : 'false');
+  button.title = saved.drive ? 'Mostrar Inicio clásico' : 'Mostrar mapa, música, clima y OBD juntos';
+ }
+ if (persist) store('rush_drive_ui', saved.drive ? 'yes':'no');
+ // El mapa está dentro del mismo DOM: no duplicar motores ni reiniciar Spotify.
+ if (window.RushHomeMap) {
+  if (saved.drive) window.RushHomeMap.follow();
+  if (typeof window.RushHomeMap.refresh === 'function') {
+   requestAnimationFrame(function() {
+    window.RushHomeMap.refresh();
+    requestAnimationFrame(function(){window.RushHomeMap.refresh()});
+   });
+  }
+ }
+}
+$('driveModeToggle').addEventListener('click',function(){
+ setDrivingMode(!saved.drive,true);
+});
 function updateTime(){
  var d=new Date(),h=d.getHours();
  write('greeting',greeting(h)+(saved.name?', '+saved.name:''));
@@ -321,6 +347,10 @@ function renderGauges(){
  write('homeObdStatus',state.obdConnected?'OBD conectado · datos en vivo':gpsSpeed?'GPS · OBD sin conectar':'Conecta tu ELM327');
  write('homeCoolant',state.obdConnected&&typeof state.coolant==='number'?Math.round(state.coolant)+' °C':'— °C');
  write('homeVoltage',state.obdConnected&&typeof info.voltage==='number'&&isFinite(info.voltage)?info.voltage.toFixed(2)+' V':'— V');
+ write('driveCoolantTemp',state.obdConnected&&typeof state.coolant==='number'&&isFinite(state.coolant)?
+   Math.round(state.coolant)+' °C':'— °C');
+ write('driveBattery',state.obdConnected&&typeof info.voltage==='number'&&isFinite(info.voltage)?
+   info.voltage.toFixed(1)+' V':'— V');
 }
 // Estado GPS diagnóstico: diferencia receptor estancado de mapa sin redibujar.
 // La edad se obtiene del último paquete REAL de Android, no de la animación.
@@ -837,11 +867,17 @@ window.addEventListener('focus',function(){
 
  }
 });
-// home_map.js ya muestra Loncoche como referencia mientras inicia GPS.
-if(window.RushHomeMap)window.RushHomeMap.follow();
+// La pantalla de conducción se activa por defecto y se puede desactivar
+// sin detener GPS, clima, Spotify ni conexión ELM327.
+setDrivingMode(saved.drive,false);
 updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);
+// Si el vehículo permanece estacionado, también renovar clima cada 15 min.
+// No se lanzan solicitudes cuando el clima está apagado o no hay GPS.
+setInterval(function(){
+ if(saved.weather && state.location)refreshWeather(false);
+},60000);
 renderMusic(null);
 if(nativeApp){
  window.Rush.ready();
