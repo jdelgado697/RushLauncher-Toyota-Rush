@@ -70,8 +70,7 @@ public class MainActivity extends Activity implements LocationListener {
             if (!obdInForeground || isFinishing()) return;
             autoConnectObd();
             // Reintentos moderados, nunca un bucle Bluetooth continuo.
-            if (obdInForeground && !isFinishing() && obdReader != null
-                    && !obdReader.isActive()) scheduleObdAuto(false);
+            if (obdInForeground && !isFinishing()) scheduleObdAuto(false);
         }
     };
     private SpotifyConnectClient spotifyConnect;
@@ -773,6 +772,7 @@ public class MainActivity extends Activity implements LocationListener {
         }
         String remembered = obdSettings().getString(OBD_MAC, "");
         String selected = "";
+        boolean foundRemembered = false;
         int recognized = 0;
         try {
             JSONArray bonded = obdReader.pairedDevices();
@@ -784,6 +784,7 @@ public class MainActivity extends Activity implements LocationListener {
                 if (!android.bluetooth.BluetoothAdapter.checkBluetoothAddress(mac)) continue;
                 if (!remembered.isEmpty() && remembered.equalsIgnoreCase(mac)) {
                     selected = mac;
+                    foundRemembered = true;
                     break;
                 }
                 // Adaptadores clásicos: no incluir cualquier periférico cercano.
@@ -799,7 +800,8 @@ public class MainActivity extends Activity implements LocationListener {
             javascript("window.rushObdStatus('No se pudieron leer dispositivos Bluetooth vinculados');");
             return;
         }
-        if (selected.isEmpty() || (remembered.isEmpty() && recognized != 1)) {
+        if (selected.isEmpty() || (!remembered.isEmpty() && !foundRemembered)
+                || (remembered.isEmpty() && recognized != 1)) {
             javascript("window.rushObdStatus('OBD automático: elige tu ELM327 una vez en Conexión');");
             return;
         }
