@@ -17,9 +17,9 @@ var zoomOut=document.getElementById('homeMapZoomOut');
 if(!host||!layer||!marker||!surface||!followButton||!zoomIn||!zoomOut)return;
 
 var current={lat:-39.367,lon:-72.632},position=null;
-var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.create(null);
+var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.create(null),motionSpeed=0;
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
-var maxTiles=18, tile=256, minLat=-85.05112878, maxLat=85.05112878;
+var maxTiles=25, tile=256, minLat=-85.05112878, maxLat=85.05112878;
 var lastGpsAt=0,lastRenderedCenter=null;
 
 function clamp(n,lower,upper){return Math.min(upper,Math.max(lower,n))}
@@ -63,9 +63,13 @@ function render(){
     img.alt='';img.draggable=false;img.decoding='async';
     img.setAttribute('loading','eager');
     img.referrerPolicy='strict-origin-when-cross-origin';
+    img.style.transition='none';
     img.src='https://tile.openstreetmap.org/'+key+'.png';
     img.onerror=function(){this.style.visibility='hidden'};
     tiles[key]=img;layer.appendChild(img);
+   }else{
+    // Pequeña interpolación entre lecturas GPS (sin descargar imágenes extra).
+    img.style.transition=following&&motionSpeed>8?'left 600ms linear, top 600ms linear':'none';
    }
    img.style.left=Math.round(x*tile-center.x+w/2)+'px';
    img.style.top=Math.round(y*tile-center.y+h/2)+'px';
@@ -113,14 +117,16 @@ function setPosition(lat,lon,acc){
  live=true;accuracy=Number.isFinite(acc)?acc:null;lastGpsAt=Date.now();
  if(following)current={lat:lat,lon:lon};
  var moved=!lastRenderedCenter||Math.abs(lastRenderedCenter.lat-current.lat)+
-    Math.abs(lastRenderedCenter.lon-current.lon)>0.000045;
+    Math.abs(lastRenderedCenter.lon-current.lon)>0.000015;
  if(moved || Date.now()-lastDraw>4500)queueDraw();
  else {drawMarker();setStatus()}
 }
 function setHeading(heading,speed){
- if(Number.isFinite(heading)&&Number.isFinite(speed)&&speed>2.5){
+ motionSpeed=Number.isFinite(speed)?Math.max(0,speed):0;
+ if(Number.isFinite(heading)&&motionSpeed>8){
   var next=(heading+360)%360;
-  if(Math.abs(next-bearing)>1){bearing=next;queueDraw()}
+  var delta=Math.abs(((next-bearing+540)%360)-180);
+  if(delta>3){bearing=next;queueDraw()}
  }
 }
 function activateFollow(){
@@ -194,10 +200,12 @@ followButton.addEventListener('click',activateFollow);
 zoomIn.addEventListener('click',function(){scaleZoom(1)});
 zoomOut.addEventListener('click',function(){scaleZoom(-1)});
 window.addEventListener('resize',queueDraw);
+if(typeof ResizeObserver==='function')new ResizeObserver(queueDraw).observe(host);
 
 window.RushHomeMap={
  setPosition:setPosition,setHeading:setHeading,follow:activateFollow,
  zoomIn:function(){scaleZoom(1)},zoomOut:function(){scaleZoom(-1)},
+ refresh:queueDraw,
  isFollowing:function(){return following},
  getBearing:getBearing
 };
