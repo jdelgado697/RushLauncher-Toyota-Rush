@@ -650,7 +650,11 @@
 .home-nav-results button strong{font-size:12px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .home-nav-results button small{font-size:10px;color:#bcdcff;max-width:100%;overflow:hidden;
  white-space:nowrap;text-overflow:ellipsis}
-.home-nav-results .home-nav-msg{padding:12px;font-size:12px;color:#d6e9ff}
+.home-nav-results .home-nav-msg{padding:8px 10px;font-size:11px;color:#d6e9ff}
+.home-nav-status{position:absolute;bottom:46px;left:9px;z-index:10;max-width:75%;
+ padding:6px 9px;border-radius:9px;border:1px solid #53bff1;background:#071b36ed;
+ color:#d9f3ff;font-size:11px;line-height:1.3;box-shadow:0 3px 10px #00192c77;
+ max-height:66px;overflow:hidden}
 .home-nav-guide{position:absolute;top:88px;left:9px;max-width:65%;min-width:210px;
  z-index:8;padding:8px 11px;display:flex;flex-direction:column;gap:3px;
  border:1px solid #3ec7ff;border-radius:12px;background:#061c36eb;color:white;
@@ -674,6 +678,7 @@
  .home-nav-search input{min-height:32px;font-size:11px}
  .home-nav-search button{min-height:32px;font-size:10px;min-width:49px}
  .home-nav-results{top:71px;left:6px;width:min(74%,350px);max-height:190px}
+ .home-nav-status{bottom:43px;left:6px;font-size:10px;max-width:78%}
  .home-nav-guide{top:76px;left:6px;min-width:175px;max-width:68%;padding:5px 8px}
  .home-nav-guide-title span{font-size:21px}
  .home-nav-guide-title strong{font-size:12px}
@@ -770,6 +775,7 @@
     <button id="homeNavSearchButton" type="button">Buscar</button>
    </div>
    <div id="homeNavResults" class="home-nav-results" hidden aria-label="Lugares sugeridos"></div>
+   <div id="homeNavStatus" class="home-nav-status" role="status" hidden></div>
    <div id="homeNavGuide" class="home-nav-guide" hidden aria-live="polite">
      <div class="home-nav-guide-title"><span id="homeNavTurnIcon">↑</span>
       <strong id="homeNavInstruction">Sigue la ruta</strong></div>
