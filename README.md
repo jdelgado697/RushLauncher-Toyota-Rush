@@ -266,3 +266,31 @@ Base: 4.15.3, con mapa nativo de navegación y todos los accesos anteriores.
   con rutas sigue en la pantalla nativa. Las teselas OSM y el pronóstico
   requieren internet; no se prometen incidencias viales ni navegación offline.
   Nunca manipular la pantalla mientras se conduce.
+
+
+## Rush Launcher 4.16.0 — Modo Conducción integrado
+
+Rama `rush-launcher-416-modo-conduccion`. Se basa DIRECTAMENTE en
+`rush-launcher-4154-inicio-vivo`, dejando intacto su APK/ramas anteriores.
+
+**Pantalla de Inicio por defecto:** menú de conducción con mapa grande a
+la izquierda (aprox. 65% del ancho), panel derecho con velocímetro OBD/GPS,
+RPM de ECU, refrigerante y voltaje cuando hay lecturas compatibles, clima
+en vivo y Spotify con carátula, canción, artista, controles y progreso si
+el proveedor de Spotify autoriza metadatos. El mapa admite arrastrar,
+zoom +/- y volver a seguir rumbo arriba. Se preserva acceso a Rush
+Navigator nativo para búsqueda de destinos, rutas y guiado.
+
+En la barra superior, **Panel clásico / Modo conducción** permite alternar
+sin reiniciar ninguna conexión ni duplicar motores de mapas. La preferencia
+se guarda en el almacenamiento local del launcher. Clima permanece activado
+según la preferencia 4.15.4; OBD intenta reconexión al ELM327 recordado.
+
+Se mejoró el seguimiento del mapa de Inicio: transición ligera del
+desplazamiento entre actualizaciones GPS, sin lanzar más descargas de
+teselas por cada fotograma, y 25 teselas máximas visibles en modo amplio.
+
+**No equivale a Google Maps o Waze:** el mapa de Inicio no calcula rutas
+ni contiene tráfico; el navegador nativo completo sí tiene cálculo de
+rutas en línea, dependiente de servicios comunitarios sin SLA. No usar
+la pantalla táctil para buscar destinos durante la conducción.
