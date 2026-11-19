@@ -16,7 +16,7 @@ var zoomIn=document.getElementById('homeMapZoomIn');
 var zoomOut=document.getElementById('homeMapZoomOut');
 if(!host||!layer||!marker||!surface||!followButton||!zoomIn||!zoomOut)return;
 
-var current={lat:-39.367,lon:-72.632},position=null,zoom:0;
+var current={lat:-39.367,lon:-72.632},position=null;
 var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.create(null);
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
 var maxTiles=18, tile=256, minLat=-85.05112878, maxLat=85.05112878;
