@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio]
 
 permissions:
   contents: read
@@ -45,6 +45,7 @@ jobs:
           node --check app/src/main/assets/nav_autocomplete.js
           node --check app/src/main/assets/navigation_mode.js
           node --check app/src/main/assets/home_map.js
+          node --check app/src/main/assets/home_navigation.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -119,6 +120,21 @@ jobs:
           assert 'rush_drive_ui' in js
           assert "refresh:queueDraw" in home_map
           assert "screen.drive-ui .main" in html and "screen.drive-ui .home-map" in html
+          home_navigation=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
+          assert '<script src="home_navigation.js"></script>' in html
+          assert html.index('dashboard.js') < html.index('home_navigation.js')
+          assert 'id="homeNavInput"' in html and 'id="homeNavGuide"' in html
+          assert 'id="homeRouteSvg"' in html and 'id="homeNavStatus"' in html
+          assert 'window.rushHomeRoute=function' in home_navigation
+          assert 'window.rushHomeSuggest=function' in home_navigation
+          assert 'window.rushHomeSearch=function' in home_navigation
+          assert 'window.rushPosition=function' in home_navigation
+          assert 'routeHomeNav' in native and 'suggestHomeNav' in native and 'searchHomeNav' in native
+          assert 'rushHomeRouteProgress' in native
+          assert 'setRoute:setRoute' in home_map and 'clearRoute:clearRoute' in home_map
+          assert 'nearestToRoute' in home_navigation and 'speakNavigation' in home_navigation
+          assert 'class="drive-obd-extra"' in html and 'id="weatherTemp"' in html
+          assert 'id="songTitle"' in html and 'id="musicToggle"' in html
           assert 'getJsonArray(url)' in native_nav
           assert 'search(destinationText, true)' in native_nav
           assert 'Photon ' in native_nav and 'Nominatim' in native_nav
@@ -296,7 +312,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 46" in gradle
+          assert "versionCode 47" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000

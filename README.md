@@ -294,3 +294,34 @@ teselas por cada fotograma, y 25 teselas máximas visibles en modo amplio.
 ni contiene tráfico; el navegador nativo completo sí tiene cálculo de
 rutas en línea, dependiente de servicios comunitarios sin SLA. No usar
 la pantalla táctil para buscar destinos durante la conducción.
+
+
+## Rush Launcher 4.17.0 — navegación giro a giro en Inicio
+
+Base: rama 4.16.0 Modo Conducción, que se conserva intacta.
+Al abrir Rush Launcher, el mapa de Inicio mantiene Spotify, clima y
+telemetría OBD visibles mientras se seleccionan destinos y se navega.
+
+Funcionalidades integradas:
+- Búsqueda de destinos en Chile con sugerencias Photon (solo con el vehículo
+  detenido), recientes locales y búsqueda explícita Nominatim.
+- Marcado de destino con pulsación larga sobre el mapa, mientras está
+  estacionado.
+- Ruta en azul sobre el mapa 2D del Inicio usando las mismas teselas
+  OpenStreetMap del launcher y el motor existente FOSSGIS/OSRM/Valhalla.
+- Maniobra próxima, distancia de aproximación, km totales y tiempo estimado.
+- Instrucciones de voz mediante el motor TTS de Android, si está disponible.
+- Aviso de GPS antiguo y recálculo moderado cuando tres lecturas GPS
+  suficientemente precisas detectan desviación, con pausa de 90 segundos.
+- Botón Finalizar ruta y botón Voz sí/no; la ruta no se comparte con servicios
+  externos salvo con el proveedor elegido para calcularla.
+- La pantalla MapLibre nativa sigue disponible como opción alternativa.
+
+IMPORTANTE: se preserva el campo GPS real; nunca se simula movimiento.
+Las instrucciones de maniobra son aproximadas y se determinan por
+la ubicación Android sobre los pasos de la ruta recibida, sin asistencia
+de carril, tráfico en vivo ni garantía de precisión. El tiempo estimado
+proviene del proveedor al calcular, no se actualiza con tráfico en tiempo
+real. Requiere conexión para descargar nuevos mapas, búsqueda y rutas.
+Los proveedores comunitarios son de demostración, sin disponibilidad
+garantizada ni SLA. Ingresar destinos siempre estacionado.

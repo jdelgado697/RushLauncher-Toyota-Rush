@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 46
-        versionName '4.16.0-Conduccion'
+        versionCode 47
+        versionName '4.17.0-RutasInicio'
     }
 
     compileOptions {
