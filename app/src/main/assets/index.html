@@ -535,6 +535,25 @@
  .nav-gps-health button{min-height:27px;font-size:10px}
 }
 
+
+/* Mapa de Inicio 4.15.4: controles internos sin bloquear el panel multimedia. */
+.home-map-tiles{inset:-42%;transform-origin:50% 50%;will-change:transform}
+.home-map-touch{position:absolute;inset:0;z-index:2;touch-action:none;cursor:grab;outline:none}
+.home-map-touch:active{cursor:grabbing}
+.home-map-touch:focus-visible{outline:2px solid #55dfff;outline-offset:-4px}
+.home-map-header{z-index:5}
+.home-map-footer{z-index:5}
+.home-map-route{max-width:60%;font-size:12px}
+.home-map-tools{position:absolute;z-index:6;right:8px;top:49px;display:flex;
+ flex-direction:column;align-items:stretch;gap:5px;max-width:45%}
+.home-map-tools button{border:1px solid #54cfff91;border-radius:8px;background:#062448e8;
+ color:white;font-size:14px;line-height:1.1;min-width:37px;min-height:35px;padding:5px 9px;
+ font-weight:750;box-shadow:0 2px 5px #00173077}
+.home-map-tools button#homeMapFollow{font-size:10px;min-height:33px;white-space:nowrap}
+.home-map-marker{left:50%;top:50%;width:27px;height:32px;z-index:4;border:none;
+ border-radius:0;clip-path:polygon(50% 0,96% 98%,50% 75%,4% 98%);
+ background:#147df4;filter:drop-shadow(0 0 3px #ffffff);color:transparent}
+.home-map.home-map-has-tiles .home-map-grid{opacity:.07}
 </style>
 </head>
 <body>
@@ -602,12 +621,18 @@
 <section class="home-map glass" aria-label="Vista previa del mapa y acceso a la navegación">
    <div id="homeMapTiles" class="home-map-tiles" aria-hidden="true"></div>
    <div class="home-map-grid" aria-hidden="true"></div>
+   <div class="home-map-touch" id="homeMapTouch" role="application" tabindex="0"
+      aria-label="Mover mapa con el dedo. Doble toque para acercar. También puedes usar flechas." ></div>
    <div id="homeMapMarker" class="home-map-marker" hidden aria-label="Posición Android">◆</div>
    <span class="home-map-attribution">© OpenStreetMap contributors</span>
    <div class="home-map-header"><span class="home-map-label">RUSH <strong>NAVIGATOR</strong></span><span id="homeMapStatus">Cargando mapa…</span></div>
-   <div class="home-map-route">Mapa en vivo<small>El vehículo aparece cuando llega GPS real</small></div>
+   <div class="home-map-route">Mapa conducción<small>Arrastra para explorar · GPS rumbo arriba</small></div>
+   <div class="home-map-tools" aria-label="Controles de mapa">
+    <button type="button" id="homeMapFollow" aria-pressed="true" title="Seguir el GPS">▲ Conduciendo</button>
+    <button type="button" id="homeMapZoomIn" aria-label="Acercar mapa">+</button>
+    <button type="button" id="homeMapZoomOut" aria-label="Alejar mapa">−</button>
+   </div>
    <div class="home-map-footer"><span id="homeMapInfo">Pulsa Mapa para navegar</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
-   <button type="button" class="home-map-hit" data-action="map" aria-label="Abrir mapa y navegación"></button>
   </section>
   <div class="widgets">
    <section class="music glass" aria-label="Reproductor multimedia">
@@ -676,6 +701,8 @@
   <div class="sheet-head"><h2>OBD2 Bluetooth</h2><button class="close" data-close="obdPanel" type="button">Cerrar ✕</button></div>
   <p class="muted">ELM327 Bluetooth Classic vinculado con Android. Lectura de PIDs Mode 01 disponibles en la ECU; no realiza escrituras ni cambios al vehículo.</p>
   <p id="obdStatusText" class="muted">No conectado</p>
+  <p id="obdAutoInfo" class="muted">Conexión automática activa · selecciona tu ELM327 una vez si es necesario</p>
+  <button type="button" id="obdAutoToggle" class="actionbtn" aria-pressed="true">Desactivar conexión automática</button>
   <div class="tile-buttons"><button class="actionbtn highlight" type="button" id="scanDevices">Buscar vinculados</button><button class="actionbtn" type="button" id="disconnectObd">Desconectar</button><button type="button" class="actionbtn" data-action="bluetoothSettings">Ajustes Bluetooth</button></div>
   <div class="list" id="deviceList">Sin dispositivos</div>
   <p class="muted">Estado: <span id="obdResult">Sin conexión</span> · RPM: <span id="rpmResult">—</span> · Refrigerante: <span id="coolantResult">—</span></p><button type="button" class="actionbtn highlight" data-action="obdDashboard">Ver tablero avanzado</button>
@@ -848,6 +875,7 @@
 <div id="toast" class="toast" hidden></div>
 <!-- Modo multimedia: NO cargar mapas OSM ni animar teselas en segundo plano. -->
 <script src="app_categories.js"></script>
+<script src="home_map.js"></script>
 <script src="dashboard.js"></script>
 <script src="nav_autocomplete.js"></script>
 <script src="navigation_mode.js"></script>

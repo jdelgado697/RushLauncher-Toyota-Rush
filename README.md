@@ -239,3 +239,30 @@ tablero OBD, Spotify y aplicaciones.
 No hay garantías de disponibilidad de servidores públicos; para
 navegación fiable en producción debe contratarse o desplegarse un servicio
 de geocodificación propio. Siempre preparar el destino con vehículo detenido.
+
+
+## 4.15.4: inicio funcional y conexión automática
+
+Base: 4.15.3, con mapa nativo de navegación y todos los accesos anteriores.
+
+- **Clima**: primera instalación de la actualización activa clima en Inicio.
+  Usa el GPS del TBox con el permiso de ubicación Android y se actualiza
+  periódicamente. El usuario puede apagarlo desde el mismo widget.
+- **OBD-II**: conexión Bluetooth Classic automática solo con adaptador
+  ELM327 emparejado. Recuerda la última MAC seleccionada. En ausencia de
+  preferencia, detecta UN ÚNICO dispositivo claramente identificado como
+  OBD/ELM/VGate/VLink/Veepeak/iCar; si hay varios, pide escoger uno en el
+  menú de conexión. No se empareja automáticamente ni escribe datos ECU.
+  Ante fallo, reintenta cuando el launcher está abierto, en intervalos
+  moderados (45 segundos). Desconectar desactiva la opción automática
+  hasta reactivarla o conectar manualmente.
+- **Mapa Inicio**: ya es un mapa interactivo. Arrastra con el dedo
+  para explorar, usa +/- para zoom y «Seguir» para recuperar modo conducción.
+  Arranca en seguimiento rumbo arriba cuando Android entrega dirección y
+  velocidad. Sin lectura GPS muestra mapa de **referencia**, nunca afirma
+  que la ubicación sea la del vehículo. El modo navegación completo
+  MapLibre sigue disponible desde «Abrir mapa completo».
+- **Límites**: el widget Inicio usa mapa raster 2D ligero; el modo 3D
+  con rutas sigue en la pantalla nativa. Las teselas OSM y el pronóstico
+  requieren internet; no se prometen incidencias viales ni navegación offline.
+  Nunca manipular la pantalla mientras se conduce.

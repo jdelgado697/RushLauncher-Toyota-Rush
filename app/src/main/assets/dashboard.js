@@ -4,7 +4,16 @@
 var $=function(id){return document.getElementById(id)};
 var nativeApp=!!(window.Rush&&typeof window.Rush.open==='function');
 var saved={};
-try{saved={name:localStorage.getItem('rush_user_name')||'',theme:localStorage.getItem('rush_theme')||'dark',weather:localStorage.getItem('rush_weather')==='yes'}}catch(e){saved={name:'',theme:'dark',weather:false}};
+try{
+ // Migración única solicitada: clima activo al instalar 4.15.4.
+ if(localStorage.getItem('rush_weather_4154')!=='yes'){
+  localStorage.setItem('rush_weather','yes');
+  localStorage.setItem('rush_weather_4154','yes');
+ }
+ saved={name:localStorage.getItem('rush_user_name')||'',
+        theme:localStorage.getItem('rush_theme')||'dark',
+        weather:localStorage.getItem('rush_weather')!=='no'};
+}catch(e){saved={name:'',theme:'dark',weather:true}};
 var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,obd:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
@@ -361,47 +370,14 @@ window.rushGpsData=function(speed,heading){
  state.gps=(typeof speed==='number'&&isFinite(speed))?Math.max(0,speed):null;
  if(state.gps!==null)state.gpsStatus='GPS disponible';
  if(window.RushLiveMap)window.RushLiveMap.updateHeading(heading,state.gps);
+ if(window.RushHomeMap)window.RushHomeMap.setHeading(heading,state.gps);
  renderMetrics();
 };
 
-/* Vista 2D compacta en Inicio. A lo sumo 9 mosaicos por posición, sin
-   animaciones y con umbral de actualización. No incrusta Waze. */
-var homeMapLast=null,homeMapLastTime=0;
+/* 4.15.4: home_map.js dibuja mapa ligero con arrastre, zoom, posición GPS,
+   rumbo arriba y seguimiento. El panel evita recargar teselas en bucles. */
 function updateHomeMap(lat,lon,accuracy){
- var box=$('homeMapTiles'),host=document.querySelector('.home-map');
- if(!box||!host||!Number.isFinite(lat)||!Number.isFinite(lon))return;
- if(!Number.isFinite(accuracy)||accuracy>1000){
-  write('homeMapStatus','Ubicación imprecisa');return;
- }
- var now=Date.now();
- if(homeMapLast && now-homeMapLastTime<30000 &&
-    Math.abs(homeMapLast.lat-lat)<.0015 && Math.abs(homeMapLast.lon-lon)<.0015)return;
- if(!$('mapPanel').hidden)return;
- homeMapLast={lat:lat,lon:lon};homeMapLastTime=now;
- var w=box.clientWidth,h=box.clientHeight,zoom=14,n=Math.pow(2,zoom),tileSize=256;
- if(w<20||h<20)return;
- var latSafe=Math.max(-85.05112878,Math.min(85.05112878,lat));
- var xx=(lon+180)/360*n;
- var latRad=latSafe*Math.PI/180;
- var yy=(1-Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n;
- var centerX=xx*tileSize,centerY=yy*tileSize;
- var xMin=Math.floor((centerX-w/2)/tileSize),xMax=Math.floor((centerX+w/2)/tileSize);
- var yMin=Math.floor((centerY-h/2)/tileSize),yMax=Math.floor((centerY+h/2)/tileSize);
- var frag=document.createDocumentFragment(),count=0;
- for(var ty=yMin;ty<=yMax;ty++)for(var tx=xMin;tx<=xMax;tx++){
-  if(count>=9||ty<0||ty>=n)continue;
-  var img=document.createElement('img');
-  img.alt='';img.decoding='async';
-  img.style.left=(tx*tileSize-centerX+w/2)+'px';
-  img.style.top=(ty*tileSize-centerY+h/2)+'px';
-  img.src='https://tile.openstreetmap.org/'+zoom+'/'+((tx%n+n)%n)+'/'+ty+'.png';
-  frag.appendChild(img);count++;
- }
- box.replaceChildren(frag);
- host.classList.add('home-map-has-tiles');
- show($('homeMapMarker'),true);
- write('homeMapStatus','Ubicación Android ±'+Math.round(accuracy)+' m');
- write('homeMapInfo','Zona cercana · tocar para navegar');
+ if(window.RushHomeMap)window.RushHomeMap.setPosition(lat,lon,accuracy);
 }
 
 window.rushPosition=function(lat,lon,accuracy){
@@ -489,6 +465,20 @@ window.rushObdDevices=function(devices){
 };
 $('scanDevices').addEventListener('click',loadDevices);
 $('disconnectObd').addEventListener('click',function(){if(nativeApp)window.Rush.disconnectObd()});
+var obdAutoEnabled=true;
+window.rushObdAutoState=function(enabled,selectedMac){
+ obdAutoEnabled=enabled!==false;
+ var btn=$('obdAutoToggle');
+ if(btn){btn.textContent=obdAutoEnabled?'Desactivar conexión automática':'Activar conexión automática';
+  btn.setAttribute('aria-pressed',obdAutoEnabled?'true':'false')}
+ write('obdAutoInfo',obdAutoEnabled?
+   (selectedMac?'ELM327 recordado · conexión automática al abrir':'Automático activo · selecciona ELM327 si hay varios') :
+   'Automático desactivado · puedes conectar manualmente');
+};
+$('obdAutoToggle').addEventListener('click',function(){
+ if(!nativeApp||!window.Rush.setObdAutoConnect)return;
+ window.Rush.setObdAutoConnect(!obdAutoEnabled);
+});
 function weatherWord(code){
  if(code===0)return ['Despejado','☀'];
  if(code<=3)return ['Parcialmente nublado','⛅'];
@@ -847,12 +837,8 @@ window.addEventListener('focus',function(){
 
  }
 });
-// Mapa real en Inicio: referencia Loncoche hasta recibir una lectura GPS.
-updateHomeMap(-39.367,-72.632,30);
-homeMapLast=null;
-show($('homeMapMarker'),false);
-write('homeMapStatus','Loncoche · referencia, esperando GPS');
-write('homeMapInfo','GPS iniciándose · pulsa el mapa para conducir');
+// home_map.js ya muestra Loncoche como referencia mientras inicia GPS.
+if(window.RushHomeMap)window.RushHomeMap.follow();
 updateTime();updateWeather();renderMetrics();renderObdAdvanced();
 setInterval(updateTime,30000);
 setInterval(updateMusicProgress,1000);

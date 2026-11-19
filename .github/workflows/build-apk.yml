@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo]
 
 permissions:
   contents: read
@@ -44,6 +44,7 @@ jobs:
           node --check app/src/main/assets/live_map.js
           node --check app/src/main/assets/nav_autocomplete.js
           node --check app/src/main/assets/navigation_mode.js
+          node --check app/src/main/assets/home_map.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -99,6 +100,15 @@ jobs:
           assert 'searchNetwork.execute' in native_nav and 'ROUTE_BACKUP' in native_nav
           assert 'searchWithFallback' in native_nav
           assert 'Geocoder.isPresent()' in native_nav
+          assert '<script src="home_map.js"></script>' in html
+          assert html.index('home_map.js') < html.index('dashboard.js')
+          home_map=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
+          assert "setPointerCapture" in home_map and "setPosition:setPosition" in home_map
+          assert 'id="homeMapTouch"' in html and 'id="homeMapFollow"' in html
+          assert 'rush_weather_4154' in js and "window.RushHomeMap.setPosition" in js
+          assert 'setObdAutoConnect(boolean enabled)' in native
+          assert 'isActive()' in Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
+          assert 'id="obdAutoToggle"' in html
           assert 'getJsonArray(url)' in native_nav
           assert 'search(destinationText, true)' in native_nav
           assert 'Photon ' in native_nav and 'Nominatim' in native_nav
@@ -275,7 +285,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 44" in gradle
+          assert "versionCode 45" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
