@@ -112,7 +112,8 @@ jobs:
           assert 'getJsonArray(url)' in native_nav
           assert 'search(destinationText, true)' in native_nav
           assert 'Photon ' in native_nav and 'Nominatim' in native_nav
-          assert "updateHomeMap(-39.367,-72.632,30)" in js
+          assert 'if(window.RushHomeMap)window.RushHomeMap.follow()' in js
+          assert "Loncoche · mapa de referencia" in home_map
           assert 'android:name="cl.rush.launcher.NavigationActivity"' in manifest
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
