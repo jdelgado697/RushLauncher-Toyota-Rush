@@ -11,10 +11,10 @@ try{
   localStorage.setItem('rush_weather_4154','yes');
  }
  saved={name:localStorage.getItem('rush_user_name')||'',
-        theme:localStorage.getItem('rush_theme')||'dark',
+        theme:localStorage.getItem('rush_theme')||'auto',
         weather:localStorage.getItem('rush_weather')!=='no',
         drive:localStorage.getItem('rush_drive_ui')!=='no'};
-}catch(e){saved={name:'',theme:'dark',weather:true,drive:true}};
+}catch(e){saved={name:'',theme:'auto',weather:true,drive:true}};
 var state={gps:null,gpsStatus:'Esperando señal GPS',location:null,obdConnected:false,obdSpeed:null,rpm:null,coolant:null,obd:null,weather:null,weatherLoading:false,spotify:null,spotifyConnected:false,spotifyConfigured:false,apps:[],appIcons:{},dockApps:{},weatherAsked:0};
 function write(id,value){var el=$(id);if(el)el.textContent=value}
 function show(el,visible){if(el)el.hidden=!visible}
@@ -54,9 +54,13 @@ function updateTime(){
  applyTheme();
 }
 function applyTheme(){
- var dark=saved.theme==='dark'||(saved.theme==='auto'&&(new Date().getHours()<7||new Date().getHours()>=19));
+ // Auto usa la hora LOCAL del Android del Carlinkit.
+ var currentHour=new Date().getHours();
+ var dark=saved.theme==='dark'||(saved.theme==='auto'&&(currentHour<7||currentHour>=19));
  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
- write('modeLabel',saved.theme==='auto'?'Automático':dark?'Oscuro':'Claro');
+ var bar=document.querySelector('meta[name="theme-color"]');
+ if(bar)bar.setAttribute('content',dark?'#0e1036':'#e3defc');
+ write('modeLabel',saved.theme==='auto'?'Automático ('+(dark?'noche':'día')+')':dark?'Oscuro':'Claro');
  write('modeSwitch',dark?'☾':'☀');
  Array.prototype.forEach.call(document.querySelectorAll('[data-theme-choice]'),function(b){
   b.classList.toggle('is-selected',b.getAttribute('data-theme-choice')===saved.theme);
@@ -862,10 +866,11 @@ document.addEventListener('visibilitychange',function(){
  if(document.hidden&&!$('mapPanel').hidden)closeOverlay('mapPanel');
 });
 window.addEventListener('focus',function(){
- if(nativeApp){
-  window.Rush.ready();
-
- }
+ applyTheme();
+ if(nativeApp){window.Rush.ready();}
+});
+document.addEventListener('visibilitychange',function(){
+ if(!document.hidden)applyTheme();
 });
 // La pantalla de conducción se activa por defecto y se puede desactivar
 // sin detener GPS, clima, Spotify ni conexión ELM327.
