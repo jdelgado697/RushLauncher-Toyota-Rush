@@ -334,7 +334,7 @@ jobs:
           assert 'id="homeMapTiles"' in html
           assert 'home-map-has-tiles' in html
           assert 'function updateHomeMap(' in js
-          assert "https://tile.openstreetmap.org/" in js
+          assert "https://tile.openstreetmap.org/" in home_map
           assert '© OpenStreetMap contributors' in html
           assert 'id="homeMapMarker"' in html
           assert 'grid-template-rows:minmax(0,3fr) minmax(0,2fr)' in html
