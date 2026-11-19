@@ -40,6 +40,8 @@ public final class ObdReader {
     private volatile Thread worker;
 
     public ObdReader(Listener listener) { this.listener=listener; }
+    /** Conexión Bluetooth o lectura en curso; evita múltiples RFCOMM simultáneos. */
+    public boolean isActive() { return running; }
     private void status(String msg) { ui.post(() -> listener.onStatus(msg)); }
     private void data(JSONObject snapshot) { ui.post(() -> listener.onData(snapshot)); }
 

@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -59,6 +60,20 @@ public class MainActivity extends Activity implements LocationListener {
     private static final int LOCATION_REQUEST_CODE = 1101;
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
     private ObdReader obdReader;
+    private static final String OBD_PREFS = "rush_obd_autoconnect";
+    private static final String OBD_MAC = "paired_elm327";
+    private static final String OBD_AUTOMATIC = "enabled";
+    private boolean obdPermissionRequested = false;
+    private boolean obdInForeground = false;
+    private final Runnable obdAutoPoll = new Runnable() {
+        @Override public void run() {
+            if (!obdInForeground || isFinishing()) return;
+            autoConnectObd();
+            // Reintentos moderados, nunca un bucle Bluetooth continuo.
+            if (obdInForeground && !isFinishing() && obdReader != null
+                    && !obdReader.isActive()) scheduleObdAuto(false);
+        }
+    };
     private SpotifyConnectClient spotifyConnect;
     private SpotifyArtworkFetcher spotifyArtwork;
     private TextToSpeech navSpeech;
@@ -271,13 +286,16 @@ public class MainActivity extends Activity implements LocationListener {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageLoaded = true;
-                // Modo multimedia: sin solicitud de GPS al iniciar ni mapa activo.
-                // El GPS se inicia solo al pulsar Activar clima o Solicitar GPS.
+                // Inicio activo: GPS y clima se controlan desde dashboard.js.
+                // El ELM327 autorizado se reconecta si está vinculado.
+                obdInForeground = true;
+                scheduleObdAuto(true);
                 sendSpotifyState();
                 sendHomeState();
                 
                 dispatchExternalNavigation();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
+                sendObdAutoState();
             }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -709,6 +727,84 @@ public class MainActivity extends Activity implements LocationListener {
             return false;
         }
         return true;
+    }
+
+    private SharedPreferences obdSettings() {
+        return getSharedPreferences(OBD_PREFS, MODE_PRIVATE);
+    }
+
+    private void sendObdAutoState() {
+        boolean enabled = obdSettings().getBoolean(OBD_AUTOMATIC, true);
+        String remembered = obdSettings().getString(OBD_MAC, "");
+        javascript("if(window.rushObdAutoState)window.rushObdAutoState("
+                + enabled + "," + JSONObject.quote(remembered) + ");");
+    }
+
+    private void scheduleObdAuto(boolean soon) {
+        mainHandler.removeCallbacks(obdAutoPoll);
+        if (!obdInForeground || !obdSettings().getBoolean(OBD_AUTOMATIC, true))
+            return;
+        mainHandler.postDelayed(obdAutoPoll, soon ? 900L : 45000L);
+    }
+
+    /**
+     * Conexión read-only SPP: recuerda MAC escogida por el usuario y verifica
+     * que sigue vinculada. Si no hay preferencia, solo selecciona un ÚNICO
+     * ELM327 reconocible. Nunca intenta conectar a teléfonos/audio u otros.
+     */
+    private void autoConnectObd() {
+        if (obdReader == null || obdReader.isActive() || !obdInForeground
+                || !obdSettings().getBoolean(OBD_AUTOMATIC, true)) return;
+        if (Build.VERSION.SDK_INT >= 31
+                && checkSelfPermission("android.permission.BLUETOOTH_CONNECT")
+                    != PackageManager.PERMISSION_GRANTED) {
+            if (!obdPermissionRequested) {
+                obdPermissionRequested = true;
+                requestPermissions(new String[] {"android.permission.BLUETOOTH_CONNECT"},
+                        BLUETOOTH_REQUEST_CODE);
+            }
+            javascript("window.rushObdStatus('Concede permiso Bluetooth para conexión automática');");
+            return;
+        }
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter == null || !adapter.isEnabled()) {
+            javascript("window.rushObdStatus('Bluetooth desactivado: activa Bluetooth Android');");
+            return;
+        }
+        String remembered = obdSettings().getString(OBD_MAC, "");
+        String selected = "";
+        int recognized = 0;
+        try {
+            JSONArray bonded = obdReader.pairedDevices();
+            for (int i=0; i<bonded.length(); i++) {
+                JSONObject item = bonded.optJSONObject(i);
+                if(item==null)continue;
+                String mac = item.optString("address","");
+                String label = item.optString("name","").toLowerCase(Locale.ROOT);
+                if (!android.bluetooth.BluetoothAdapter.checkBluetoothAddress(mac)) continue;
+                if (!remembered.isEmpty() && remembered.equalsIgnoreCase(mac)) {
+                    selected = mac;
+                    break;
+                }
+                // Adaptadores clásicos: no incluir cualquier periférico cercano.
+                if(label.contains("elm327") || label.contains("obd")
+                    || label.contains("vgate") || label.contains("vlink")
+                    || label.contains("veepeak") || label.contains("konnwei")
+                    || label.contains("icar")) {
+                    selected = mac;
+                    recognized++;
+                }
+            }
+        } catch (SecurityException ignored) {
+            javascript("window.rushObdStatus('No se pudieron leer dispositivos Bluetooth vinculados');");
+            return;
+        }
+        if (selected.isEmpty() || (remembered.isEmpty() && recognized != 1)) {
+            javascript("window.rushObdStatus('OBD automático: elige tu ELM327 una vez en Conexión');");
+            return;
+        }
+        javascript("window.rushObdStatus('Conectando ELM327 automáticamente…');");
+        obdReader.connect(selected);
     }
 
     private void showPairedObd() {
@@ -1334,7 +1430,10 @@ public class MainActivity extends Activity implements LocationListener {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode == BLUETOOTH_REQUEST_CODE) {
-            showPairedObd();
+            boolean granted = results.length > 0
+                    && results[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted) { showPairedObd(); scheduleObdAuto(true); }
+            else javascript("window.rushObdStatus('Permiso Bluetooth denegado');");
             return;
         }
         if (requestCode == LOCATION_REQUEST_CODE) {
@@ -1400,6 +1499,8 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onPause() {
+        obdInForeground = false;
+        mainHandler.removeCallbacks(obdAutoPoll);
         if (spotifyConnect != null) spotifyConnect.pause();
         super.onPause();
         if (locationManager != null) {
@@ -1412,6 +1513,8 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onResume() {
         super.onResume();
+        obdInForeground = true;
+        if (pageLoaded) scheduleObdAuto(true);
         if (spotifyConnect != null) spotifyConnect.resume();
         if (pageLoaded) {
             if (gpsRequested || mapGpsActive || weatherGpsActive) startGps();
@@ -1422,6 +1525,8 @@ public class MainActivity extends Activity implements LocationListener {
 
     @Override
     protected void onDestroy() {
+        obdInForeground = false;
+        mainHandler.removeCallbacks(obdAutoPoll);
         stopGpsWatchdog();
         if(locationManager!=null){
             try{locationManager.removeUpdates(this);}catch(SecurityException ignored){}
@@ -1474,6 +1579,7 @@ public class MainActivity extends Activity implements LocationListener {
                 sendSpotifyState();
                 sendDockIcons();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
+                sendObdAutoState();
             });
         }
         @JavascriptInterface public void spotifyClientId(String clientId) {
@@ -1589,10 +1695,29 @@ public class MainActivity extends Activity implements LocationListener {
             runUi(() -> showPairedObd());
         }
         @JavascriptInterface public void connectObd(String mac) {
-            runUi(() -> { if (bluetoothAvailable()) obdReader.connect(mac); });
+            runUi(() -> {
+                if (!bluetoothAvailable() || !BluetoothAdapter.checkBluetoothAddress(mac)) return;
+                obdSettings().edit().putString(OBD_MAC,mac)
+                        .putBoolean(OBD_AUTOMATIC,true).apply();
+                obdReader.connect(mac);
+                sendObdAutoState();
+            });
         }
         @JavascriptInterface public void disconnectObd() {
-            runUi(() -> obdReader.disconnect());
+            runUi(() -> {
+                obdSettings().edit().putBoolean(OBD_AUTOMATIC,false).apply();
+                mainHandler.removeCallbacks(obdAutoPoll);
+                obdReader.disconnect();
+                sendObdAutoState();
+            });
+        }
+        @JavascriptInterface public void setObdAutoConnect(boolean enabled) {
+            runUi(() -> {
+                obdSettings().edit().putBoolean(OBD_AUTOMATIC, enabled).apply();
+                sendObdAutoState();
+                if (enabled) scheduleObdAuto(true);
+                else mainHandler.removeCallbacks(obdAutoPoll);
+            });
         }
         @JavascriptInterface public void bluetoothSettings() {
             runUi(() -> openBluetoothSettings());
