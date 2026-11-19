@@ -98,6 +98,9 @@ public final class NavigationActivity extends Activity implements LocationListen
     private long lastGpsElapsed = -1;
     private long lastRouteElapsed = -120000;
     private int instructionIndex = 0;
+    private Location lastCameraFix;
+    private long lastCameraElapsed = 0L;
+    private static final String ROUTE_BACKUP = "https://routing.openstreetmap.de/routed-car/route/v1/driving/";
     private Runnable pendingSearch;
 
     private static final class Step {
@@ -371,7 +374,7 @@ public final class NavigationActivity extends Activity implements LocationListen
         if (destinationSource != null) destinationSource.setGeoJson(Feature.fromGeometry(point));
         if (map != null) map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(new LatLng(point.latitude(), point.longitude()), 14), 500);
-        if (fix != null) calculateRoute(false);
+        if (fix != null && lastGpsElapsed >= 0 && SystemClock.elapsedRealtime()-lastGpsElapsed<15000) calculateRoute(false);
         else {
             guidance.setText("Destino seleccionado · esperando ubicación GPS");
             status.setText("Activa Ubicación precisa en Android");
@@ -421,7 +424,19 @@ public final class NavigationActivity extends Activity implements LocationListen
                 String url = ROUTE + String.format(Locale.US, "%.6f,%.6f;%.6f,%.6f",
                         origin.getLongitude(), origin.getLatitude(), target.longitude(), target.latitude())
                         + "?overview=full&geometries=geojson&steps=true";
-                JSONObject response = getJson(url);
+                JSONObject response;
+                try {
+                    response = getJson(url);
+                    if (!"Ok".equalsIgnoreCase(response.optString("code","Ok")))
+                        throw new Exception("No hay ruta desde el servidor principal");
+                } catch (Exception primary) {
+                    String backupUrl = ROUTE_BACKUP + String.format(Locale.US,
+                            "%.6f,%.6f;%.6f,%.6f",
+                            origin.getLongitude(), origin.getLatitude(),
+                            target.longitude(), target.latitude())
+                            + "?overview=full&geometries=geojson&steps=true";
+                    response = getJson(backupUrl);
+                }
                 JSONArray routes = response.optJSONArray("routes");
                 if (routes == null || routes.length() == 0) throw new Exception("No se encontró una ruta");
                 JSONObject route = routes.getJSONObject(0);
@@ -471,8 +486,8 @@ public final class NavigationActivity extends Activity implements LocationListen
             } catch (Exception ex) {
                 runOnUiThread(() -> {
                     if (!isFinishing()) {
-                        guidance.setText("No se pudo calcular ruta. Reintenta con internet.");
-                        status.setText("El servicio de rutas puede estar temporalmente no disponible");
+                        guidance.setText("No se calculó la ruta · pulsa Calcular ruta para reintentar");
+                        status.setText("Servicio de rutas no disponible: "+ex.getClass().getSimpleName());
                     }
                 });
             } finally {
@@ -520,8 +535,13 @@ public final class NavigationActivity extends Activity implements LocationListen
                 .tilt(45.0)
                 .bearing(bearing)
                 .build();
+        long now=SystemClock.elapsedRealtime();
+        if(!immediate && lastCameraFix!=null &&
+           value.distanceTo(lastCameraFix)<2.0f && now-lastCameraElapsed<1800L)return;
+        lastCameraFix = new Location(value);
+        lastCameraElapsed=now;
         if (immediate) map.moveCamera(CameraUpdateFactory.newCameraPosition(camera));
-        else map.animateCamera(CameraUpdateFactory.newCameraPosition(camera), 650);
+        else map.animateCamera(CameraUpdateFactory.newCameraPosition(camera), 600);
     }
 
     @Override public void onLocationChanged(Location value) {
@@ -537,7 +557,7 @@ public final class NavigationActivity extends Activity implements LocationListen
         status.setText("GPS activo · ±" + Math.round(value.getAccuracy()) + " m"
                 + (value.hasSpeed() ? " · " + Math.round(value.getSpeed() * 3.6f) + " km/h" : ""));
         if (destination == null) return;
-        if (routePoints.isEmpty()) { calculateRoute(false); return; }
+        if (routePoints.isEmpty()) { calculateRoute(true); return; }
         Point p = Point.fromLngLat(value.getLongitude(), value.getLatitude());
         double nearest = Double.MAX_VALUE;
         for (int i = 0; i < routePoints.size(); i += Math.max(1, routePoints.size() / 250)) {
