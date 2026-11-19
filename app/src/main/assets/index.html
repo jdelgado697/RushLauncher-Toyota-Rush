@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#c6c6f9"/>
-<title>Rush Launcher 4.14 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
+<title>Rush Launcher 4.15 · Clima en Inicio, OBD, Mapa y Spotify XL</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -474,7 +474,7 @@
 @media(max-width:860px){.nav-diagnostics{left:7px;right:52px;top:7px;padding:7px 9px}
  .nav-diagnostics p{font-size:11px}}
 
-/* Rush Launcher 4.14: modo conducción ligero y flecha visible. */
+/* Rush Launcher 4.15: modo conducción ligero y flecha visible. */
 #mapPanel.is-driving .nav-search{display:none}
 #mapPanel.is-driving .nav-results{display:none!important}
 #mapPanel.is-driving .map-sheet{gap:4px}
@@ -517,6 +517,23 @@
 #realMap.is-navigating .map-tile{will-change:auto!important;transition:none!important}
 #mapPositionMarker.is-navigation{transition:none!important;filter:drop-shadow(0 3px 3px #08213b)}
 #mapPanel .nav-guide strong{font-variant-numeric:tabular-nums}
+
+
+/* Diagnóstico de lecturas: nunca rotular un dato antiguo como ubicación actual. */
+.nav-gps-health{position:absolute;left:8px;bottom:36px;z-index:11;
+ display:flex;align-items:center;gap:7px;max-width:65%;padding:5px 8px;
+ color:#f2faff;background:#092441d9;border:1px solid #419bd0;
+ border-radius:9px;font-size:11px;font-weight:650;pointer-events:auto;
+ box-shadow:0 1px 5px #0008}
+.nav-gps-health.is-stale{border-color:#ffb955;color:#fff3dc;background:#42280ce8}
+.nav-gps-health button{min-height:30px;padding:4px 8px;border-radius:7px;
+ color:#04192d;background:#ffc16c;border:none;font-size:10px;font-weight:800}
+.nav-gps-health button[hidden]{display:none!important}
+#mapPanel.is-driving .nav-gps-health{bottom:35px}
+@media(max-width:860px){
+ .nav-gps-health{left:5px;bottom:28px;max-width:62%;padding:3px 6px;font-size:10px}
+ .nav-gps-health button{min-height:27px;font-size:10px}
+}
 
 </style>
 </head>
@@ -630,7 +647,7 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.14 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.15 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -754,6 +771,10 @@
     <button type="button" id="navDriveOverview" title="Ver mapa norte arriba">Vista general</button>
     <button type="button" id="navVoiceToggle" title="Activar o desactivar indicaciones por voz">Voz: sí</button>
    </div>
+   <div id="navGpsHealth" class="nav-gps-health" role="status" aria-live="off">
+    <span id="navGpsHealthText">GPS: esperando lecturas…</span>
+    <button type="button" id="navGpsRestart" hidden>Reactivar GPS</button>
+   </div>
    <div class="mapnote" id="locationStatus">Sin lectura de ubicación</div>
    <span class="map-attribution">© OpenStreetMap contributors</span>
   </div>
@@ -791,7 +812,7 @@
    <summary>Integración avanzada por Spotify API (opcional)</summary>
    <p class="muted">Solo para cuentas que puedan registrar una aplicación en Spotify for Developers. Permite metadatos, carátula y búsqueda de estado desde Spotify Connect con autorización OAuth PKCE.</p>
    <p class="muted">Registra exactamente esta URI de retorno:</p>
-   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherobd414://spotify/callback" readonly aria-label="Redirección Spotify"/>
+   <input class="searchapps" id="spotifyRedirect" type="text" value="rushlauncherobd415://spotify/callback" readonly aria-label="Redirección Spotify"/>
    <p class="muted">Introduce solamente el Client ID público (nunca Client Secret).</p>
    <input class="searchapps" id="spotifyClientId" type="text" maxlength="32" placeholder="Client ID (32 caracteres)" autocomplete="off" autocapitalize="off" spellcheck="false"/>
    <div class="tile-buttons">
