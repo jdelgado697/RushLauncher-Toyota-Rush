@@ -37,6 +37,7 @@ import org.maplibre.android.camera.CameraPosition;
 import org.maplibre.android.camera.CameraUpdateFactory;
 import org.maplibre.android.geometry.LatLng;
 import org.maplibre.android.maps.MapLibreMap;
+import org.maplibre.android.maps.MapLibreMapOptions;
 import org.maplibre.android.maps.MapView;
 import org.maplibre.android.style.layers.CircleLayer;
 import org.maplibre.android.style.layers.LineLayer;
@@ -70,7 +71,7 @@ public final class NavigationActivity extends Activity implements LocationListen
     private static final String MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
     private static final String SEARCH = "https://photon.komoot.io/api/";
     private static final String ROUTE = "https://router.project-osrm.org/route/v1/driving/";
-    private static final String USER_AGENT = "RushLauncher/4.15.1 (personal Android car navigation; github.com/jdelgado697/RushLauncher-Toyota-Rush)";
+    private static final String USER_AGENT = "RushLauncher/4.15.2 (personal Android car navigation; github.com/jdelgado697/RushLauncher-Toyota-Rush)";
     private static final int BLUE = Color.rgb(55, 129, 255);
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService network = Executors.newSingleThreadExecutor();
@@ -82,6 +83,7 @@ public final class NavigationActivity extends Activity implements LocationListen
     private GeoJsonSource userSource, destinationSource, lineSource;
     private SymbolLayer userArrowLayer;
     private EditText query;
+    private Button routeButton;
     private LinearLayout suggestionBox;
     private TextView status, guidance;
     private LocationManager locations;
@@ -133,7 +135,7 @@ public final class NavigationActivity extends Activity implements LocationListen
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         MapLibre.getInstance(getApplicationContext());
-        mapView = new MapView(this);
+        mapView = new MapView(this, new MapLibreMapOptions().textureMode(true));
         mapView.onCreate(saved);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF101830);
@@ -162,8 +164,8 @@ public final class NavigationActivity extends Activity implements LocationListen
         LinearLayout.LayoutParams qp = new LinearLayout.LayoutParams(0, -1, 1);
         qp.setMargins(dp(7), 0, dp(7), 0);
         searchRow.addView(query, qp);
-        Button center = button("◎ GPS");
-        searchRow.addView(center, new LinearLayout.LayoutParams(dp(84), -1));
+        Button center = button("▲ Conducir");
+        searchRow.addView(center, new LinearLayout.LayoutParams(dp(96), -1));
         center.setOnClickListener(v -> {
             following = true;
             if (fix != null) moveCamera(fix, true);
@@ -186,11 +188,32 @@ public final class NavigationActivity extends Activity implements LocationListen
         bottom.setPadding(dp(10), dp(5), dp(10), dp(5));
         FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
         root.addView(bottom, bp);
-        guidance = text("Rush Navigator · busca un destino para calcular ruta", 14, Color.WHITE);
+        guidance = text("MODO CONDUCCIÓN · GPS y rumbo arriba", 14, Color.WHITE);
         guidance.setMaxLines(2);
         bottom.addView(guidance, new LinearLayout.LayoutParams(-1, -2));
         status = text("Esperando señal GPS · mapa necesita internet", 11, 0xFFAFC7E8);
         bottom.addView(status, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout actions = new LinearLayout(this);
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1,dp(40));
+        ap.topMargin=dp(3); bottom.addView(actions,ap);
+        routeButton=button("Calcular ruta");
+        routeButton.setEnabled(false);routeButton.setAlpha(.5f);
+        actions.addView(routeButton,new LinearLayout.LayoutParams(0,-1,1));
+        routeButton.setOnClickListener(v->{
+            if(destination==null)status.setText("Primero elige destino");
+            else if(fix==null||lastGpsElapsed<0||SystemClock.elapsedRealtime()-lastGpsElapsed>15000)
+                status.setText("Sin GPS reciente: activa ubicación precisa");
+            else calculateRoute(false);
+        });
+        Button pick=button("Elegir en mapa");
+        LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(0,-1,1);
+        pp.leftMargin=dp(5);actions.addView(pick,pp);
+        pick.setOnClickListener(v->guidance.setText("Mantén pulsado el mapa para elegir destino"));
+        Button clear=button("Borrar");
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(dp(72),-1);
+        cp.leftMargin=dp(5);actions.addView(clear,cp);
+        clear.setOnClickListener(v->clearDestination());
+        top.bringToFront();bottom.bringToFront();
 
         query.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -237,6 +260,10 @@ public final class NavigationActivity extends Activity implements LocationListen
                 style.addLayer(userArrowLayer);
                 if (fix != null) renderFix(fix);
                 else map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-38.74, -72.59), 11));
+            });
+            map.addOnMapLongClickListener(point->{
+                selectDestination(Point.fromLngLat(point.getLongitude(),point.getLatitude()),"Punto del mapa");
+                return true;
             });
             map.addOnCameraMoveStartedListener(reason -> {
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) following = false;
@@ -320,7 +347,10 @@ public final class NavigationActivity extends Activity implements LocationListen
     }
 
     private void selectDestination(Point point, String title) {
-        destination = point;
+        destination=point;
+        routePoints.clear();instructions.clear();
+        if(lineSource!=null)lineSource.setGeoJson(FeatureCollection.fromFeatures(new Feature[0]));
+        routeButton.setEnabled(true);routeButton.setAlpha(1f);
         hideSuggestions();
         query.setText(title);
         if (pendingSearch != null) handler.removeCallbacks(pendingSearch);
@@ -336,6 +366,17 @@ public final class NavigationActivity extends Activity implements LocationListen
             guidance.setText("Destino seleccionado · esperando ubicación GPS");
             status.setText("Activa Ubicación precisa en Android");
         }
+    }
+
+    private void clearDestination(){
+        destination=null;routePoints.clear();instructions.clear();
+        routeButton.setEnabled(false);routeButton.setAlpha(.5f);
+        if(lineSource!=null)lineSource.setGeoJson(FeatureCollection.fromFeatures(new Feature[0]));
+        if(destinationSource!=null)destinationSource.setGeoJson(FeatureCollection.fromFeatures(new Feature[0]));
+        guidance.setText("MODO CONDUCCIÓN · GPS y rumbo arriba");
+        status.setText("Busca destino o pulsa sobre mapa");
+        query.setText("");hideSuggestions();following=true;
+        if(fix!=null)moveCamera(fix,true);
     }
 
     private JSONObject getJson(String location) throws Exception {
@@ -465,8 +506,8 @@ public final class NavigationActivity extends Activity implements LocationListen
         float bearing = value.hasBearing() && value.getSpeed() >= 1.0f ? value.getBearing() : 0f;
         CameraPosition camera = new CameraPosition.Builder()
                 .target(new LatLng(value.getLatitude(), value.getLongitude()))
-                .zoom(routePoints.size() > 0 ? 16.5 : 15.0)
-                .tilt(routePoints.size() > 0 ? 45.0 : 0.0)
+                .zoom(routePoints.size() > 0 ? 16.5 : 16.0)
+                .tilt(45.0)
                 .bearing(bearing)
                 .build();
         if (immediate) map.moveCamera(CameraUpdateFactory.newCameraPosition(camera));
