@@ -4,6 +4,10 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.drawable.GradientDrawable;
 import android.location.Location;
 import android.location.LocationListener;
@@ -36,6 +40,7 @@ import org.maplibre.android.maps.MapLibreMap;
 import org.maplibre.android.maps.MapView;
 import org.maplibre.android.style.layers.CircleLayer;
 import org.maplibre.android.style.layers.LineLayer;
+import org.maplibre.android.style.layers.SymbolLayer;
 import org.maplibre.android.style.layers.PropertyFactory;
 import org.maplibre.android.style.sources.GeoJsonSource;
 import org.maplibre.geojson.Feature;
@@ -75,6 +80,7 @@ public final class NavigationActivity extends Activity implements LocationListen
     private MapView mapView;
     private MapLibreMap map;
     private GeoJsonSource userSource, destinationSource, lineSource;
+    private SymbolLayer userArrowLayer;
     private EditText query;
     private LinearLayout suggestionBox;
     private TextView status, guidance;
@@ -219,10 +225,16 @@ public final class NavigationActivity extends Activity implements LocationListen
                         PropertyFactory.circleRadius(10f),
                         PropertyFactory.circleStrokeColor(Color.WHITE),
                         PropertyFactory.circleStrokeWidth(3f)));
-                style.addLayer(new CircleLayer("rush-user-dot", "rush-user").withProperties(
-                        PropertyFactory.circleColor(BLUE), PropertyFactory.circleRadius(9f),
-                        PropertyFactory.circleStrokeColor(Color.WHITE),
-                        PropertyFactory.circleStrokeWidth(3f)));
+                style.addLayer(new CircleLayer("rush-user-halo", "rush-user").withProperties(
+                        PropertyFactory.circleColor(0x553781FF), PropertyFactory.circleRadius(16f)));
+                style.addImage("rush-nav-arrow", makeArrow());
+                userArrowLayer = new SymbolLayer("rush-user-arrow", "rush-user").withProperties(
+                        PropertyFactory.iconImage("rush-nav-arrow"),
+                        PropertyFactory.iconSize(0.9f),
+                        PropertyFactory.iconAllowOverlap(true),
+                        PropertyFactory.iconIgnorePlacement(true),
+                        PropertyFactory.iconRotate(0f));
+                style.addLayer(userArrowLayer);
                 if (fix != null) renderFix(fix);
                 else map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-38.74, -72.59), 11));
             });
@@ -311,6 +323,7 @@ public final class NavigationActivity extends Activity implements LocationListen
         destination = point;
         hideSuggestions();
         query.setText(title);
+        if (pendingSearch != null) handler.removeCallbacks(pendingSearch);
         ++searchRequest; // invalida cualquier búsqueda antigua
         ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
                 .hideSoftInputFromWindow(query.getWindowToken(), 0);
@@ -417,11 +430,33 @@ public final class NavigationActivity extends Activity implements LocationListen
         });
     }
 
+    private Bitmap makeArrow() {
+        Bitmap bitmap = Bitmap.createBitmap(80, 80, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
+        border.setStyle(Paint.Style.STROKE);
+        border.setStrokeWidth(7f); border.setColor(Color.WHITE);
+        border.setStrokeJoin(Paint.Join.ROUND);
+        Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+        fill.setColor(BLUE);
+        Path triangle = new Path();
+        triangle.moveTo(40, 6);
+        triangle.lineTo(14, 70);
+        triangle.lineTo(40, 57);
+        triangle.lineTo(66, 70);
+        triangle.close();
+        canvas.drawPath(triangle, border);
+        canvas.drawPath(triangle, fill);
+        return bitmap;
+    }
+
     private void renderFix(Location value) {
         if (userSource != null) {
             userSource.setGeoJson(Feature.fromGeometry(
                     Point.fromLngLat(value.getLongitude(), value.getLatitude())));
         }
+        if (userArrowLayer != null && value.hasBearing() && value.getSpeed() >= 0.8f)
+            userArrowLayer.setProperties(PropertyFactory.iconRotate(value.getBearing()));
         if (following) moveCamera(value, false);
     }
 
