@@ -75,6 +75,9 @@ public final class NavigationActivity extends Activity implements LocationListen
     private static final int BLUE = Color.rgb(55, 129, 255);
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService network = Executors.newSingleThreadExecutor();
+    private final ExecutorService searchNetwork = Executors.newFixedThreadPool(2);
+    private ScrollView resultsScroll;
+    private long lastSearchStartedAt=0L;
     private final List<Point> routePoints = new ArrayList<>();
     private final List<Step> instructions = new ArrayList<>();
 
@@ -172,15 +175,15 @@ public final class NavigationActivity extends Activity implements LocationListen
             else Toast.makeText(this, "Esperando ubicación Android", Toast.LENGTH_SHORT).show();
         });
 
-        ScrollView resultScroll = new ScrollView(this);
-        resultScroll.setFillViewport(false);
-        resultScroll.setBackground(bg(0xF51A2341, 12));
+        resultsScroll = new ScrollView(this);
+        resultsScroll.setFillViewport(false);
+        resultsScroll.setBackground(bg(0xF51A2341, 12));
         suggestionBox = new LinearLayout(this);
         suggestionBox.setOrientation(LinearLayout.VERTICAL);
-        resultScroll.addView(suggestionBox);
-        top.addView(resultScroll, new LinearLayout.LayoutParams(-1, -2));
-        resultScroll.setVisibility(View.GONE);
-        suggestionBox.setTag(resultScroll);
+        resultsScroll.addView(suggestionBox);
+        top.addView(resultsScroll, new LinearLayout.LayoutParams(-1, -2));
+        resultsScroll.setVisibility(View.GONE);
+        suggestionBox.setTag(resultsScroll);
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.VERTICAL);
@@ -275,13 +278,16 @@ public final class NavigationActivity extends Activity implements LocationListen
 
     private void scheduleSearch(String term) {
         searchRequest++;
-        if (pendingSearch != null) handler.removeCallbacks(pendingSearch);
-        if (term.trim().length() < 3) {
-            hideSuggestions();
-            return;
-        }
-        pendingSearch = () -> search(term.trim());
-        handler.postDelayed(pendingSearch, 650); // Mantiene uso moderado de Photon
+        if(pendingSearch!=null)handler.removeCallbacks(pendingSearch);
+        String q=term.trim();
+        if(q.length()<2){hideSuggestions();return;}
+        suggestionBox.removeAllViews();
+        suggestionBox.addView(text("Buscando lugares cercanos en Chile…",13,Color.WHITE));
+        resultsScroll.getLayoutParams().height=dp(45);
+        resultsScroll.setVisibility(View.VISIBLE);
+        long throttle=Math.max(0L,1200L-(SystemClock.elapsedRealtime()-lastSearchStartedAt));
+        pendingSearch=()->search(q);
+        handler.postDelayed(pendingSearch,Math.max(450L,throttle));
     }
 
     private void hideSuggestions() {
@@ -290,15 +296,16 @@ public final class NavigationActivity extends Activity implements LocationListen
     }
 
     private void search(String term) {
-        if (term.length() < 3) return;
+        if (term.length() < 2) return;
         final int ticket = ++searchRequest;
-        final double lat = fix != null ? fix.getLatitude() : -38.74;
-        final double lon = fix != null ? fix.getLongitude() : -72.59;
+        lastSearchStartedAt=SystemClock.elapsedRealtime();
+        final double lat = fix != null ? fix.getLatitude() : -39.367;
+        final double lon = fix != null ? fix.getLongitude() : -72.632;
         status.setText("Buscando destinos en Chile…");
-        network.execute(() -> {
+        searchNetwork.execute(() -> {
             try {
                 String url = SEARCH + "?q=" + URLEncoder.encode(term, "UTF-8")
-                        + "&limit=5&lang=es&countrycode=CL&lat="
+                        + "&limit=8&lang=es&countrycode=CL&lat="
                         + lat + "&lon=" + lon;
                 JSONObject json = getJson(url);
                 JSONArray found = json.optJSONArray("features");
@@ -324,7 +331,8 @@ public final class NavigationActivity extends Activity implements LocationListen
                         TextView t = text("Sin coincidencias. Prueba otro nombre.", 13, Color.WHITE);
                         suggestionBox.addView(t);
                     }
-                    for (int i = 0; i < titles.size(); i++) {
+                    int shown=Math.min(8,titles.size());
+                    for (int i = 0; i < shown; i++) {
                         final int index = i;
                         Button option = button(titles.get(i));
                         option.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -334,13 +342,15 @@ public final class NavigationActivity extends Activity implements LocationListen
                         suggestionBox.addView(option, p);
                         option.setOnClickListener(v -> selectDestination(coords.get(index), titles.get(index)));
                     }
-                    ((View) suggestionBox.getTag()).setVisibility(View.VISIBLE);
-                    status.setText("Resultados en Chile · selecciona un destino");
+                    resultsScroll.getLayoutParams().height=dp(Math.min(185,Math.max(45,shown*45)));
+                    resultsScroll.setVisibility(View.VISIBLE);
+                    resultsScroll.scrollTo(0,0);
+                    status.setText("Sugerencias cercanas · pulsa un lugar");
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     if (ticket == searchRequest && !isFinishing())
-                        status.setText("No se pudo buscar: comprueba internet");
+                        status.setText("Error de búsqueda: revisa Internet o Photon");
                 });
             }
         });
@@ -605,6 +615,7 @@ public final class NavigationActivity extends Activity implements LocationListen
         ++searchRequest;
         handler.removeCallbacksAndMessages(null);
         network.shutdownNow();
+        searchNetwork.shutdownNow();
         mapView.onDestroy(); super.onDestroy();
     }
 }
