@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 52
-        versionName '4.20.0-TomTomTraffic'
+        versionCode 53
+        versionName '4.20.1-MapStable'
     }
 
     compileOptions {

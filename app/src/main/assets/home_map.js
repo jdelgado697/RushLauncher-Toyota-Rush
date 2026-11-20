@@ -45,7 +45,19 @@ var trafficLegend=document.getElementById('homeMapTrafficLegend');
 var trafficButton=document.getElementById('homeMapTraffic');
 var attribution=document.getElementById('homeMapAttribution');
 var trafficCachePeriod=180000; // 3 min para limitar consumo y costos.
-var lastThemeOnTiles='';
+var lastThemeOnTiles='', lastClassicPanel=null;
+function isClassicPanel(){
+ var screen=document.getElementById('rushScreen');
+ return !!(screen&&!screen.classList.contains('drive-ui'));
+}
+function syncPanelZoom(){
+ var classic=isClassicPanel();
+ if(lastClassicPanel===classic)return;
+ lastClassicPanel=classic;
+ autoZoom=!classic&&mapStyle==='drive';
+ zoom=classic?14:(mapStyle==='drive'?
+   (motionSpeed>=85?16:motionSpeed>=50?17:18):15);
+}
 try {
   tomtomKey=localStorage.getItem('rush_tomtom_key_420')||'';
   mapProvider=localStorage.getItem('rush_map_provider_420')==='tomtom'?'tomtom':'osm';
@@ -190,6 +202,9 @@ function setStatus(){
 }
 function render(){
  if(!host.offsetWidth||!host.offsetHeight)return;
+ // En el panel clásico mostrar menos etiquetas raster por nivel de zoom.
+ // En conducción mantener la cartografía cercana de seguimiento.
+ syncPanelZoom();
  var w=layer.clientWidth,h=layer.clientHeight;
  if(w<15||h<15)return;
  var center=project(current.lat,current.lon),n=numZoom();
@@ -362,7 +377,7 @@ function setHeading(heading,speed){
  motionSpeed=Number.isFinite(speed)?Math.max(0,speed):0;
  // Zoom automático sensible a la velocidad, evitando saltos frecuentes.
  // <50 km/h: detalle de calles (z18); 50-84: z17; >=85: z16.
- if(autoZoom && mapStyle==='drive' && following && live){
+ if(autoZoom && mapStyle==='drive' && !isClassicPanel() && following && live){
   var target=motionSpeed>=85?16:motionSpeed>=50?17:18;
   if(target!==zoom && Date.now()-lastAutoZoomAt>9000){
    zoom=target;lastAutoZoomAt=Date.now();queueDraw();
@@ -381,8 +396,9 @@ function setHeading(heading,speed){
 }
 function activateFollow(){
  following=true;
- autoZoom=mapStyle==='drive';
+ autoZoom=mapStyle==='drive'&&!isClassicPanel();
  if(autoZoom)zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
+ else if(isClassicPanel())zoom=14;
  if(position)current={lat:position.lat,lon:position.lon};
  followButton.textContent='▲ Conduciendo';
  followButton.setAttribute('aria-pressed','true');
@@ -399,8 +415,9 @@ function setStyle(mode){
  mapStyle=mode==='classic'?'classic':'drive';
  try{localStorage.setItem('rush_map_style',mapStyle)}catch(e){}
  host.classList.toggle('rush-map-drive',mapStyle==='drive');
- autoZoom=mapStyle==='drive';
- zoom=mapStyle==='drive'?(motionSpeed>=85?16:motionSpeed>=50?17:18):15;
+ autoZoom=mapStyle==='drive'&&!isClassicPanel();
+ zoom=isClassicPanel()?14:
+   (mapStyle==='drive'?(motionSpeed>=85?16:motionSpeed>=50?17:18):15);
  if(following&&position)current={lat:position.lat,lon:position.lon};
  if(document.getElementById('mapStyleDrive'))
   document.getElementById('mapStyleDrive').setAttribute('aria-pressed',

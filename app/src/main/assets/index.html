@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20 · Cartografía TomTom y tráfico en tiempo real</title>
+<title>Rush Launcher 4.20.1 · Mapa estable y panel limpio</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -815,6 +815,22 @@
 .rush-flow-good{background:#2ae57b}
 .rush-flow-medium{background:#ffc105}
 .rush-flow-bad{background:#fb2d09}
+
+/* 4.20.1: el panel clásico es una vista previa sin etiquetas adicionales
+   sobre la cartografía. Los controles, búsqueda, rutas y tráfico permanecen. */
+.screen:not(.drive-ui) .home-map-header,
+.screen:not(.drive-ui) .home-map-route,
+.screen:not(.drive-ui) .home-map-footer>span,
+.screen:not(.drive-ui) .home-map-traffic-legend{
+ display:none!important
+}
+.screen:not(.drive-ui) .home-map-footer{justify-content:flex-end}
+.screen:not(.drive-ui) .home-map-tools{
+ top:7px;right:7px;transform:scale(.87);transform-origin:top right
+}
+.screen:not(.drive-ui) .home-map-tiles img.rush-base-tile{
+ filter:saturate(.75) contrast(.94) brightness(1.035)!important
+}
 </style>
 </head>
 <body>
@@ -834,7 +850,7 @@
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.1</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -969,7 +985,7 @@
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.15 · Clima</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.20.1 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -1016,7 +1032,7 @@
    </div>
    <p class="muted">Puedes elegir la cartografía OpenStreetMap o TomTom. La capa de tráfico requiere una clave API activa. Pulsa ▲ Conduciendo para recuperar el zoom automático después de usar + o −.</p>
   </div>
-  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D con búsqueda y cálculo de rutas dentro del launcher. Requiere internet y ubicación Android; la precisión depende del TBox. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
+  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D integrado en el launcher, sin iniciar la pantalla gráfica MapLibre. Permite buscar destinos y calcular rutas por internet; admite la ubicación Android y las coordenadas del GPS del iPhone. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
 
   <div class="set-line">
    <h3>Inicio y navegación del TBox</h3>
