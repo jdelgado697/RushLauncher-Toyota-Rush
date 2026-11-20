@@ -92,20 +92,51 @@ public class MainActivity extends Activity implements LocationListener {
     private long gpsRegisteredMs = 0L;
     private long lastGpsRestartMs = 0L;
     private int gpsFixCounter = 0;
+    private int gpsRawCounter = 0;
+    private long gpsRawReceivedMs = 0L;
+    private String lastGpsProvider = "Ninguno";
+    private String gpsRejectReason = "";
+    // No suponer que el receptor avanza si Android devuelve siempre la misma posición.
+    private boolean gpsTrackingEnabled() {
+        return gpsRequested || mapGpsActive || weatherGpsActive;
+    }
+    private void sendGpsDiagnostics(long ageMs) {
+        JSONObject info = new JSONObject();
+        try {
+            info.put("ageSeconds",Math.max(0,ageMs/1000L));
+            info.put("rawCount",gpsRawCounter);
+            info.put("acceptedCount",gpsFixCounter);
+            info.put("provider",lastGpsProvider);
+            info.put("rejectReason",gpsRejectReason);
+            info.put("registered",gpsRegistered);
+        }catch(Exception ignored){}
+        javascript("if(window.rushGpsDiagnostics)window.rushGpsDiagnostics("+info.toString()+");");
+    }
     private boolean gpsRegistered = false;
     private boolean gpsWatchdogRunning = false;
     private final Runnable gpsWatchdog = new Runnable() {
         @Override public void run() {
-            if(!mapGpsActive||isFinishing()) {
+            if(!gpsTrackingEnabled() || isFinishing() || isDestroyed()) {
                 gpsWatchdogRunning=false;return;
             }
             long now=android.os.SystemClock.elapsedRealtime();
-            long stale=lastFixReceivedMs==0L?now-gpsRegisteredMs:now-lastFixReceivedMs;
-            if(stale>=10000L) {
-                sendGpsStatus("SIN POSICIÓN NUEVA · "+(stale/1000L)+" s");
-                if(stale>=15000L && now-lastGpsRestartMs>22000L){
+            // Después de reactivar el receptor, conceder una ventana nueva
+            // de adquisición de señal; no usar el timestamp viejo del viaje previo.
+            long latest=Math.max(lastFixReceivedMs,gpsRegisteredMs);
+            long age=latest>0L?Math.max(0L,now-latest):0L;
+            sendGpsDiagnostics(age);
+            if(age>=10000L) {
+                sendGpsStatus("SIN GPS NUEVO · "+(age/1000L)+" s · "
+                    +lastGpsProvider+" · "+gpsFixCounter+" lecturas");
+                boolean granted=Build.VERSION.SDK_INT<Build.VERSION_CODES.M
+                    || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                      ==PackageManager.PERMISSION_GRANTED
+                    || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                      ==PackageManager.PERMISSION_GRANTED;
+                if(granted && age>=17000L && now-lastGpsRestartMs>=30000L){
                     lastGpsRestartMs=now;
                     gpsRegistered=false;
+                    // Reinscribir en GNSS+red sin alterar la última posición dibujada.
                     startGps();
                 }
             }
@@ -113,12 +144,13 @@ public class MainActivity extends Activity implements LocationListener {
         }
     };
     private void startGpsWatchdog() {
-        if(!mapGpsActive||gpsWatchdogRunning)return;
+        if(!gpsTrackingEnabled() || gpsWatchdogRunning)return;
         gpsWatchdogRunning=true;
         mainHandler.postDelayed(gpsWatchdog,4000L);
     }
     private void stopGpsWatchdog(){
-        gpsWatchdogRunning=false;mainHandler.removeCallbacks(gpsWatchdog);
+        gpsWatchdogRunning=false;
+        mainHandler.removeCallbacks(gpsWatchdog);
     }
     private boolean pageLoaded = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -1473,6 +1505,7 @@ public class MainActivity extends Activity implements LocationListener {
         }
         if(started)sendGpsStatus("Esperando siguiente lectura GPS…");
         else sendGpsStatus("GPS y red no disponibles en Android");
+        // Siempre supervisar el GPS del Inicio, no solo el mapa secundario.
         startGpsWatchdog();
     }
 
@@ -1499,32 +1532,55 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         if(location==null)return;
+        gpsRawCounter++;
+        gpsRawReceivedMs=android.os.SystemClock.elapsedRealtime();
+        lastGpsProvider=LocationManager.GPS_PROVIDER.equals(location.getProvider())
+                ? "GPS" : LocationManager.NETWORK_PROVIDER.equals(location.getProvider())
+                ? "Red" : String.valueOf(location.getProvider());
         long fixNs=location.getElapsedRealtimeNanos();
         long nowNs=android.os.SystemClock.elapsedRealtimeNanos();
         if(fixNs<=0L||fixNs>nowNs+1000000000L||
-                nowNs-fixNs>10000000000L)return;
+                nowNs-fixNs>15000000000L) {
+            gpsRejectReason="Lectura GPS antigua o sin fecha válida";
+            return;
+        }
         boolean satellite=LocationManager.GPS_PROVIDER.equals(location.getProvider());
         boolean network=LocationManager.NETWORK_PROVIDER.equals(location.getProvider());
-        if(!satellite&&!network)return;
+        if(!satellite&&!network){
+            gpsRejectReason="Proveedor no reconocido: "+lastGpsProvider;
+            return;
+        }
         if(satellite){
-            if(fixNs<=lastGpsFixNs)return;
+            if(fixNs<=lastGpsFixNs){
+                gpsRejectReason="GNSS repite exactamente la misma lectura";
+                return;
+            }
             lastGpsFixNs=fixNs;
             if(location.hasAccuracy()&&location.getAccuracy()<=100f)
                 lastAccurateGpsNs=fixNs;
         }else{
-            if(fixNs<=lastNetworkFixNs)return;
+            if(fixNs<=lastNetworkFixNs){
+                gpsRejectReason="Red repite una lectura anterior";
+                return;
+            }
             lastNetworkFixNs=fixNs;
             // No dejar que una posición Wi-Fi menos precisa desplace la
             // última lectura satelital reciente.
-            if(lastAccurateGpsNs>0&&nowNs-lastAccurateGpsNs<6500000000L)
+            if(lastAccurateGpsNs>0&&nowNs-lastAccurateGpsNs<6500000000L){
+                gpsRejectReason="Priorizando satélites recientes";
                 return;
+            }
         }
         // Se acepta un fix del satélite aunque llegue después de un fix
         // de red con timestamp posterior. Antes se descartaba silenciosamente.
-        if(!satellite&&fixNs<=lastFixElapsedNs)return;
+        if(!satellite&&fixNs<=lastFixElapsedNs){
+            gpsRejectReason="Red con timestamp anterior al GPS";
+            return;
+        }
         lastFixElapsedNs=Math.max(lastFixElapsedNs,fixNs);
         lastFixReceivedMs=android.os.SystemClock.elapsedRealtime();
         gpsFixCounter++;
+        gpsRejectReason="";
         String speed=location.hasSpeed()?
                 String.valueOf(Math.max(0,location.getSpeed()*3.6f)):"null";
         String heading=location.hasBearing()?
