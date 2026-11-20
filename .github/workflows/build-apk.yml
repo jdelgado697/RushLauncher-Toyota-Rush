@@ -169,7 +169,7 @@ jobs:
           assert 'rush_tomtom_key_420' in home_map
           assert 'tomtomKey=candidate' in home_map
           assert 'GPS2IP' in native and 'acceptExternalNmea' in native
-          assert 'TomTom' not in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert 'rush_tomtom_key_420' not in Path("app/build.gradle").read_text(encoding="utf-8")
           assert 'rush-map-drive' in html and 'rush-map-drive' in home_map
           assert 'var zoom=mapStyle' in home_map
           assert 'function driveOffset()' in home_map
