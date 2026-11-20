@@ -21,6 +21,8 @@ var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.creat
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
 var maxTiles=25, tile=256, minLat=-85.05112878, maxLat=85.05112878;
 var lastGpsAt=0,lastRenderedCenter=null;
+var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
+var previousFix=null;
 var routeCoords=[],routeSvg=document.getElementById('homeRouteSvg'),
     routeShadow=document.getElementById('homeRouteBorder'),
     routeLine=document.getElementById('homeRouteLine'),
@@ -39,14 +41,35 @@ function unproject(x,y){
  var n=numZoom()*tile,angle=Math.PI*(1-2*y/n);
  return {lat:Math.atan(Math.sinh(angle))*180/Math.PI,lon:((x/n)*360-180+540)%360-180};
 }
+function setDiagnostics(data) {
+ if(data&&typeof data==='object') {
+  rawDiagnostic=data;
+  setStatus();
+ }
+}
 function setStatus(){
- if(!live){setText(label,'Loncoche · mapa de referencia');return;}
+ var suffix=rawDiagnostic?' · GPS '+(rawDiagnostic.provider||'—')+
+   ' #'+(rawDiagnostic.acceptedCount||0):'';
+ if(!live) {
+  setText(label,'Esperando GPS real'+suffix);
+  setText(info,rawDiagnostic&&rawDiagnostic.rawCount>0?
+    'Datos recibidos: '+rawDiagnostic.rawCount+' · '+(rawDiagnostic.rejectReason||'sin posición válida'):
+    'Sin lectura GPS · comprueba Ubicación Android');
+  return;
+ }
  var age=(Date.now()-lastGpsAt)/1000;
  var fresh=age<=10;
- setText(label,following?(fresh?'CONDUCIENDO · GPS ±'+Math.round(accuracy||0)+' m':'GPS sin actualizar'):
-     'Explorando mapa · pulsa Seguir');
- setText(info,following?(fresh?'Mapa sigue el vehículo':'Esperando señal GPS…'):
-     'Mapa desplazado · toca Seguir para volver');
+ if(!following) {
+  setText(label,'Mapa desplazado · toca Seguir'+suffix);
+  setText(info,'El mapa está en exploración, no seguirá al vehículo');
+ } else if(fresh) {
+  setText(label,'CONDUCIENDO · ±'+Math.round(accuracy||0)+' m'+suffix);
+  setText(info,motionSpeed>8&&lastActualMoveAt&&Date.now()-lastActualMoveAt>15000?
+    'GPS recibe datos pero no cambia las coordenadas':'Seguimiento GPS activo');
+ } else {
+  setText(label,'GPS SIN ACTUALIZAR · '+Math.round(age)+' s'+suffix);
+  setText(info,'Pulsa ↻ GPS · si persiste, revisa el receptor del Carlinkit');
+ }
 }
 function render(){
  if(!host.offsetWidth||!host.offsetHeight)return;
@@ -152,6 +175,15 @@ function getBearing(){return bearing}
 function setPosition(lat,lon,acc){
  if(!valid(lat,lon))return;
  if(Number.isFinite(acc)&&acc>1000)return;
+ if(previousFix) {
+  var dLat=(lat-previousFix.lat)*111320;
+  var dLon=(lon-previousFix.lon)*111320*Math.cos(lat*Math.PI/180);
+  if(Math.hypot(dLat,dLon)>3) lastActualMoveAt=Date.now();
+ } else lastActualMoveAt=Date.now();
+ previousFix={lat:lat,lon:lon};
+ // Si se exploró el mapa durante un viaje, volver al seguimiento automático.
+ if(!following&&motionSpeed>8&&lastManualPanAt &&
+       Date.now()-lastManualPanAt>12000)activateFollow();
  position={lat:lat,lon:lon};
  live=true;accuracy=Number.isFinite(acc)?acc:null;lastGpsAt=Date.now();
  if(following)current={lat:lat,lon:lon};
@@ -176,6 +208,7 @@ function activateFollow(){
  queueDraw();
 }
 function freeMove(){
+ lastManualPanAt=Date.now();
  if(!following)return;
  following=false;layer.style.transform='none';
  followButton.textContent='◎ Seguir';
@@ -260,6 +293,7 @@ if(typeof ResizeObserver==='function')new ResizeObserver(queueDraw).observe(host
 window.RushHomeMap={
  setPosition:setPosition,setHeading:setHeading,follow:activateFollow,
  setRoute:setRoute,clearRoute:clearRoute,
+ setDiagnostics:setDiagnostics,
  zoomIn:function(){scaleZoom(1)},zoomOut:function(){scaleZoom(-1)},
  refresh:queueDraw,
  isFollowing:function(){return following},
