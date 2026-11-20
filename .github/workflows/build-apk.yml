@@ -139,7 +139,7 @@ jobs:
           assert 'search(destinationText, true)' in native_nav
           assert 'Photon ' in native_nav and 'Nominatim' in native_nav
           assert 'setDrivingMode(saved.drive,false)' in js
-          assert "Loncoche · mapa de referencia" in home_map
+          assert "Esperando GPS real" in home_map
           assert 'android:name="cl.rush.launcher.NavigationActivity"' in manifest
           mapjs=Path("app/src/main/assets/live_map.js").read_text(encoding="utf-8")
           assert 'https://tile.openstreetmap.org/' in mapjs
@@ -158,7 +158,7 @@ jobs:
           assert 'mapGpsActive || weatherGpsActive' in native
           assert 'setDiagnostics:setDiagnostics' in home_map
           assert 'lastManualPanAt' in home_map and 'activateFollow()' in home_map
-          assert 'SIN POSICIÓN NUEVA' in native
+          assert 'SIN GPS NUEVO' in native
           assert 'private final Runnable gpsWatchdog' in native
           assert 'lastGpsFixNs' in native and 'lastNetworkFixNs' in native
           assert 'requestLocationUpdates(LocationManager.GPS_PROVIDER' in native
