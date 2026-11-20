@@ -17,9 +17,14 @@ var zoomOut=document.getElementById('homeMapZoomOut');
 if(!host||!layer||!marker||!surface||!followButton||!zoomIn||!zoomOut)return;
 
 var current={lat:-39.367,lon:-72.632},position=null;
-var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.create(null),motionSpeed=0;
+// Vista de conducción cercana a nivel calle; los cambios de rumbo no
+// cambian la fuente GPS, únicamente hacen más ágil su presentación.
+var zoom=18,following=true,bearing=0,visualBearing=0,live=false,accuracy=null,
+    tiles=Object.create(null),motionSpeed=0,autoZoom=true,lastAutoZoomAt=0;
+var lastDirectionAt=0;
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
 var maxTiles=25, tile=256, minLat=-85.05112878, maxLat=85.05112878;
+function driveOffset(){return following&&live?Math.round(host.clientHeight*0.115):0}
 var lastGpsAt=0,lastRenderedCenter=null;
 var externalActive=false;
 var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
@@ -104,7 +109,8 @@ function render(){
     tiles[key]=img;layer.appendChild(img);
    }else{
     // Pequeña interpolación entre lecturas GPS (sin descargar imágenes extra).
-    img.style.transition=following&&motionSpeed>8?'left 600ms linear, top 600ms linear':'none';
+    img.style.transition=following&&motionSpeed>6?
+      'left 880ms linear, top 880ms linear':'none';
    }
    img.style.left=Math.round(x*tile-center.x+w/2)+'px';
    img.style.top=Math.round(y*tile-center.y+h/2)+'px';
@@ -116,7 +122,10 @@ function render(){
   if(!names[key]){tiles[key].remove();delete tiles[key]}
  });
  host.classList.add('home-map-has-tiles');
- layer.style.transform=following&&live?'rotate('+(-bearing)+'deg)':'none';
+ // El vehículo queda un poco más abajo para mostrar más calle por delante.
+ // visualBearing acumula los cambios por el camino MÁS CORTO al cruzar 0/360.
+ layer.style.transform=following&&live?
+   'translate3d(0,'+driveOffset()+'px,0) rotate('+(-visualBearing)+'deg)':'none';
  drawRoute(center,w,h);
  drawMarker();
  setStatus();
@@ -169,7 +178,7 @@ function drawMarker(){
  }
  marker.hidden=false;
  marker.style.left='calc(50% + '+Math.round(dx)+'px)';
- marker.style.top='calc(50% + '+Math.round(dy)+'px)';
+ marker.style.top='calc(50% + '+Math.round(dy+(following?driveOffset():0))+'px)';
  var rotation=following?'0deg':bearing+'deg';
  marker.style.transform='translate(-50%,-50%) rotate('+rotation+')';
 }
@@ -201,14 +210,28 @@ function setPosition(lat,lon,acc){
 }
 function setHeading(heading,speed){
  motionSpeed=Number.isFinite(speed)?Math.max(0,speed):0;
- if(Number.isFinite(heading)&&motionSpeed>8){
-  var next=(heading+360)%360;
-  var delta=Math.abs(((next-bearing+540)%360)-180);
-  if(delta>3){bearing=next;queueDraw()}
+ // Zoom automático sensible a la velocidad, evitando saltos frecuentes.
+ // <50 km/h: detalle de calles (z18); 50-84: z17; >=85: z16.
+ if(autoZoom && following && live){
+  var target=motionSpeed>=85?16:motionSpeed>=50?17:18;
+  if(target!==zoom && Date.now()-lastAutoZoomAt>9000){
+   zoom=target;lastAutoZoomAt=Date.now();queueDraw();
+  }
  }
+ // El rumbo RMC es course-over-ground, no el giro del volante: cuando
+ // el vehículo está parado puede variar aleatoriamente. Evitar ese ruido.
+ if(!Number.isFinite(heading)||motionSpeed<3.5)return;
+ var next=(heading+360)%360;
+ var delta=((next-bearing+540)%360)-180; // -180..180
+ if(Math.abs(delta)<0.75)return;
+ bearing=next;
+ visualBearing+=delta; // sin salto de 359° a 0°
+ lastDirectionAt=Date.now();
+ queueDraw();
 }
 function activateFollow(){
  following=true;
+ autoZoom=true;zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
  if(position)current={lat:position.lat,lon:position.lon};
  followButton.textContent='▲ Conduciendo';
  followButton.setAttribute('aria-pressed','true');
@@ -222,7 +245,9 @@ function freeMove(){
  followButton.setAttribute('aria-pressed','false');
 }
 function scaleZoom(change){
- zoom=clamp(zoom+change,12,17);
+ // Zoom manual conservado hasta pulsar de nuevo 'Conduciendo'.
+ autoZoom=false;
+ zoom=clamp(zoom+change,13,19);
  queueDraw();
 }
 function changeCenter(dx,dy){
@@ -304,7 +329,8 @@ window.RushHomeMap={
  zoomIn:function(){scaleZoom(1)},zoomOut:function(){scaleZoom(-1)},
  refresh:queueDraw,
  isFollowing:function(){return following},
- getBearing:getBearing
+ getBearing:getBearing,
+ getZoom:function(){return zoom}
 };
 // Visible desde el inicio, sin fingir que el vehículo se encuentra aquí.
 followButton.textContent='▲ Conduciendo';
