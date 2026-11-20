@@ -21,6 +21,7 @@ var zoom=15,following=true,bearing=0,live=false,accuracy=null,tiles=Object.creat
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
 var maxTiles=25, tile=256, minLat=-85.05112878, maxLat=85.05112878;
 var lastGpsAt=0,lastRenderedCenter=null;
+var externalActive=false;
 var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
 var previousFix=null;
 var routeCoords=[],routeSvg=document.getElementById('homeRouteSvg'),
@@ -41,6 +42,7 @@ function unproject(x,y){
  var n=numZoom()*tile,angle=Math.PI*(1-2*y/n);
  return {lat:Math.atan(Math.sinh(angle))*180/Math.PI,lon:((x/n)*360-180+540)%360-180};
 }
+function setExternalActive(enabled){externalActive=!!enabled;setStatus();}
 function setDiagnostics(data) {
  if(data&&typeof data==='object') {
   rawDiagnostic=data;
@@ -48,8 +50,9 @@ function setDiagnostics(data) {
  }
 }
 function setStatus(){
- var suffix=rawDiagnostic?' · GPS '+(rawDiagnostic.provider||'—')+
-   ' #'+(rawDiagnostic.acceptedCount||0):'';
+ var suffix=externalActive?' · iPhone NMEA':
+    rawDiagnostic?' · GPS '+(rawDiagnostic.provider||'—')+
+     ' #'+(rawDiagnostic.acceptedCount||0):'';
  if(!live) {
   setText(label,'Esperando GPS real'+suffix);
   setText(info,rawDiagnostic&&rawDiagnostic.rawCount>0?
@@ -63,12 +66,16 @@ function setStatus(){
   setText(label,'Mapa desplazado · toca Seguir'+suffix);
   setText(info,'El mapa está en exploración, no seguirá al vehículo');
  } else if(fresh) {
-  setText(label,'CONDUCIENDO · ±'+Math.round(accuracy||0)+' m'+suffix);
+  var precision=Number.isFinite(accuracy)&&accuracy>=0?
+    '±'+Math.round(accuracy)+' m':'precisión no informada';
+  setText(label,'CONDUCIENDO · '+precision+suffix);
   setText(info,motionSpeed>8&&lastActualMoveAt&&Date.now()-lastActualMoveAt>15000?
     'GPS recibe datos pero no cambia las coordenadas':'Seguimiento GPS activo');
  } else {
   setText(label,'GPS SIN ACTUALIZAR · '+Math.round(age)+' s'+suffix);
-  setText(info,'Pulsa ↻ GPS · si persiste, revisa el receptor del Carlinkit');
+  setText(info,externalActive?
+      'GPS iPhone sin nuevas lecturas: revisa GPS2IP/Wi-Fi':
+      'Pulsa ↻ GPS · si persiste, revisa el receptor del Carlinkit');
  }
 }
 function render(){
@@ -185,7 +192,7 @@ function setPosition(lat,lon,acc){
  if(!following&&motionSpeed>8&&lastManualPanAt &&
        Date.now()-lastManualPanAt>12000)activateFollow();
  position={lat:lat,lon:lon};
- live=true;accuracy=Number.isFinite(acc)?acc:null;lastGpsAt=Date.now();
+ live=true;accuracy=Number.isFinite(acc)&&acc>=0?acc:null;lastGpsAt=Date.now();
  if(following)current={lat:lat,lon:lon};
  var moved=!lastRenderedCenter||Math.abs(lastRenderedCenter.lat-current.lat)+
     Math.abs(lastRenderedCenter.lon-current.lon)>0.000015;
@@ -293,7 +300,7 @@ if(typeof ResizeObserver==='function')new ResizeObserver(queueDraw).observe(host
 window.RushHomeMap={
  setPosition:setPosition,setHeading:setHeading,follow:activateFollow,
  setRoute:setRoute,clearRoute:clearRoute,
- setDiagnostics:setDiagnostics,
+ setDiagnostics:setDiagnostics,setExternalActive:setExternalActive,
  zoomIn:function(){scaleZoom(1)},zoomOut:function(){scaleZoom(-1)},
  refresh:queueDraw,
  isFollowing:function(){return following},
