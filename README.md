@@ -368,3 +368,35 @@ tablero, Spotify, OBD y navegación. **No se simula movimiento del coche**.
   otro navegador Android o app GPS Test instalada directamente en el TBox.
 - Permisos necesarios: ubicación precisa, receptor/servicios de ubicación
   habilitados. No usar el teclado mientras se conduce.
+
+
+## 4.18.0 — GPS del iPhone directamente por Wi-Fi, sin ubicación simulada
+
+Se conserva la rama anterior 4.17.2. Esta versión incluye receptor TCP
+propio y parser NMEA RMC sobre Wi-Fi local. Seleccionar **Ajustes → GPS del
+iPhone**, escribir la IP indicada por GPS2IP (por ejemplo 192.168.0.101)
+y puerto 11123, pulsar **Conectar GPS iPhone**. Mantener GPS2IP activado
+como servidor Socket en WiFi IP; cerrar GPS Connector para que no ocupe
+el único cliente TCP, si el servidor limita las conexiones.
+
+El receptor acepta únicamente IP privadas (10.x.x.x, 172.16-31.x.x,
+192.168.x.x), puertos 1024-65535, checksums NMEA válidos, estado RMC=A,
+coordenadas válidas, y velocidad en nudos convertida a km/h. No se concede
+ubicación simulada ni se alteran datos de otras aplicaciones Android.
+El panel muestra el origen iPhone NMEA y **precisión no informada** en lugar
+de simular GPS ±0 m: RMC no incluye campo de precisión.
+
+Al perder Wi-Fi/socket se avisa y se intenta restablecer la conexión
+mientras Rush está en primer plano; no se inventan nuevas posiciones.
+El último IP se recuerda. Se puede desconectar desde ajustes.
+El modo navegación de Inicio permite calcular ruta con RMC reciente
+pero deshabilita el recálculo automático y voz cuando no conoce precisión,
+para no confiar en maniobras de precisión falsa. GPS2IP Lite podría terminar
+automáticamente cada sesión tras el límite de la versión gratuita.
+
+El mapa nativo MapLibre y otras apps Android no toman este GPS directamente:
+la integración solo alimenta el navegador de Inicio dentro de Rush Launcher.
+Para las otras apps sigue siendo necesario un proveedor de ubicación Android.
+
+La fuente TCP NMEA transmite datos de posición sin cifrado sobre Wi-Fi local;
+usar solamente una red propia o de confianza.
