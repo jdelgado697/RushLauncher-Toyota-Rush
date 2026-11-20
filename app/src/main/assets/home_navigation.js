@@ -33,7 +33,16 @@ function distanceLabel(m){
  if(!Number.isFinite(m))return '—';
  return m<950?Math.max(0,Math.round(m/10)*10)+' m':(m/1000).toFixed(1)+' km';
 }
-function freshGps(){return fix&&Date.now()-lastPositionAt<15000&&accuracy<=120}
+function freshGps(){
+ var recent=fix&&Date.now()-lastPositionAt<15000;
+ // iPhone RMC provee fix válido pero NO información de precisión (GGA/GST).
+ // Permitir cálculo manual de ruta, sin habilitar voz ni reruteo automático
+ // basado en precisión no informada.
+ var external=window.RushExternalGps &&
+     window.RushExternalGps.active && window.RushExternalGps.recent &&
+     window.RushExternalGps.hasFix;
+ return !!(recent&&(accuracy<=120||external));
+}
 function stopped(){return !Number.isFinite(speed)||speed<=5}
 function showStatus(text,temporary){
  if(!status)return;
