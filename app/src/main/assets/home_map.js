@@ -41,6 +41,7 @@ var mapProvider='osm',tomtomKey='',trafficEnabled=false;
 var trafficTiles=Object.create(null),lastTrafficSuccess=0,lastTrafficError=0;
 var trafficChecked=0,lastMapError=0,trafficErrorCount=0;
 var trafficNotice=document.getElementById('homeMapTrafficStatus');
+var trafficLegend=document.getElementById('homeMapTrafficLegend');
 var trafficButton=document.getElementById('homeMapTraffic');
 var attribution=document.getElementById('homeMapAttribution');
 var trafficCachePeriod=180000; // 3 min para limitar consumo y costos.
@@ -84,6 +85,7 @@ function trafficStatus(){
   trafficNotice.textContent='Consultando tráfico TomTom…';
   trafficNotice.hidden=false;
  }
+ if(trafficLegend)trafficLegend.hidden=!ready||!lastTrafficSuccess;
  if(trafficButton)trafficButton.setAttribute('aria-pressed',ready?'true':'false');
  if(trafficButton)trafficButton.textContent=ready?'Tráfico ✓':'Tráfico';
  if(attribution)attribution.textContent=
