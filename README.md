@@ -426,3 +426,39 @@ IMPORTANTE: los cambios de dirección se basan en el campo curso/rumbo RMC
 del iPhone; una vez por segundo no puede interpolarse con precisión física
 entre señales. En parada el curso GPS puede ser poco fiable: no girar
 por debajo de 3.5 km/h. Requiere internet para mapas nuevos y rutas.
+
+
+## Rush Launcher 4.20 — cartografía TomTom Orbis y tráfico en Inicio
+
+Base: Rush Launcher 4.19, **sin cambiar el receptor NMEA TCP del iPhone**
+ni Spotify/OBD/clima. Nuevo botón **Tráfico** en el mapa de Inicio y
+**Ajustes → Cartografía y tráfico TomTom Orbis**. Permite:
+
+- Continuar con OpenStreetMap predeterminado, aun sin clave API.
+- Utilizar cartografía TomTom Orbis raster street-light/street-dark
+  mediante clave personal de https://my.tomtom.com/ (API v2).
+- Superponer teselas transparentes de tráfico (flujo y incidentes) de
+  TomTom Orbis v2, solo sobre cartografía TomTom, no mezclarlas con OSM
+  porque las geometrías de carreteras pueden diferir.
+- Leyenda colores de congestión, estado de carga y error, botón activar
+  y desactivar; no inventa incidentes ni tiempos de ruta.
+- Recarga de mosaicos de tráfico en ciclos de tres minutos mientras la
+  pantalla esté visible. Consumo y costo sujetos a condiciones del plan
+  TomTom, cobertura y red. No existe tráfico activo sin clave.
+- Al fallar la carga de cartografía TomTom, una tesela puede volver a
+  OpenStreetMap. La atribución TomTom/OSM se muestra en el mapa.
+
+Privacidad: clave API se guarda en localStorage del WebView de este TBox,
+y se envía a la infraestructura TomTom en la URL HTTPS de mosaicos.
+No se incrusta ninguna clave en el proyecto ni en el APK. Es apropiado
+para prueba privada: en producción usar servidor/proxy con autenticación,
+separación de secretos y restricciones por aplicación.
+
+TomTom docs (verificar versiones):
+https://docs.tomtom.com/map-display-api/documentation/tomtom-orbis-maps/v2/raster/raster-tile
+https://docs.tomtom.com/traffic-api/documentation/tomtom-orbis-maps/v2/traffic-flow/raster-flow-tiles
+https://docs.tomtom.com/traffic-api/documentation/tomtom-orbis-maps/v2/traffic-incidents/raster-incident-tiles
+
+Las rutas siguen calculándose por el motor previo OSRM/Valhalla;
+no son tráfico-dependientes. El navegador nativo MapLibre y Google Maps
+no reciben esta capa nueva: corresponde al mapa de Inicio Rush Drive.
