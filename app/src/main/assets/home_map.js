@@ -113,6 +113,10 @@ function configureCartography(options){
   mapProvider=options.provider;
  }
  if(options.traffic===true||options.traffic===false)trafficEnabled=options.traffic;
+ // Evitar desalineación geométrica entre carreteras de distintos mapas:
+ // el tráfico se dibuja sobre la misma cartografía TomTom Orbis.
+ if(trafficEnabled&&validTomtomKey())mapProvider='tomtom';
+ if(mapProvider==='osm')trafficEnabled=false;
  if(!validTomtomKey()){
   mapProvider='osm';trafficEnabled=false;
  }
@@ -212,7 +216,7 @@ function render(){
     img.setAttribute('loading','eager');
     img.referrerPolicy='strict-origin-when-cross-origin';
     img.style.transition='none';
-    img.src=baseTileUrl(zoom,wrapped,y);
+    img.dataset.xyz=key;
     img.onerror=function(){
       // Conserva siempre cartografía al fallar la clave o el proveedor.
       if(this.dataset.fallback!=='yes' && mapProvider==='tomtom'){
@@ -221,7 +225,7 @@ function render(){
       }else this.style.visibility='hidden';
       lastMapError=Date.now();
     };
-    img.dataset.xyz=key;
+    img.src=baseTileUrl(zoom,wrapped,y);
     tiles[key]=img;layer.appendChild(img);
    }else{
     img.style.transition=following&&motionSpeed>6?
