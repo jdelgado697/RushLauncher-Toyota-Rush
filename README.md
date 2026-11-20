@@ -344,3 +344,27 @@ Base: rama 4.17, sin reemplazar ruta en Inicio, Spotify, OBD, clima ni panel cl�
   elecciones manuales Día/Noche desde Ajustes. No requiere internet.
 - Si la hora del Carlinkit es incorrecta, corregir Ajustes de fecha/hora
   automáticas antes de diagnosticar el modo de fondo.
+
+
+## Rush Launcher 4.17.2 · GPS Carlinkit
+
+Se parte de la 4.17.1 (tema día/noche y buscador), preservando el
+tablero, Spotify, OBD y navegación. **No se simula movimiento del coche**.
+
+- El watchdog de GPS ahora supervisa también el mapa de Inicio cuando
+  `askGps()` o el clima habilitan recepción; anteriormente solo supervisaba
+  `mapGpsActive`, flag del navegador secundario.
+- Diagnóstico visible del proveedor Android, conteo de lecturas recibidas y
+  aceptadas, antigüedad de la última posición y motivo de descarte de
+  datos GNSS incorrectos. La posición antigua no se inventa ni extrapola.
+- Si no llegan lecturas nuevas durante 17 segundos, intenta renovar el
+  registro GPS+red con intervalo mínimo de 30 segundos, sin reiniciar la app.
+- Nuevo botón **↻ GPS** en Inicio; permite solicitar una nueva sesión GNSS
+  voluntariamente sin afectar Spotify y OBD.
+- Tras explorar el mapa, la vista vuelve al seguimiento automáticamente
+  cuando el vehículo se mueve (>8 km/h) y pasan 12 segundos sin gesto táctil.
+- GPS puede continuar sin moverse si no existe señal GNSS real o el
+  firmware de Carlinkit no proporciona coordenadas nuevas. Comparar con
+  otro navegador Android o app GPS Test instalada directamente en el TBox.
+- Permisos necesarios: ubicación precisa, receptor/servicios de ubicación
+  habilitados. No usar el teclado mientras se conduce.

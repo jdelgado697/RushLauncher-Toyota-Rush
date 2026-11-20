@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery]
 
 permissions:
   contents: read
@@ -112,7 +112,7 @@ jobs:
           assert 'id="obdAutoToggle"' in html
           assert 'id="driveModeToggle"' in html
           assert 'class="screen drive-ui"' in html
-          assert 'version-pill">4.17.1' in html
+          assert 'version-pill">4.17.2' in html
           assert 'class="drive-obd-extra"' in html
           assert 'class="home-map glass"' in html
           assert "setDrivingMode(saved.drive,false)" in js
@@ -151,6 +151,13 @@ jobs:
           assert 'id="navGpsHealth"' in html and 'id="navGpsRestart"' in html
           assert 'window.rushGpsFixMeta=function' in js
           assert 'window.Rush.restartMapGps()' in js
+          assert 'id="homeMapRetryGps"' in html
+          assert 'restartHomeGps()' in native
+          assert 'window.rushGpsDiagnostics=function' in js
+          assert 'gpsTrackingEnabled()' in native and 'sendGpsDiagnostics(age)' in native
+          assert 'mapGpsActive || weatherGpsActive' in native
+          assert 'setDiagnostics:setDiagnostics' in home_map
+          assert 'lastManualPanAt' in home_map and 'activateFollow()' in home_map
           assert 'SIN POSICIÓN NUEVA' in native
           assert 'private final Runnable gpsWatchdog' in native
           assert 'lastGpsFixNs' in native and 'lastNetworkFixNs' in native
@@ -312,7 +319,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 48" in gradle
+          assert "versionCode 49" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000

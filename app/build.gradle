@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 48
-        versionName '4.17.1-BusquedaAuto'
+        versionCode 49
+        versionName '4.17.2-GPSRecuperacion'
     }
 
     compileOptions {
