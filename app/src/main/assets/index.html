@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.18 · GPS iPhone directo por NMEA</title>
+<title>Rush Launcher 4.19 · Mapa Rush Drive vista cercana y giro fluido</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -756,6 +756,33 @@
 #iphoneGpsHost{width:165px;max-width:100%;font-size:14px;margin:4px 0}
 #iphoneGpsPort{width:90px;font-size:14px;margin:4px 0}
 #iphoneGpsStatus{font-weight:700;color:var(--text)}
+
+/* 4.19 Rush Drive: cartografía OSM existente, presentada con un aspecto de
+   navegación automotriz. Conserva la caché actual y no requiere API key. */
+.rush-map-drive{background:#d6e8ef;box-shadow:inset 0 0 16px #042c4b99,0 0 12px #006ccc66}
+.rush-map-drive .home-map-tiles{opacity:1;will-change:transform;
+ transition:transform 260ms cubic-bezier(.15,.7,.2,1);}
+.rush-map-drive .home-map-tiles img{filter:saturate(.65) contrast(1.17) brightness(1.035)}
+:root[data-theme=dark] .rush-map-drive{background:#14273b}
+:root[data-theme=dark] .rush-map-drive .home-map-tiles img{
+ filter:invert(.88) hue-rotate(175deg) saturate(.7) brightness(.84) contrast(1.08)
+}
+.rush-map-drive .home-map-grid{opacity:0!important}
+.rush-map-drive .home-map-marker{
+ width:32px;height:37px;background:#137bfa;
+ clip-path:polygon(50% 0,97% 100%,50% 78%,3% 100%);
+ filter:drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 2px #003d78);
+ transition:top 240ms ease,left 240ms ease,transform 250ms ease-out;
+}
+.rush-map-drive .home-map-header>span:last-child{
+ font-weight:800;background:#061e37df;color:#d0f4ff
+}
+.rush-map-drive #homeRouteLine{stroke:#00a5ff;stroke-width:7}
+.rush-map-drive #homeRouteBorder{stroke:#10365d;stroke-width:13}
+.rush-map-drive .home-map-footer>span{background:#061d38e8;color:#ecfaff;font-weight:800}
+.rush-map-drive .home-map-attribution{background:#071e38c9;color:#f0f9ff}
+#mapStyleDrive[aria-pressed=true],#mapStyleClassic[aria-pressed=true]{
+ outline:2px solid #47d2ff;outline-offset:-2px}
 </style>
 </head>
 <body>
@@ -775,7 +802,7 @@
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.18</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.19</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -837,7 +864,7 @@
       aria-label="Mover mapa con el dedo. Doble toque para acercar. También puedes usar flechas." ></div>
    <div id="homeMapMarker" class="home-map-marker" hidden aria-label="Posición Android">◆</div>
    <span class="home-map-attribution">© OpenStreetMap contributors</span>
-   <div class="home-map-header"><span class="home-map-label">RUSH <strong>NAVIGATOR</strong></span><span id="homeMapStatus">Cargando mapa…</span></div>
+   <div class="home-map-header"><span class="home-map-label">RUSH <strong>DRIVE</strong></span><span id="homeMapStatus">Cargando mapa…</span></div>
    <div class="home-map-route">Mapa y ruta<small>GPS rumbo arriba · mantén pulsado para destino</small></div>
    <div class="home-nav-search" role="search" aria-label="Buscar destino en Chile">
     <input id="homeNavInput" type="search" maxlength="100" autocomplete="off"
@@ -863,7 +890,7 @@
     <button type="button" id="homeMapZoomIn" aria-label="Acercar mapa">+</button>
     <button type="button" id="homeMapZoomOut" aria-label="Alejar mapa">−</button>
    </div>
-   <div class="home-map-footer"><span id="homeMapInfo">Desliza el mapa · usa Abrir mapa completo para rutas</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+   <div class="home-map-footer"><span id="homeMapInfo">Rush Drive · calles cercanas · rumbo arriba</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
   </section>
   <div class="widgets">
    <section class="music glass" aria-label="Reproductor multimedia">
@@ -921,6 +948,14 @@
    </div>
    <p class="muted" id="iphoneGpsStatus" role="status">GPS iPhone desconectado</p>
    <p class="muted">La sentencia RMC contiene posición, velocidad y rumbo, pero no precisión. Rush no mostrará un falso ±0 m. Al perder Wi-Fi, el último punto se indicará como antiguo. GPS2IP Lite puede limitar la duración de las sesiones.</p>
+  </div>
+  <div class="set-line"><h3>Vista del mapa en Inicio</h3>
+   <p class="muted">Rush Drive utiliza un mapa a nivel calle, con más carretera visible por delante del vehículo y una rotación más rápida. El acercamiento se adapta a la velocidad; los botones + y − permiten ajustarlo manualmente.</p>
+   <div class="tile-buttons">
+     <button type="button" id="mapStyleDrive" class="actionbtn highlight" aria-pressed="true">Rush Drive · cercano</button>
+     <button type="button" id="mapStyleClassic" class="actionbtn" aria-pressed="false">Mapa clásico</button>
+   </div>
+   <p class="muted">Usamos las teselas OpenStreetMap con contraste y colores rediseñados; no es un mapa de Google ni ofrece tráfico en tiempo real. Pulsa ▲ Conduciendo para recuperar el zoom automático después de usar + o −.</p>
   </div>
   <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D con búsqueda y cálculo de rutas dentro del launcher. Requiere internet y ubicación Android; la precisión depende del TBox. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
 
