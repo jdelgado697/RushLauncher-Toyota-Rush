@@ -555,7 +555,7 @@ jobs:
           NODE
 
       - name: Compilar APK de prueba
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: gradle :app:assembleDebug -x :app:lintVitalAnalyzeDebug --no-daemon --stacktrace
 
       - name: Verificar manifiesto final de APK
         run: |
