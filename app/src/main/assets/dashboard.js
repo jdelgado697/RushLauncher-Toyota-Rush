@@ -67,7 +67,11 @@ function applyTheme(){
  });
 }
 function store(key,value){try{localStorage.setItem(key,value)}catch(e){}}
-function openOverlay(id){show($(id),true);if(id==='appsPanel'&&nativeApp){write('appsCount','Buscando…');$('appsSearch').value='';window.Rush.listApps()}}
+function openOverlay(id){
+ show($(id),true);
+ if(id==='settingsPanel')cartoControlsUpdate();
+ if(id==='appsPanel'&&nativeApp){write('appsCount','Buscando…');$('appsSearch').value='';window.Rush.listApps()}
+}
 function closeOverlay(id){
  if(id==='mapPanel'){
   navClear();
@@ -399,6 +403,66 @@ setInterval(function(){
 /* Rush 4.18: el servidor Socket de GPS2IP alimenta directamente el launcher.
    GPS Connector no interviene; la IP puede cambiar al cambiar de Wi-Fi. */
 window.RushExternalGps={active:false,recent:false,hasFix:false};
+/* Rush 4.20: TomTom Orbis con clave personal opt-in.
+   Nunca imprimimos el valor de la clave en pantalla, logs o URLs de terceros. */
+function cartoControlsUpdate(extra){
+ var map=window.RushHomeMap;
+ if(!map||typeof map.getCartography!=='function')return;
+ var state=map.getCartography();
+ var osm=$('cartoUseOsm'),tom=$('cartoUseTomtom'),traffic=$('cartoToggleTraffic');
+ if(osm)osm.setAttribute('aria-pressed',state.provider==='osm'?'true':'false');
+ if(tom)tom.setAttribute('aria-pressed',state.provider==='tomtom'?'true':'false');
+ if(traffic){
+  traffic.setAttribute('aria-pressed',state.traffic?'true':'false');
+  traffic.textContent=state.traffic?'Desactivar tráfico':'Activar tráfico';
+ }
+ var text='Mapa '+(state.provider==='tomtom'?'TomTom Orbis':'OpenStreetMap')+
+   ' · tráfico '+(state.traffic?'activado':'desactivado')+
+   ' · clave '+(state.hasKey?'guardada':'sin configurar');
+ write('cartoTomtomStatus',extra||text);
+}
+function cartoConfigure(config){
+ var map=window.RushHomeMap;
+ if(!map||typeof map.configureCartography!=='function')return;
+ var result=map.configureCartography(config);
+ if(!result.ok){cartoControlsUpdate(result.message);return;}
+ cartoControlsUpdate();
+}
+if($('cartoSaveKey'))$('cartoSaveKey').addEventListener('click',function(){
+ var key=$('cartoTomtomKey').value.trim();
+ if(!key){cartoControlsUpdate('Escribe primero tu clave TomTom personal');return;}
+ var map=window.RushHomeMap;
+ if(!map)return;
+ var result=map.configureCartography({key:key,provider:'tomtom'});
+ if(result.ok){
+  $('cartoTomtomKey').value='';
+  cartoControlsUpdate('Clave guardada · mapa TomTom seleccionado. Puedes activar tráfico.');
+ }else cartoControlsUpdate(result.message);
+});
+if($('cartoRemoveKey'))$('cartoRemoveKey').addEventListener('click',function(){
+ cartoConfigure({clearKey:true});
+ if($('cartoTomtomKey'))$('cartoTomtomKey').value='';
+});
+if($('cartoUseOsm'))$('cartoUseOsm').addEventListener('click',function(){
+ cartoConfigure({provider:'osm'});
+});
+if($('cartoUseTomtom'))$('cartoUseTomtom').addEventListener('click',function(){
+ var cfg=window.RushHomeMap&&window.RushHomeMap.getCartography();
+ if(!cfg||!cfg.hasKey){
+  cartoControlsUpdate('Para usar cartografía TomTom, guarda primero la clave API.');
+  return;
+ }
+ cartoConfigure({provider:'tomtom'});
+});
+if($('cartoToggleTraffic'))$('cartoToggleTraffic').addEventListener('click',function(){
+ var cfg=window.RushHomeMap&&window.RushHomeMap.getCartography();
+ if(!cfg||!cfg.hasKey){
+  cartoControlsUpdate('Necesitas una clave TomTom para consultar el tráfico real.');
+  return;
+ }
+ cartoConfigure({traffic:!cfg.traffic});
+});
+cartoControlsUpdate();
 window.rushExternalNmeaState=function(info) {
  if(!info || typeof info!=='object')return;
  window.RushExternalGps.active=!!info.enabled;
