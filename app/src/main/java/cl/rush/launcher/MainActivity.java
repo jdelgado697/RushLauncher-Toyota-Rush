@@ -60,6 +60,54 @@ public class MainActivity extends Activity implements LocationListener {
     private static final int LOCATION_REQUEST_CODE = 1101;
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
     private ObdReader obdReader;
+    private ExternalNmeaGps externalNmea;
+    private static final String NMEA_PREFS = "rush_gps_iphone_direct";
+    private static final String NMEA_HOST = "host";
+    private static final String NMEA_PORT = "port";
+    private static final String NMEA_ENABLED = "enabled";
+    private volatile boolean nmeaFixRecentlyReceived = false;
+    private volatile long lastExternalNmeaFixMs = 0L;
+    private long externalNmeaFixCounter = 0L;
+
+    private SharedPreferences nmeaSettings() {
+        return getSharedPreferences(NMEA_PREFS,MODE_PRIVATE);
+    }
+
+    private void nmeaInfoToWeb(String status) {
+        JSONObject payload=new JSONObject();
+        try {
+            payload.put("status",status);
+            payload.put("host",nmeaSettings().getString(NMEA_HOST,"192.168.0.101"));
+            payload.put("port",nmeaSettings().getInt(NMEA_PORT,11123));
+            payload.put("enabled",nmeaSettings().getBoolean(NMEA_ENABLED,false));
+            payload.put("fixes",externalNmeaFixCounter);
+        }catch(Exception ignored){}
+        javascript("if(window.rushExternalNmeaState)window.rushExternalNmeaState("+payload.toString()+");");
+    }
+
+    private void connectSavedNmea() {
+        if(externalNmea==null || !nmeaSettings().getBoolean(NMEA_ENABLED,false))return;
+        externalNmea.connect(nmeaSettings().getString(NMEA_HOST,"192.168.0.101"),
+             nmeaSettings().getInt(NMEA_PORT,11123));
+    }
+
+    private void acceptExternalNmea(double lat,double lon,Double speed,Double heading) {
+        if(!nmeaSettings().getBoolean(NMEA_ENABLED,false))return;
+        long now=android.os.SystemClock.elapsedRealtime();
+        lastExternalNmeaFixMs=now;
+        nmeaFixRecentlyReceived=true;
+        externalNmeaFixCounter++;
+        // RMC no publica precisión: null, NUNCA ±0 m.
+        String s=speed!=null&&Double.isFinite(speed)?String.valueOf(speed):"null";
+        String h=heading!=null&&Double.isFinite(heading)?String.valueOf(heading):"null";
+        String js="window.rushGpsData("+s+","+h+");"
+             +"window.rushPosition("+lat+","+lon+",null);"
+             +"if(window.rushGpsFixMeta)window.rushGpsFixMeta('iPhone NMEA',"
+             +externalNmeaFixCounter+","+(heading!=null?"true":"false")+");";
+        javascript(js);
+        if(externalNmeaFixCounter%8==1)nmeaInfoToWeb("GPS iPhone activo · lecturas "+externalNmeaFixCounter);
+    }
+
     private static final String OBD_PREFS = "rush_obd_autoconnect";
     private static final String OBD_MAC = "paired_elm327";
     private static final String OBD_AUTOMATIC = "enabled";
@@ -288,6 +336,14 @@ public class MainActivity extends Activity implements LocationListener {
         if (spotifyConnect.handles(getIntent().getData())) {
             spotifyConnect.handleRedirect(getIntent());
         }
+        externalNmea = new ExternalNmeaGps(new ExternalNmeaGps.Listener() {
+            @Override public void onStatus(String status) {
+                nmeaInfoToWeb(status);
+            }
+            @Override public void onFix(double lat,double lon,Double kmh,Double bearing) {
+                acceptExternalNmea(lat,lon,kmh,bearing);
+            }
+        });
         obdReader = new ObdReader(new ObdReader.Listener() {
             @Override public void onStatus(String status) {
                 javascript("window.rushObdStatus(" + JSONObject.quote(status) + ");");
@@ -327,6 +383,8 @@ public class MainActivity extends Activity implements LocationListener {
                 dispatchExternalNavigation();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
                 sendObdAutoState();
+                nmeaInfoToWeb("GPS iPhone listo");
+                connectSavedNmea();
             }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -1532,6 +1590,11 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         if(location==null)return;
+        // Si NMEA externo entrega posición reciente, evitar saltar a la
+        // localización Wi-Fi estática del TBox sin receptor GNSS.
+        if(nmeaSettings().getBoolean(NMEA_ENABLED,false)
+            && lastExternalNmeaFixMs>0L &&
+            android.os.SystemClock.elapsedRealtime()-lastExternalNmeaFixMs<10000L)return;
         gpsRawCounter++;
         gpsRawReceivedMs=android.os.SystemClock.elapsedRealtime();
         lastGpsProvider=LocationManager.GPS_PROVIDER.equals(location.getProvider())
@@ -1614,13 +1677,17 @@ public class MainActivity extends Activity implements LocationListener {
         }
         gpsRegistered=false;
         stopGpsWatchdog();
+        if(externalNmea!=null)externalNmea.disconnect();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         obdInForeground = true;
-        if (pageLoaded) scheduleObdAuto(true);
+        if (pageLoaded) {
+            scheduleObdAuto(true);
+            connectSavedNmea();
+        }
         if (spotifyConnect != null) spotifyConnect.resume();
         if (pageLoaded) {
             if (gpsRequested || mapGpsActive || weatherGpsActive) startGps();
@@ -1634,6 +1701,7 @@ public class MainActivity extends Activity implements LocationListener {
         obdInForeground = false;
         mainHandler.removeCallbacks(obdAutoPoll);
         stopGpsWatchdog();
+        if(externalNmea!=null)externalNmea.disconnect();
         if(locationManager!=null){
             try{locationManager.removeUpdates(this);}catch(SecurityException ignored){}
         }
@@ -1686,6 +1754,7 @@ public class MainActivity extends Activity implements LocationListener {
                 sendDockIcons();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
                 sendObdAutoState();
+                nmeaInfoToWeb("GPS iPhone listo");
             });
         }
         @JavascriptInterface public void spotifyClientId(String clientId) {
@@ -1731,6 +1800,32 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void navigate(String destination) {
             runUi(() -> openMaps(destination));
+        }
+        @JavascriptInterface public void connectIphoneGps(String address,int port) {
+            runUi(() -> {
+                if(!ExternalNmeaGps.validLocalIpv4(address)||port<1024||port>65535) {
+                    nmeaInfoToWeb("IP inválida: debe ser IPv4 de red Wi-Fi privada");
+                    return;
+                }
+                nmeaSettings().edit().putString(NMEA_HOST,address)
+                    .putInt(NMEA_PORT,port).putBoolean(NMEA_ENABLED,true).apply();
+                externalNmeaFixCounter=0;
+                nmeaFixRecentlyReceived=false;
+                connectSavedNmea();
+                nmeaInfoToWeb("Conectando a GPS2IP…");
+            });
+        }
+        @JavascriptInterface public void disconnectIphoneGps() {
+            runUi(() -> {
+                nmeaSettings().edit().putBoolean(NMEA_ENABLED,false).apply();
+                if(externalNmea!=null)externalNmea.disconnect();
+                nmeaFixRecentlyReceived=false;
+                nmeaInfoToWeb("GPS del iPhone desactivado");
+            });
+        }
+        @JavascriptInterface public void getIphoneGpsSettings() {
+            runUi(() -> nmeaInfoToWeb(nmeaSettings().getBoolean(NMEA_ENABLED,false) ?
+                "Configurado · esperando conexión" : "GPS iPhone no conectado"));
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> { gpsRequested = true; startGps(); });
