@@ -395,6 +395,25 @@ if($('navGpsRestart'))$('navGpsRestart').addEventListener('click',function(){
 setInterval(function(){
  if(!$('mapPanel').hidden)updateNavGpsHealth();
 },2000);
+window.rushGpsDiagnostics=function(data){
+ if(!data || typeof data!=='object')return;
+ if(window.RushHomeMap && typeof window.RushHomeMap.setDiagnostics==='function')
+  window.RushHomeMap.setDiagnostics(data);
+ var age=Number(data.ageSeconds)||0;
+ var provider=String(data.provider||'sin proveedor');
+ var total=Number(data.acceptedCount)||0,raw=Number(data.rawCount)||0;
+ var detail='GPS '+provider+' · nuevas '+total+' / recibidas '+raw+
+    ' · última hace '+age+' s';
+ if(data.rejectReason)detail+=' · '+String(data.rejectReason);
+ write('gpsDetail',detail);
+};
+if($('homeMapRetryGps'))$('homeMapRetryGps').addEventListener('click',function(){
+ if(nativeApp && window.Rush && typeof window.Rush.restartHomeGps==='function'){
+  if(window.RushHomeMap)window.RushHomeMap.follow();
+  window.Rush.restartHomeGps();
+  notice('Reiniciando receptor GPS del Carlinkit…');
+ }else notice('Reinicio de GPS disponible en el Carlinkit');
+});
 window.rushGpsStatus=function(status){
  state.gpsStatus=String(status||'Sin información');if(/desactivado|sin permiso|no disponible|sin proveedor|requerido/i.test(state.gpsStatus))state.gps=null;
  if(window.RushLiveMap)window.RushLiveMap.setStatus(state.gpsStatus);
