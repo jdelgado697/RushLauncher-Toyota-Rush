@@ -804,6 +804,17 @@
 #cartoTomtomStatus{font-size:12px}
 #cartoUseOsm[aria-pressed=true],#cartoUseTomtom[aria-pressed=true],
 #cartoToggleTraffic[aria-pressed=true]{outline:2px solid #28ceef;outline-offset:-2px}
+
+.home-map-traffic-legend{position:absolute;left:9px;bottom:73px;z-index:5;
+ display:flex;gap:9px;align-items:center;padding:5px 7px;border-radius:7px;
+ background:#041a33d9;color:white;font:700 9px/1.15 Arial,sans-serif;
+ border:1px solid #4b90b888;pointer-events:none}
+.home-map-traffic-legend[hidden]{display:none!important}
+.home-map-traffic-legend span{display:inline-flex;gap:4px;align-items:center;white-space:nowrap}
+.home-map-traffic-legend i{display:inline-block;width:13px;height:4px;border-radius:5px}
+.rush-flow-good{background:#2ae57b}
+.rush-flow-medium{background:#ffc105}
+.rush-flow-bad{background:#fb2d09}
 </style>
 </head>
 <body>
@@ -913,6 +924,11 @@
     <button type="button" id="homeMapZoomOut" aria-label="Alejar mapa">−</button>
    </div>
    <span id="homeMapTrafficStatus" class="home-map-trafficstatus" role="status" hidden>Tráfico no disponible</span>
+   <div id="homeMapTrafficLegend" class="home-map-traffic-legend" hidden aria-label="Colores del tráfico">
+    <span><i class="rush-flow-good"></i> Fluido</span>
+    <span><i class="rush-flow-medium"></i> Lento</span>
+    <span><i class="rush-flow-bad"></i> Congestión</span>
+   </div>
    <div class="home-map-footer"><span id="homeMapInfo">Rush Drive · calles cercanas · rumbo arriba</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
   </section>
   <div class="widgets">
