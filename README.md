@@ -400,3 +400,29 @@ Para las otras apps sigue siendo necesario un proveedor de ubicación Android.
 
 La fuente TCP NMEA transmite datos de posición sin cifrado sobre Wi-Fi local;
 usar solamente una red propia o de confianza.
+
+
+## Rush Launcher 4.19.0 — Rush Drive: navegación cercana
+
+Construido sobre 4.18, manteniendo **GPS2IP TCP del iPhone** y todos
+los controles Spotify/OBD/clima. En Inicio hay una nueva vista Rush Drive
+seleccionada por defecto (Ajustes → Vista del mapa → Mapa clásico para
+revertir), con las siguientes diferencias:
+- Más calle visible: zoom 18 a baja velocidad, zoom 17 desde 50 km/h y
+  zoom 16 desde 85 km/h, con un máximo de un cambio por cada nueve
+  segundos para no saturar el TBox.
+- Flecha del vehículo ligeramente por debajo del centro del mapa para
+  mostrar más vía en el sentido de avance.
+- Rumbo arriba sin giro invertido al pasar de 359° a 0°; suavizado visual
+  de rotación de 260 ms, sin modificar el sensor GPS ni simular movimiento.
+- Movimiento de teselas interpolado 880 ms entre posiciones GPS.
+- Mapa OSM con estilo de contraste desaturado durante el día y un estilo
+  nocturno azulado; no se utilizan terceros con claves de API.
+- Zoom manual entre 13 y 19 con botones +/−. Pulsar ▲ Conduciendo
+  recupera el zoom automático. Mapa clásico conserva el zoom 15 anterior.
+- El motor de rutas y de búsqueda sigue siendo el de la versión 4.18.
+
+IMPORTANTE: los cambios de dirección se basan en el campo curso/rumbo RMC
+del iPhone; una vez por segundo no puede interpolarse con precisión física
+entre señales. En parada el curso GPS puede ser poco fiable: no girar
+por debajo de 3.5 km/h. Requiere internet para mapas nuevos y rutas.

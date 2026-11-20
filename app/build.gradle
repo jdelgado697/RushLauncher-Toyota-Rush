@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 50
-        versionName '4.18.0-GPSiPhoneTCP'
+        versionCode 51
+        versionName '4.19.0-RushDriveCercano'
     }
 
     compileOptions {

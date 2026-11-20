@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano]
 
 permissions:
   contents: read
@@ -112,7 +112,7 @@ jobs:
           assert 'id="obdAutoToggle"' in html
           assert 'id="driveModeToggle"' in html
           assert 'class="screen drive-ui"' in html
-          assert 'version-pill">4.18' in html
+          assert 'version-pill">4.19' in html
           assert 'class="drive-obd-extra"' in html
           assert 'class="home-map glass"' in html
           assert "setDrivingMode(saved.drive,false)" in js
@@ -152,6 +152,17 @@ jobs:
           assert 'window.rushGpsFixMeta=function' in js
           assert 'window.Rush.restartMapGps()' in js
           assert 'id="homeMapRetryGps"' in html
+          assert 'id="mapStyleDrive"' in html and 'id="mapStyleClassic"' in html
+          assert 'rush-map-drive' in html and 'rush-map-drive' in home_map
+          assert 'var zoom=mapStyle' in home_map
+          assert 'function driveOffset()' in home_map
+          assert 'Math.round(host.clientHeight*0.115)' in home_map
+          assert 'visualBearing+=delta' in home_map
+          assert 'motionSpeed>=85?16:motionSpeed>=50?17:18' in home_map
+          assert 'zoom=clamp(zoom+change,13,19)' in home_map
+          assert 'function setStyle(mode)' in home_map
+          assert "transition:transform 260ms" in html
+          assert 'GPS2IP' in native and 'acceptExternalNmea' in native
           nmea=Path("app/src/main/java/cl/rush/launcher/ExternalNmeaGps.java").read_text(encoding="utf-8")
           assert 'GPS2IP' in nmea and 'parseRmc(String raw)' in nmea
           assert 'check!=stated' in nmea and '"A".equals(v[2])' in nmea
@@ -334,7 +345,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 50" in gradle
+          assert "versionCode 51" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
