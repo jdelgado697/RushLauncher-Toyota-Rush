@@ -81,6 +81,9 @@ public class MainActivity extends Activity implements LocationListener {
             payload.put("port",nmeaSettings().getInt(NMEA_PORT,11123));
             payload.put("enabled",nmeaSettings().getBoolean(NMEA_ENABLED,false));
             payload.put("fixes",externalNmeaFixCounter);
+            payload.put("recent",nmeaSettings().getBoolean(NMEA_ENABLED,false)
+                && lastExternalNmeaFixMs>0L &&
+                android.os.SystemClock.elapsedRealtime()-lastExternalNmeaFixMs<10000L);
         }catch(Exception ignored){}
         javascript("if(window.rushExternalNmeaState)window.rushExternalNmeaState("+payload.toString()+");");
     }
