@@ -164,7 +164,7 @@ jobs:
           assert "path=type==='incidents'?'incidents':'flow'" in home_map
           assert 'trafficCachePeriod=180000' in home_map
           assert "mapProvider==='osm'" in home_map
-          assert 'img.dataset.fallback' in home_map
+          assert 'this.dataset.fallback' in home_map
           assert '© TomTom' in html and '© OpenStreetMap' in html
           assert 'rush_tomtom_key_420' in home_map
           assert 'tomtomKey=candidate' in home_map
