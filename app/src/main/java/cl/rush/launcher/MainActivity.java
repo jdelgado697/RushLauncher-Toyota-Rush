@@ -670,17 +670,13 @@ public class MainActivity extends Activity implements LocationListener {
         }
     }
 
-    // Rush Navigator 4.15.1 se ejecuta EN ESTA misma APK, sin app externa.
+    // 4.20.1: mapa ligero dentro del WebView principal, sin arrancar MapLibre GL.
+    // Es compatible con los accesos del dock y con Rush.navigate(destino).
     private void openMaps(String destination) {
-        try {
-            Intent screen = new Intent(this, NavigationActivity.class);
-            String place = destination == null ? "" : destination.trim();
-            if (!place.isEmpty())
-                screen.putExtra("rush_destination", place.substring(0, Math.min(180, place.length())));
-            startActivity(screen);
-        } catch (Exception ex) {
-            message("No se pudo iniciar el mapa nativo; comprueba compatibilidad de GPU");
-        }
+        String place = destination == null ? "" : destination.trim();
+        if (place.length() > 140) place = place.substring(0, 140);
+        javascript("if(window.rushOpenEmbeddedMap)window.rushOpenEmbeddedMap("
+                + JSONObject.quote(place) + ");");
     }
 
     private void openRoute(String action) {
