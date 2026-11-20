@@ -1735,6 +1735,20 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public void askGps() {
             runUi(() -> { gpsRequested = true; startGps(); });
         }
+        @JavascriptInterface public void restartHomeGps() {
+            runUi(() -> {
+                gpsRequested=true;
+                if(locationManager!=null) {
+                    try{locationManager.removeUpdates(MainActivity.this);}
+                    catch(SecurityException ignored){}
+                }
+                gpsRegistered=false;
+                gpsRegisteredMs=android.os.SystemClock.elapsedRealtime();
+                lastGpsRestartMs=gpsRegisteredMs;
+                sendGpsStatus("Reiniciando GPS del Inicio…");
+                startGps();
+            });
+        }
         @JavascriptInterface public void startWeatherGps() {
             runUi(() -> { weatherGpsActive = true; startGps(); });
         }
