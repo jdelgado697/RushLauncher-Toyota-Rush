@@ -211,12 +211,8 @@ $('navStartRoute').addEventListener('click',function(){
 $('navClearRoute').addEventListener('click',navClear);
 
 function openMap(){
- // En Android abre MapLibre Native dentro del mismo APK.
- // El mapa 2D de la 4.15 se conserva como respaldo para previsualización HTML.
- if(nativeApp){
-  app('maps');
-  return;
- }
+ // 4.20.1: navegación 2D dentro del WebView ya activo.
+ // Evita iniciar MapLibre GL nativo en GPUs incompatibles del TBox.
  navGpsMeta.started=Date.now();
  openOverlay('mapPanel');
  write('mapSubtitle','Busca un destino o elige un punto en el mapa');
@@ -242,6 +238,14 @@ function openMap(){
  };
  document.body.appendChild(script);
 }
+// También atiende los accesos nativos del puente Java sin lanzar otra Activity.
+window.rushOpenEmbeddedMap=function(destination){
+ openMap();
+ if(typeof destination==='string'&&destination.trim()){
+  $('navQuery').value=destination.trim().slice(0,140);
+  $('navSearchBtn').click();
+ }
+};
 function rushReturnHome(){
  Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){
   if(!p.hidden)closeOverlay(p.id);
