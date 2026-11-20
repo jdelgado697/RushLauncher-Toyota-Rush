@@ -288,7 +288,8 @@ function pointerStart(event){
  longTimer=setTimeout(function(){
   if(!activePointer||activePointer.moved||motionSpeed>5||!window.RushHomeNavigation)return;
   var rect=host.getBoundingClientRect();
-  var dx=activePointer.x-rect.left-rect.width/2,dy=activePointer.y-rect.top-rect.height/2;
+  var dx=activePointer.x-rect.left-rect.width/2,
+      dy=activePointer.y-rect.top-rect.height/2-driveOffset();
   var radians=following&&live?bearing*Math.PI/180:0;
   var x=dx*Math.cos(radians)-dy*Math.sin(radians);
   var y=dx*Math.sin(radians)+dy*Math.cos(radians);
