@@ -19,12 +19,17 @@ if(!host||!layer||!marker||!surface||!followButton||!zoomIn||!zoomOut)return;
 var current={lat:-39.367,lon:-72.632},position=null;
 // Vista de conducción cercana a nivel calle; los cambios de rumbo no
 // cambian la fuente GPS, únicamente hacen más ágil su presentación.
-var zoom=18,following=true,bearing=0,visualBearing=0,live=false,accuracy=null,
-    tiles=Object.create(null),motionSpeed=0,autoZoom=true,lastAutoZoomAt=0;
+var mapStyle='drive';
+try{mapStyle=localStorage.getItem('rush_map_style')==='classic'?'classic':'drive'}catch(e){}
+var zoom=mapStyle==='drive'?18:15,following=true,bearing=0,visualBearing=0,
+    live=false,accuracy=null,tiles=Object.create(null),motionSpeed=0,
+    autoZoom=mapStyle==='drive',lastAutoZoomAt=0;
+host.classList.toggle('rush-map-drive',mapStyle==='drive');
 var lastDirectionAt=0;
 var lastDraw=0,drawQueued=false,activePointer=null,lastTouch=0;
 var maxTiles=25, tile=256, minLat=-85.05112878, maxLat=85.05112878;
-function driveOffset(){return following&&live?Math.round(host.clientHeight*0.115):0}
+function driveOffset(){return following&&live&&mapStyle==='drive'?
+  Math.round(host.clientHeight*0.115):0}
 var lastGpsAt=0,lastRenderedCenter=null;
 var externalActive=false;
 var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
@@ -212,7 +217,7 @@ function setHeading(heading,speed){
  motionSpeed=Number.isFinite(speed)?Math.max(0,speed):0;
  // Zoom automático sensible a la velocidad, evitando saltos frecuentes.
  // <50 km/h: detalle de calles (z18); 50-84: z17; >=85: z16.
- if(autoZoom && following && live){
+ if(autoZoom && mapStyle==='drive' && following && live){
   var target=motionSpeed>=85?16:motionSpeed>=50?17:18;
   if(target!==zoom && Date.now()-lastAutoZoomAt>9000){
    zoom=target;lastAutoZoomAt=Date.now();queueDraw();
@@ -231,7 +236,8 @@ function setHeading(heading,speed){
 }
 function activateFollow(){
  following=true;
- autoZoom=true;zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
+ autoZoom=mapStyle==='drive';
+ if(autoZoom)zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
  if(position)current={lat:position.lat,lon:position.lon};
  followButton.textContent='▲ Conduciendo';
  followButton.setAttribute('aria-pressed','true');
@@ -243,6 +249,21 @@ function freeMove(){
  following=false;layer.style.transform='none';
  followButton.textContent='◎ Seguir';
  followButton.setAttribute('aria-pressed','false');
+}
+function setStyle(mode){
+ mapStyle=mode==='classic'?'classic':'drive';
+ try{localStorage.setItem('rush_map_style',mapStyle)}catch(e){}
+ host.classList.toggle('rush-map-drive',mapStyle==='drive');
+ autoZoom=mapStyle==='drive';
+ zoom=mapStyle==='drive'?(motionSpeed>=85?16:motionSpeed>=50?17:18):15;
+ if(following&&position)current={lat:position.lat,lon:position.lon};
+ if(document.getElementById('mapStyleDrive'))
+  document.getElementById('mapStyleDrive').setAttribute('aria-pressed',
+    mapStyle==='drive'?'true':'false');
+ if(document.getElementById('mapStyleClassic'))
+  document.getElementById('mapStyleClassic').setAttribute('aria-pressed',
+    mapStyle==='classic'?'true':'false');
+ setStatus();queueDraw();
 }
 function scaleZoom(change){
  // Zoom manual conservado hasta pulsar de nuevo 'Conduciendo'.
@@ -317,6 +338,14 @@ surface.addEventListener('keydown',function(e){
  if(e.key==='-'){scaleZoom(-1);e.preventDefault()}
 });
 followButton.addEventListener('click',activateFollow);
+var styleDriveButton=document.getElementById('mapStyleDrive');
+var styleClassicButton=document.getElementById('mapStyleClassic');
+if(styleDriveButton)styleDriveButton.addEventListener('click',function(){setStyle('drive')});
+if(styleClassicButton)styleClassicButton.addEventListener('click',function(){setStyle('classic')});
+if(styleDriveButton)styleDriveButton.setAttribute('aria-pressed',
+  mapStyle==='drive'?'true':'false');
+if(styleClassicButton)styleClassicButton.setAttribute('aria-pressed',
+  mapStyle==='classic'?'true':'false');
 zoomIn.addEventListener('click',function(){scaleZoom(1)});
 zoomOut.addEventListener('click',function(){scaleZoom(-1)});
 window.addEventListener('resize',queueDraw);
@@ -330,7 +359,8 @@ window.RushHomeMap={
  refresh:queueDraw,
  isFollowing:function(){return following},
  getBearing:getBearing,
- getZoom:function(){return zoom}
+ getZoom:function(){return zoom},
+ getStyle:function(){return mapStyle},setStyle:setStyle
 };
 // Visible desde el inicio, sin fingir que el vehículo se encuentra aquí.
 followButton.textContent='▲ Conduciendo';
