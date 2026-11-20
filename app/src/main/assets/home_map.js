@@ -1,7 +1,8 @@
 /* Rush Launcher 4.15.4 — mapa de Inicio manipulable y seguimiento de conducción.
  * No incrusta el mapa GL pesado de la pantalla de navegación: utiliza pocas
  * teselas raster para proteger los 4 GB del TBox. GPS real o referencia explícita.
- * © OpenStreetMap contributors. No tráfico en tiempo real ni navegación offline.
+ * © OpenStreetMap contributors. Con API TomTom opcional: © TomTom.
+ * Tráfico sujeto a la disponibilidad del proveedor y clave propia.
  */
 (function(){
 'use strict';
@@ -34,6 +35,99 @@ var lastGpsAt=0,lastRenderedCenter=null;
 var externalActive=false;
 var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
 var previousFix=null;
+// Rush 4.20: cartografía y tráfico TomTom Orbis v2. Sin credenciales,
+// OSM continúa siendo el mapa estable; nunca se dibuja tráfico inventado.
+var mapProvider='osm',tomtomKey='',trafficEnabled=false;
+var trafficTiles=Object.create(null),lastTrafficSuccess=0,lastTrafficError=0;
+var trafficChecked=0,lastMapError=0,trafficErrorCount=0;
+var trafficNotice=document.getElementById('homeMapTrafficStatus');
+var trafficButton=document.getElementById('homeMapTraffic');
+var attribution=document.getElementById('homeMapAttribution');
+var trafficCachePeriod=180000; // 3 min para limitar consumo y costos.
+var lastThemeOnTiles='';
+try {
+  tomtomKey=localStorage.getItem('rush_tomtom_key_420')||'';
+  mapProvider=localStorage.getItem('rush_map_provider_420')==='tomtom'?'tomtom':'osm';
+  trafficEnabled=localStorage.getItem('rush_traffic_enabled_420')==='yes';
+}catch(e){}
+function validTomtomKey(){return /^[A-Za-z0-9_-]{12,128}$/.test(tomtomKey)}
+if(!validTomtomKey()){mapProvider='osm';trafficEnabled=false;}
+function trafficReady(){return trafficEnabled&&validTomtomKey()}
+function currentMapTheme(){return document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'}
+function baseTileUrl(z,x,y){
+ if(mapProvider!=='tomtom'||!validTomtomKey())
+  return 'https://tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png';
+ var style=currentMapTheme()==='dark'?'street-dark':'street-light';
+ return 'https://api.tomtom.com/maps/orbis/display/raster/tile/'+z+'/'+x+'/'+y+
+  '?apiVersion=2&style='+style+'&tileSize=256&geopoliticalView=CL&key='+encodeURIComponent(tomtomKey);
+}
+function trafficTileUrl(type,z,x,y){
+ var path=type==='incidents'?'incidents':'flow';
+ return 'https://api.tomtom.com/maps/orbis/traffic/'+path+'/raster/tile/'+z+'/'+x+'/'+y+
+  '?apiVersion=2&style='+currentMapTheme()+'&tileSize=256&key='+encodeURIComponent(tomtomKey);
+}
+function trafficStatus(){
+ if(!trafficNotice)return;
+ var ready=trafficReady(),time=lastTrafficSuccess?
+   new Date(lastTrafficSuccess).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):'';
+ if(!validTomtomKey()){
+  trafficNotice.textContent='Tráfico: requiere clave TomTom';trafficNotice.hidden=true;
+ }else if(!ready){
+  trafficNotice.textContent='Tráfico desactivado';trafficNotice.hidden=true;
+ }else if(lastTrafficSuccess) {
+  trafficNotice.textContent='Tráfico TomTom · datos cargados '+time;
+  trafficNotice.hidden=false;
+ }else if(lastTrafficError) {
+  trafficNotice.textContent='Tráfico no disponible · revisa clave o red';
+  trafficNotice.hidden=false;
+ }else{
+  trafficNotice.textContent='Consultando tráfico TomTom…';
+  trafficNotice.hidden=false;
+ }
+ if(trafficButton)trafficButton.setAttribute('aria-pressed',ready?'true':'false');
+ if(trafficButton)trafficButton.textContent=ready?'Tráfico ✓':'Tráfico';
+ if(attribution)attribution.textContent=
+  mapProvider==='tomtom'||ready?'© TomTom · © OpenStreetMap':'© OpenStreetMap contributors';
+ host.classList.toggle('rush-tomtom-map',mapProvider==='tomtom');
+}
+function resetMapTiles(){
+ Object.keys(tiles).forEach(function(k){tiles[k].remove();delete tiles[k]});
+ Object.keys(trafficTiles).forEach(function(k){trafficTiles[k].remove();delete trafficTiles[k]});
+}
+function configureCartography(options){
+ options=options||{};
+ if(typeof options.key==='string'&&options.key.trim()){
+  var candidate=options.key.trim();
+  if(!/^[A-Za-z0-9_-]{12,128}$/.test(candidate))
+   return {ok:false,message:'Clave API TomTom inválida'};
+  tomtomKey=candidate;
+  try{localStorage.setItem('rush_tomtom_key_420',tomtomKey)}catch(e){}
+ }
+ if(options.clearKey===true){
+  tomtomKey='';
+  try{localStorage.removeItem('rush_tomtom_key_420')}catch(e){}
+ }
+ if(options.provider==='osm'||options.provider==='tomtom'){
+  mapProvider=options.provider;
+ }
+ if(options.traffic===true||options.traffic===false)trafficEnabled=options.traffic;
+ if(!validTomtomKey()){
+  mapProvider='osm';trafficEnabled=false;
+ }
+ try {
+  localStorage.setItem('rush_map_provider_420',mapProvider);
+  localStorage.setItem('rush_traffic_enabled_420',trafficEnabled?'yes':'no');
+ }catch(e){}
+ lastTrafficSuccess=0;lastTrafficError=0;trafficErrorCount=0;
+ resetMapTiles();trafficStatus();queueDraw();
+ return {ok:true,provider:mapProvider,traffic:trafficReady(),hasKey:validTomtomKey()};
+}
+function getCartography(){return {
+ provider:mapProvider,traffic:trafficReady(),hasKey:validTomtomKey(),
+ lastTrafficSuccess:lastTrafficSuccess,
+ error:!lastTrafficSuccess&&lastTrafficError>0
+}}
+
 var routeCoords=[],routeSvg=document.getElementById('homeRouteSvg'),
     routeShadow=document.getElementById('homeRouteBorder'),
     routeLine=document.getElementById('homeRouteLine'),
@@ -95,7 +189,13 @@ function render(){
  var center=project(current.lat,current.lon),n=numZoom();
  var minX=Math.floor((center.x-w/2)/tile),maxX=Math.floor((center.x+w/2)/tile);
  var minY=Math.floor((center.y-h/2)/tile),maxY=Math.floor((center.y+h/2)/tile);
- var names=Object.create(null),count=0;
+ var names=Object.create(null),tNames=Object.create(null),count=0;
+ var theme=currentMapTheme();
+ if(lastThemeOnTiles!==theme){
+  lastThemeOnTiles=theme;
+  resetMapTiles();
+ }
+ var trafficEpoch=Math.floor(Date.now()/trafficCachePeriod);
  for(var y=minY;y<=maxY;y++){
   if(y<0||y>=n)continue;
   for(var x=minX;x<=maxX;x++){
@@ -105,20 +205,57 @@ function render(){
    var img=tiles[key];
    if(!img){
     img=document.createElement('img');
+    img.className='rush-base-tile';
     img.alt='';img.draggable=false;img.decoding='async';
     img.setAttribute('loading','eager');
     img.referrerPolicy='strict-origin-when-cross-origin';
     img.style.transition='none';
-    img.src='https://tile.openstreetmap.org/'+key+'.png';
-    img.onerror=function(){this.style.visibility='hidden'};
+    img.src=baseTileUrl(zoom,wrapped,y);
+    img.onerror=function(){
+      // Conserva siempre cartografía al fallar la clave o el proveedor.
+      if(this.dataset.fallback!=='yes' && mapProvider==='tomtom'){
+       this.dataset.fallback='yes';
+       this.src='https://tile.openstreetmap.org/'+this.dataset.xyz+'.png';
+      }else this.style.visibility='hidden';
+      lastMapError=Date.now();
+    };
+    img.dataset.xyz=key;
     tiles[key]=img;layer.appendChild(img);
    }else{
-    // Pequeña interpolación entre lecturas GPS (sin descargar imágenes extra).
     img.style.transition=following&&motionSpeed>6?
       'left 880ms linear, top 880ms linear':'none';
    }
-   img.style.left=Math.round(x*tile-center.x+w/2)+'px';
-   img.style.top=Math.round(y*tile-center.y+h/2)+'px';
+   var px=Math.round(x*tile-center.x+w/2)+'px',py=Math.round(y*tile-center.y+h/2)+'px';
+   img.style.left=px;img.style.top=py;
+   if(trafficReady()){
+    ['flow','incidents'].forEach(function(type){
+     var tkey=type+'/'+trafficEpoch+'/'+key;
+     tNames[tkey]=true;
+     var overlay=trafficTiles[tkey];
+     if(!overlay){
+      overlay=document.createElement('img');
+      overlay.className=type==='flow'?'rush-traffic-flow':'rush-traffic-incidents';
+      overlay.alt='';
+      overlay.decoding='async';overlay.draggable=false;
+      overlay.referrerPolicy='strict-origin-when-cross-origin';
+      overlay.style.transition='none';
+      overlay.style.pointerEvents='none';
+      overlay.onload=function(){
+       lastTrafficSuccess=Date.now();trafficStatus();
+      };
+      overlay.onerror=function(){
+       lastTrafficError=Date.now();trafficErrorCount++;trafficStatus();
+       this.style.visibility='hidden';
+      };
+      overlay.src=trafficTileUrl(type,zoom,wrapped,y);
+      trafficTiles[tkey]=overlay;layer.appendChild(overlay);
+     }else{
+      overlay.style.transition=following&&motionSpeed>6?
+       'left 880ms linear, top 880ms linear':'none';
+     }
+     overlay.style.left=px;overlay.style.top=py;
+    });
+   }
    count++;
   }
   if(count>=maxTiles)break;
@@ -126,14 +263,16 @@ function render(){
  Object.keys(tiles).forEach(function(key){
   if(!names[key]){tiles[key].remove();delete tiles[key]}
  });
+ Object.keys(trafficTiles).forEach(function(key){
+  if(!tNames[key]){trafficTiles[key].remove();delete trafficTiles[key]}
+ });
  host.classList.add('home-map-has-tiles');
- // El vehículo queda un poco más abajo para mostrar más calle por delante.
- // visualBearing acumula los cambios por el camino MÁS CORTO al cruzar 0/360.
  layer.style.transform=following&&live?
    'translate3d(0,'+driveOffset()+'px,0) rotate('+(-visualBearing)+'deg)':'none';
  drawRoute(center,w,h);
  drawMarker();
  setStatus();
+ trafficStatus();
  lastDraw=Date.now();
  lastRenderedCenter={lat:current.lat,lon:current.lon};
 }
@@ -339,6 +478,16 @@ surface.addEventListener('keydown',function(e){
  if(e.key==='-'){scaleZoom(-1);e.preventDefault()}
 });
 followButton.addEventListener('click',activateFollow);
+if(trafficButton)trafficButton.addEventListener('click',function(){
+ if(!validTomtomKey()){
+  var st=document.getElementById('cartoTomtomStatus');
+  if(st)st.textContent='Configura tu clave TomTom en Ajustes antes de activar tráfico.';
+  var settings=document.getElementById('settingsPanel');
+  if(settings)settings.hidden=false;
+  return;
+ }
+ configureCartography({traffic:!trafficEnabled});
+});
 var styleDriveButton=document.getElementById('mapStyleDrive');
 var styleClassicButton=document.getElementById('mapStyleClassic');
 if(styleDriveButton)styleDriveButton.addEventListener('click',function(){setStyle('drive')});
@@ -361,11 +510,21 @@ window.RushHomeMap={
  isFollowing:function(){return following},
  getBearing:getBearing,
  getZoom:function(){return zoom},
- getStyle:function(){return mapStyle},setStyle:setStyle
+ getStyle:function(){return mapStyle},setStyle:setStyle,
+ configureCartography:configureCartography,getCartography:getCartography
 };
 // Visible desde el inicio, sin fingir que el vehículo se encuentra aquí.
 followButton.textContent='▲ Conduciendo';
 followButton.setAttribute('aria-pressed','true');
+trafficStatus();
 queueDraw();
-setInterval(function(){if(live&&host.offsetWidth)setStatus()},5000);
+setInterval(function(){
+ if(host.offsetWidth){
+  if(live)setStatus();
+  // Repintar cada 30 s solo si hay tráfico visible y el mapa está en pantalla;
+  // los mosaicos se actualizan con una ventana temporal de tres minutos.
+  if(trafficReady()&&document.visibilityState!=='hidden')queueDraw();
+  if(currentMapTheme()!==lastThemeOnTiles)queueDraw();
+ }
+},30000);
 })();
