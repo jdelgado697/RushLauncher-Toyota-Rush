@@ -379,7 +379,8 @@ function updateNavGpsHealth(){
  }
 }
 window.rushGpsFixMeta=function(source,counter,hasBearing){
- navGpsMeta.source=source==='GPS'?'Satélite':'Red/Wi-Fi';
+ navGpsMeta.source=source==='iPhone NMEA'?'iPhone Wi-Fi':
+   source==='GPS'?'Satélite':'Red/Wi-Fi';
  navGpsMeta.counter=Number(counter)||0;
  navGpsMeta.hasBearing=!!hasBearing;
  navGpsMeta.at=Date.now();
@@ -395,6 +396,51 @@ if($('navGpsRestart'))$('navGpsRestart').addEventListener('click',function(){
 setInterval(function(){
  if(!$('mapPanel').hidden)updateNavGpsHealth();
 },2000);
+/* Rush 4.18: el servidor Socket de GPS2IP alimenta directamente el launcher.
+   GPS Connector no interviene; la IP puede cambiar al cambiar de Wi-Fi. */
+window.RushExternalGps={active:false,recent:false,hasFix:false};
+window.rushExternalNmeaState=function(info) {
+ if(!info || typeof info!=='object')return;
+ window.RushExternalGps.active=!!info.enabled;
+ window.RushExternalGps.recent=!!info.recent;
+ window.RushExternalGps.hasFix=(Number(info.fixes)||0)>0&&!!info.recent;
+ if($('iphoneGpsHost')&&document.activeElement!==$('iphoneGpsHost'))
+   $('iphoneGpsHost').value=info.host||'192.168.0.101';
+ if($('iphoneGpsPort')&&document.activeElement!==$('iphoneGpsPort'))
+   $('iphoneGpsPort').value=info.port||11123;
+ var msg=String(info.status||'GPS iPhone no conectado');
+ var fixes=Number(info.fixes)||0;
+ write('iphoneGpsStatus',msg+(fixes?' · '+fixes+' lecturas RMC':''));
+ if(window.RushHomeMap && typeof window.RushHomeMap.setExternalActive==='function')
+   window.RushHomeMap.setExternalActive(window.RushExternalGps.active);
+ if(window.RushExternalGps.active && window.RushExternalGps.hasFix){
+   state.gpsStatus='GPS iPhone vía Wi-Fi';
+   renderMetrics();
+ }
+};
+$('iphoneGpsConnect').addEventListener('click',function(){
+ if(!nativeApp||typeof window.Rush.connectIphoneGps!=='function'){
+  notice('Disponible en Rush Launcher 4.18 para Android');return;
+ }
+ var ip=$('iphoneGpsHost').value.trim(),port=Number($('iphoneGpsPort').value);
+ if(!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)||!Number.isInteger(port)||port<1024||port>65535){
+  notice('Revisa IP privada y puerto del iPhone');return;
+ }
+ window.Rush.connectIphoneGps(ip,port);
+ write('iphoneGpsStatus','Conectando a GPS2IP '+ip+':'+port+'…');
+});
+$('iphoneGpsDisconnect').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.disconnectIphoneGps==='function'){
+   window.Rush.disconnectIphoneGps();
+ }
+});
+$('homeMapIphoneGps').addEventListener('click',function(){
+ openOverlay('settingsPanel');
+ if(nativeApp&&typeof window.Rush.getIphoneGpsSettings==='function')
+   window.Rush.getIphoneGpsSettings();
+});
+if(nativeApp&&typeof window.Rush.getIphoneGpsSettings==='function')
+  window.Rush.getIphoneGpsSettings();
 window.rushGpsDiagnostics=function(data){
  if(!data || typeof data!=='object')return;
  if(window.RushHomeMap && typeof window.RushHomeMap.setDiagnostics==='function')
