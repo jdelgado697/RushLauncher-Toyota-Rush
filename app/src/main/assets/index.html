@@ -747,6 +747,9 @@
  .home-map.search-keyboard .home-nav-results{left:5px!important;top:45px!important;
   width:calc(100% - 10px)!important;max-height:calc(100% - 52px)!important}
 }
+/* Acceso rápido a recuperación GPS sin salir del modo de conducción. */
+.home-map-tools #homeMapRetryGps{background:#143957ee;color:#bdeeff;font-size:11px;white-space:nowrap}
+.home-map-tools #homeMapRetryGps:active{background:#167ec0}
 </style>
 </head>
 <body>
@@ -849,6 +852,7 @@
    </div>
    <div class="home-map-tools" aria-label="Controles de mapa">
     <button type="button" id="homeMapFollow" aria-pressed="true" title="Seguir el GPS">▲ Conduciendo</button>
+    <button type="button" id="homeMapRetryGps" title="Reiniciar el receptor GPS de Android">↻ GPS</button>
     <button type="button" id="homeMapZoomIn" aria-label="Acercar mapa">+</button>
     <button type="button" id="homeMapZoomOut" aria-label="Alejar mapa">−</button>
    </div>
