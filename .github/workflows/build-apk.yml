@@ -96,7 +96,7 @@ jobs:
           assert 'id="homeNavPeek"' in html
           assert '4.20.6' in html and 'home-map-marker::after' in html
           assert '#5cd8bb' in html and '#8cd8ed' in html
-          assert "applicationId 'cl.rush.launcher.pastel'" in gradle
+          assert "applicationId 'cl.rush.launcher.pastel'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
           assert 'Rush GTA Pastel (prueba)' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
@@ -387,7 +387,7 @@ jobs:
           assert '1600L,0f,this,Looper.getMainLooper()' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.pastel'" in gradle
+          assert "applicationId 'cl.rush.launcher.pastel'" in Path("app/build.gradle").read_text(encoding="utf-8")
           assert 'RushLauncher/4.20.6' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
