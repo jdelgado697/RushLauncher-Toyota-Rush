@@ -358,7 +358,7 @@ jobs:
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
           assert "applicationId 'cl.rush.launcher.obd415'" in gradle
-          assert 'RushLauncher/4.15.0' in native
+          assert 'RushLauncher/4.20.3' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
