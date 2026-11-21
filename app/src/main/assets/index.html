@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.7 · Ruta precisa y hora de llegada</title>
+<title>Rush Launcher 4.20.8 · GPS fluido y Chile sin internet</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -1209,6 +1209,28 @@ body>.home-map.rush-map-fullscreen.has-active-route .home-map-attribution{
  stroke-linecap:round!important;
  stroke-linejoin:round!important;
 }
+
+/* 4.20.8: GPS interpolado en un solo plano; ruta y teselas sincronizadas */
+.home-map .home-map-tiles,.home-map.rush-map-drive .home-map-tiles,
+body>.home-map.rush-map-fullscreen .home-map-tiles,
+.home-map .home-map-tiles>img,
+.home-map .home-map-tiles>img.rush-traffic-flow,
+.home-map .home-map-tiles>img.rush-traffic-incidents{
+ transition:none!important;
+}
+.home-map-offlinechip{
+ position:absolute;bottom:39px;left:7px;z-index:6;
+ min-height:24px;display:flex;align-items:center;
+ padding:4px 7px;max-width:110px;
+ background:#174f4de8;color:#e6ffef;
+ border:1px solid #7fdac0;border-radius:7px;
+ font-size:10px;font-weight:850;pointer-events:none;
+}
+.home-map-offlinechip[hidden]{display:none!important}
+.home-map.has-active-route .home-map-offlinechip{bottom:40px}
+body>.home-map.rush-map-fullscreen .home-map-offlinechip{
+ bottom:45px;left:10px;
+}
 </style>
 </head>
 <body>
@@ -1228,7 +1250,7 @@ body>.home-map.rush-map-fullscreen.has-active-route .home-map-attribution{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.7</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.8</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1290,6 +1312,7 @@ body>.home-map.rush-map-fullscreen.has-active-route .home-map-attribution{
       aria-label="Mover mapa con el dedo. Doble toque para acercar. También puedes usar flechas." ></div>
    <div id="homeMapMarker" class="home-map-marker" hidden aria-label="Posición Android">◆</div>
    <span class="home-map-attribution" id="homeMapAttribution">© OpenStreetMap contributors</span>
+    <span class="home-map-offlinechip" id="homeMapOfflineChip" hidden>Chile offline</span>
    <div class="home-map-header"><span class="home-map-label">RUSH <strong>DRIVE</strong></span><span id="homeMapStatus">Cargando mapa…</span></div>
    <div class="home-map-route">Mapa y ruta<small>GPS rumbo arriba · mantén pulsado para destino</small></div>
    <div class="home-nav-search" role="search" aria-label="Buscar destino en Chile">
@@ -1385,6 +1408,15 @@ body>.home-map.rush-map-fullscreen.has-active-route .home-map-attribution{
    <p class="muted">La sentencia RMC contiene posición, velocidad y rumbo, pero no precisión. Rush no mostrará un falso ±0 m. Al perder Wi-Fi, el último punto se indicará como antiguo. GPS2IP Lite puede limitar la duración de las sesiones.</p>
   </div>
 
+  <div class="set-line">
+   <h3>Chile sin internet</h3>
+   <p class="muted">Se incluyen carreteras y calles de Chile, poblaciones, ríos y
+   áreas verdes desde el extracto OSM/Geofabrik. Si se corta internet el
+   mapa local se activa automáticamente, sin cambiar de visor.</p>
+   <p class="muted">Limitaciones: cartografía simplificada sin imágenes ni
+   edificios descargados. Las búsquedas, rutas nuevas y el tráfico TomTom
+   requieren internet. Datos © OpenStreetMap contributors (ODbL) · Geofabrik.</p>
+  </div>
   <div class="set-line">
    <h3>Cartografía y tráfico TomTom Orbis</h3>
    <p class="muted">Por defecto funciona OpenStreetMap. Para utilizar mapas TomTom y congestión real, agrega tu clave personal de <b>my.tomtom.com</b>. No se incluyen claves ni tráfico simulado. Requiere internet; según tu cuenta puede haber límites y cargos por uso.</p>
