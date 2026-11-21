@@ -18,6 +18,7 @@ import android.graphics.drawable.Drawable;
 import android.util.Base64;
 import android.util.LruCache;
 import android.media.AudioManager;
+import android.media.AudioAttributes;
 import android.net.Uri;
 import android.bluetooth.BluetoothAdapter;
 import android.os.Build;
@@ -1469,31 +1470,92 @@ public class MainActivity extends Activity implements LocationListener {
         });
     }
 
-    // Guía hablada bajo demanda; sin permisos especiales ni grabación de audio.
+    // Voz de navegacion 4.20.4: usar el mismo canal multimedia del TBox.
+    // Diagnostico visible: no confundir un boton "Voz si" con audio real.
+    private void reportNavigationSpeech(String state,String message) {
+        javascript("if(window.rushTtsStatus)window.rushTtsStatus("+
+            JSONObject.quote(state)+","+JSONObject.quote(message)+");");
+    }
+
     private void speakNavigationInternal(String message) {
-        if(message==null||message.isEmpty())return;
+        if(message==null||message.trim().isEmpty())return;
         final String phrase=message.length()>220?message.substring(0,220):message;
         if(navSpeech==null) {
             pendingNavSpeech=phrase;
+            navSpeechReady=false;
+            reportNavigationSpeech("loading","Inicializando síntesis de voz Android…");
             navSpeech=new TextToSpeech(getApplicationContext(),status -> {
-                if(status!=TextToSpeech.SUCCESS||navSpeech==null)return;
-                int lang=navSpeech.setLanguage(new Locale("es","CL"));
-                if(lang==TextToSpeech.LANG_MISSING_DATA||lang==TextToSpeech.LANG_NOT_SUPPORTED)
-                    lang=navSpeech.setLanguage(new Locale("es","ES"));
-                navSpeechReady=lang!=TextToSpeech.LANG_MISSING_DATA
-                        &&lang!=TextToSpeech.LANG_NOT_SUPPORTED;
-                if(navSpeechReady&&pendingNavSpeech!=null){
-                    navSpeech.speak(pendingNavSpeech,TextToSpeech.QUEUE_FLUSH,null,"rush-first-turn");
+                if(status!=TextToSpeech.SUCCESS||navSpeech==null) {
+                    navSpeechReady=false;
+                    pendingNavSpeech=null;
+                    reportNavigationSpeech("error","No hay motor de voz Android disponible. Abre Ajustes de voz.");
+                    return;
                 }
-                pendingNavSpeech=null;
+                try {
+                    // Spotify ya sale por STREAM_MUSIC. Usar el mismo canal
+                    // impide que la voz quede en un stream silencioso del TBox.
+                    navSpeech.setAudioAttributes(new AudioAttributes.Builder()
+                        .setLegacyStreamType(AudioManager.STREAM_MUSIC).build());
+                    navSpeech.setSpeechRate(1.02f);
+                    int lang=navSpeech.setLanguage(new Locale("es","CL"));
+                    if(lang==TextToSpeech.LANG_MISSING_DATA||lang==TextToSpeech.LANG_NOT_SUPPORTED)
+                        lang=navSpeech.setLanguage(new Locale("es","ES"));
+                    if(lang==TextToSpeech.LANG_MISSING_DATA||lang==TextToSpeech.LANG_NOT_SUPPORTED)
+                        lang=navSpeech.setLanguage(new Locale("es"));
+                    navSpeechReady=lang!=TextToSpeech.LANG_MISSING_DATA
+                        &&lang!=TextToSpeech.LANG_NOT_SUPPORTED;
+                    if(!navSpeechReady){
+                        reportNavigationSpeech("error",
+                            "No hay voz española instalada. Instala datos de voz en Ajustes Android.");
+                        pendingNavSpeech=null;
+                        return;
+                    }
+                    navSpeech.setOnUtteranceProgressListener(
+                        new android.speech.tts.UtteranceProgressListener(){
+                            @Override public void onStart(String id) {
+                                reportNavigationSpeech("speaking",
+                                    "Motor de voz activo. Si no se oye, revisa volumen multimedia.");
+                            }
+                            @Override public void onDone(String id) {}
+                            @Override public void onError(String id) {
+                                reportNavigationSpeech("error",
+                                    "El motor de voz no pudo reproducir audio. Revisa TTS Android.");
+                            }
+                        });
+                    reportNavigationSpeech("ready","Voz Android lista · salida multimedia");
+                    if(pendingNavSpeech!=null){
+                        String first=pendingNavSpeech;
+                        pendingNavSpeech=null;
+                        playNavigationSpeech(first);
+                    }
+                }catch(Exception exception){
+                    navSpeechReady=false;
+                    pendingNavSpeech=null;
+                    reportNavigationSpeech("error",
+                        "Error al iniciar la voz. Revisa motor TTS y volumen multimedia.");
+                }
             });
             return;
         }
-        if(navSpeechReady){
-            navSpeech.speak(phrase,TextToSpeech.QUEUE_FLUSH,null,
-                    "rush-turn-"+System.currentTimeMillis());
+        if(navSpeechReady) {
+            playNavigationSpeech(phrase);
+        }else {
+            pendingNavSpeech=phrase;
+            reportNavigationSpeech("error",
+                "Motor de voz no preparado. Revisa los ajustes de voz Android.");
         }
     }
+
+    private void playNavigationSpeech(String phrase){
+        if(navSpeech==null||!navSpeechReady)return;
+        int result=navSpeech.speak(phrase,TextToSpeech.QUEUE_FLUSH,null,
+            "rush-turn-"+System.currentTimeMillis());
+        if(result==TextToSpeech.ERROR){
+            reportNavigationSpeech("error",
+                "El motor TTS rechazó el audio. Comprueba ajustes de voz.");
+        }
+    }
+
     private void stopNavigationSpeechInternal() {
         pendingNavSpeech=null;
         if(navSpeech!=null)navSpeech.stop();
@@ -1904,6 +1966,16 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void speakNavigation(String message) {
             runUi(() -> speakNavigationInternal(message));
+        }
+        @JavascriptInterface public void openTtsSettings() {
+            runUi(() -> {
+                try {
+                    startActivity(new Intent("com.android.settings.TTS_SETTINGS"));
+                } catch(Exception missing) {
+                    try {startActivity(new Intent(Settings.ACTION_SETTINGS));}
+                    catch(Exception ignored) {message("No se pueden abrir los ajustes de voz.");}
+                }
+            });
         }
         @JavascriptInterface public void stopNavigationSpeech() {
             runUi(() -> stopNavigationSpeechInternal());
