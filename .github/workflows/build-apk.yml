@@ -637,11 +637,11 @@ jobs:
           # Descargar DATOS ABIERTOS OSM para crear las teselas propias.
           # Está prohibido copiar masivamente imágenes del servidor OSM.
           DATA=/tmp/chile-latest.osm.pbf
-          curl --fail --location --retry 4 --retry-delay 8 \\
-            --connect-timeout 25 --max-time 1000 --output "$DATA" \\
+          curl --fail --location --retry 4 --retry-delay 8 \
+            --connect-timeout 25 --max-time 1000 --output "$DATA" \
             "https://download.geofabrik.de/south-america/chile-latest.osm.pbf"
           test $(stat -c%s "$DATA") -gt 250000000
-          python3 scripts/build_chile_offline.py "$DATA" \\
+          python3 scripts/build_chile_offline.py "$DATA" \
             app/src/main/assets/chile_offline.db
           rm -f "$DATA"
           python3 - <<'PY'
@@ -683,7 +683,7 @@ jobs:
             assert 'assets/chile_offline.db' in z.namelist()
             f=z.getinfo('assets/chile_offline.db')
             with z.open(f) as stream:
-              assert stream.read(16)==b'SQLite format 3\\x00'
+              assert stream.read(16)==b'SQLite format 3\x00'
             assert f.file_size>2000000
             print('Mapa incluido en APK, MB:',round(f.file_size/1048576,1))
           PY
