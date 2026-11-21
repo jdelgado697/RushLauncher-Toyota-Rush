@@ -420,21 +420,26 @@ function setPosition(lat,lon,acc){
  // Si se exploró el mapa durante un viaje, volver al seguimiento automático.
  if(!following&&motionSpeed>8&&lastManualPanAt &&
        Date.now()-lastManualPanAt>12000)activateFollow();
+ var firstFix=!live;
  position={lat:lat,lon:lon};
  live=true;accuracy=Number.isFinite(acc)&&acc>=0?acc:null;lastGpsAt=Date.now();
- if(following)current={lat:lat,lon:lon};
- var moved=!lastRenderedCenter||Math.abs(lastRenderedCenter.lat-current.lat)+
-    Math.abs(lastRenderedCenter.lon-current.lon)>0.000015;
- if(moved || Date.now()-lastDraw>4500)queueDraw();
- else {drawMarker();setStatus()}
+ if(following){
+  if(firstFix){centerMotion=null;current={lat:lat,lon:lon};queueDraw()}
+  else followSmoothly(lat,lon);
+ }else if(Date.now()-lastDraw>4500)queueDraw();
+ else{drawMarker();setStatus()}
 }
 function setHeading(heading,speed){
  motionSpeed=Number.isFinite(speed)?Math.max(0,speed):0;
- // Zoom automático sensible a la velocidad, evitando saltos frecuentes.
- // <50 km/h: detalle de calles (z18); 50-84: z17; >=85: z16.
+ // Cambiar nivel con histéresis evita tirones en autopista cuando
+ // la velocidad oscila alrededor de 50 u 85 km/h.
  if(autoZoom && mapStyle==='drive' && following && live){
-  var target=motionSpeed>=85?16:motionSpeed>=50?17:18;
-  if(target!==zoom && Date.now()-lastAutoZoomAt>9000){
+  var target=zoom;
+  if(zoom===16&&motionSpeed<72)target=17;
+  else if(zoom===17&&motionSpeed>100)target=16;
+  else if(zoom===17&&motionSpeed<37)target=18;
+  else if(zoom===18&&motionSpeed>57)target=17;
+  if(target!==zoom && Date.now()-lastAutoZoomAt>25000){
    zoom=target;lastAutoZoomAt=Date.now();queueDraw();
   }
  }
@@ -454,7 +459,7 @@ function activateFollow(){
  autoZoom=mapStyle==='drive';
  if(autoZoom)zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
  else zoom=15;
- if(position)current={lat:position.lat,lon:position.lon};
+ centerMotion=null;if(position)current={lat:position.lat,lon:position.lon};
  followButton.textContent='➤';followButton.title='GPS: siguiendo vehículo';
  followButton.setAttribute('aria-pressed','true');
  queueDraw();
@@ -462,7 +467,7 @@ function activateFollow(){
 function freeMove(){
  lastManualPanAt=Date.now();
  if(!following)return;
- following=false;layer.style.transform='none';
+ following=false;centerMotion=null;layer.style.transform='none';
  followButton.textContent='◎';followButton.title='Reanudar seguimiento GPS';
  followButton.setAttribute('aria-pressed','false');
 }
@@ -472,7 +477,7 @@ function setStyle(mode){
  host.classList.toggle('rush-map-drive',mapStyle==='drive');
  autoZoom=mapStyle==='drive';
  zoom=mapStyle==='drive'?(motionSpeed>=85?16:motionSpeed>=50?17:18):15;
- if(following&&position)current={lat:position.lat,lon:position.lon};
+ centerMotion=null;if(following&&position)current={lat:position.lat,lon:position.lon};
  if(document.getElementById('mapStyleDrive'))
   document.getElementById('mapStyleDrive').setAttribute('aria-pressed',
     mapStyle==='drive'?'true':'false');
@@ -610,4 +615,11 @@ setInterval(function(){
   if(currentMapTheme()!==lastThemeOnTiles)queueDraw();
  }
 },30000);
+// Cambiar entre fuentes raster online y locales cuando se va la señal 4G.
+setInterval(function(){
+ if(!host.offsetWidth)return;
+ var before=offlineMode,wasReady=offlineReady;
+ lastNetworkCheck=0;checkNetwork();
+ if(before!==offlineMode||wasReady!==offlineReady)queueDraw();
+},7000);
 })();
