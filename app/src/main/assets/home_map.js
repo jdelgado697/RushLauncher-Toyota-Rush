@@ -211,6 +211,8 @@ function render(){
  var minX=Math.floor((center.x-w/2)/tile),maxX=Math.floor((center.x+w/2)/tile);
  var minY=Math.floor((center.y-h/2)/tile),maxY=Math.floor((center.y+h/2)/tile);
  var names=Object.create(null),tNames=Object.create(null),count=0;
+ // Pantalla completa: presupuesto adaptativo para evitar zonas vacias.
+ var tileLimit=host.classList.contains('rush-map-fullscreen')?48:maxTiles;
  var theme=currentMapTheme();
  if(lastThemeOnTiles!==theme){
   lastThemeOnTiles=theme;
@@ -220,7 +222,7 @@ function render(){
  for(var y=minY;y<=maxY;y++){
   if(y<0||y>=n)continue;
   for(var x=minX;x<=maxX;x++){
-   if(count>=maxTiles)break;
+   if(count>=tileLimit)break;
    var wrapped=((x%n)+n)%n,key=zoom+'/'+wrapped+'/'+y;
    names[key]=true;
    var img=tiles[key];
@@ -279,7 +281,7 @@ function render(){
    }
    count++;
   }
-  if(count>=maxTiles)break;
+  if(count>=tileLimit)break;
  }
  Object.keys(tiles).forEach(function(key){
   if(!names[key]){tiles[key].remove();delete tiles[key]}
@@ -400,7 +402,7 @@ function activateFollow(){
  if(autoZoom)zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
  else if(isClassicPanel())zoom=14;
  if(position)current={lat:position.lat,lon:position.lon};
- followButton.textContent='▲ Conduciendo';
+ followButton.textContent='➤';followButton.title='GPS: siguiendo vehículo';
  followButton.setAttribute('aria-pressed','true');
  queueDraw();
 }
@@ -408,7 +410,7 @@ function freeMove(){
  lastManualPanAt=Date.now();
  if(!following)return;
  following=false;layer.style.transform='none';
- followButton.textContent='◎ Seguir';
+ followButton.textContent='◎';followButton.title='Reanudar seguimiento GPS';
  followButton.setAttribute('aria-pressed','false');
 }
 function setStyle(mode){
@@ -503,6 +505,8 @@ surface.addEventListener('keydown',function(e){
 followButton.addEventListener('click',activateFollow);
 if(trafficButton)trafficButton.addEventListener('click',function(){
  if(!validTomtomKey()){
+  if(host.classList.contains('rush-map-fullscreen')&&
+     typeof window.rushCloseFullMap==='function')window.rushCloseFullMap();
   var st=document.getElementById('cartoTomtomStatus');
   if(st)st.textContent='Configura tu clave TomTom en Ajustes antes de activar tráfico.';
   var settings=document.getElementById('settingsPanel');
@@ -537,7 +541,7 @@ window.RushHomeMap={
  configureCartography:configureCartography,getCartography:getCartography
 };
 // Visible desde el inicio, sin fingir que el vehículo se encuentra aquí.
-followButton.textContent='▲ Conduciendo';
+followButton.textContent='➤';followButton.title='GPS: siguiendo vehículo';
 followButton.setAttribute('aria-pressed','true');
 trafficStatus();
 queueDraw();
