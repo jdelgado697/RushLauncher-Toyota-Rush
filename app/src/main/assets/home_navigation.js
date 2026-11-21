@@ -282,7 +282,11 @@ window.rushTtsStatus=function(state,message){
  var text=String(message||'').slice(0,140);
  var output=document.getElementById('navTtsStatus');
  if(output)output.textContent=text;
- if(state==='error')showStatus(text,true);
+ if(state==='error'){
+  host.classList.add('rush-tts-error');
+  showStatus(text,true);
+  setTimeout(function(){host.classList.remove('rush-tts-error')},6500);
+ }else host.classList.remove('rush-tts-error');
 };
 var testButton=document.getElementById('navTestSpeech');
 if(testButton)testButton.addEventListener('click',testSpeech);
