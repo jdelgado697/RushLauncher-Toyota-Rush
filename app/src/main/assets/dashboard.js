@@ -34,7 +34,7 @@ function setDrivingMode(enabled, persist) {
  if (persist) store('rush_drive_ui', saved.drive ? 'yes':'no');
  // El mapa está dentro del mismo DOM: no duplicar motores ni reiniciar Spotify.
  if (window.RushHomeMap) {
-  if (saved.drive) window.RushHomeMap.follow();
+  // No reiniciar zoom, seguimiento ni ruta al cambiar el diseño del tablero.
   if (typeof window.RushHomeMap.refresh === 'function') {
    requestAnimationFrame(function() {
     window.RushHomeMap.refresh();

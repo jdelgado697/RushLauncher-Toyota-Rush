@@ -19,8 +19,13 @@ var fix=null,accuracy=999,speed=0,lastBearing=0,lastPositionAt=0;
 var currentStep=0,lastStepDistance=Infinity,offRouteCount=0,voiceStage='';
 var voiceEnabled=true,heldStatusTimer=null;
 try{voiceEnabled=localStorage.getItem('rush_home_voice')!=='no'}catch(e){}
-voiceButton.textContent=voiceEnabled?'Voz: sí':'Voz: no';
-voiceButton.setAttribute('aria-pressed',String(voiceEnabled));
+function syncVoiceButton(){
+ voiceButton.textContent=voiceEnabled?'🔊':'🔇';
+ voiceButton.title=voiceEnabled?'Desactivar voz':'Activar voz y probar audio';
+ voiceButton.setAttribute('aria-label',voiceEnabled?'Desactivar indicaciones por voz':'Activar y probar indicaciones por voz');
+ voiceButton.setAttribute('aria-pressed',String(voiceEnabled));
+}
+syncVoiceButton();
 function write(el,text){if(el)el.textContent=String(text)}
 function showing(element,yes){if(element)element.hidden=!yes}
 function valid(lat,lon){return Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180}
@@ -174,6 +179,7 @@ function selectDestination(lat,lon,name){
  // Ignorar cualquier respuesta antigua cuando cambia el destino.
  ++routeRequest;
  routeBusy=false;route=null;offRouteCount=0;currentStep=0;voiceStage='';
+ host.classList.remove('has-active-route');
  lastRouteAt=0;
  destination={lat:lat,lon:lon,name:name||'Destino seleccionado'};
  if(window.RushHomeMap)window.RushHomeMap.clearRoute();
@@ -218,9 +224,10 @@ window.rushHomeRoute=function(reply){
   window.RushHomeMap.follow();
  }
  showing(guide,true);
- showStatus('Ruta activa · '+String(route.provider||'proveedor de rutas')+
-   ' · sin tráfico en directo',true);
+ host.classList.add('has-active-route');
+ showing(status,false);
  updateGuidance();
+ speak('Ruta calculada. Comienza la navegación.',true);
 };
 function describeStep(step){
  if(!step)return {text:'Sigue tu ruta',icon:'↑'};
@@ -253,11 +260,41 @@ function nearestToRoute(point){
  }
  return best;
 }
-function speak(text){
+function externalGpsFresh(){
+ return !!(window.RushExternalGps&&window.RushExternalGps.active&&
+   window.RushExternalGps.recent&&window.RushExternalGps.hasFix&&
+   fix&&Date.now()-lastPositionAt<10000);
+}
+function speak(text,force){
  if(!voiceEnabled||!nativeApp||!window.Rush.speakNavigation)return;
- if(Date.now()-lastPositionAt>10000||accuracy>80)return;
+ // El iPhone transmite NMEA RMC sin precisión informada.
+ if(!force&&(Date.now()-lastPositionAt>10000||
+   !(accuracy<=80||externalGpsFresh())))return;
  window.Rush.speakNavigation(String(text).slice(0,190));
 }
+function testSpeech(){
+ if(!nativeApp||typeof window.Rush.speakNavigation!=='function'){
+  showStatus('La voz necesita el APK Android',true);return;
+ }
+ window.Rush.speakNavigation('Prueba de voz de Rush Launcher. En doscientos metros, gira a la derecha.');
+}
+window.rushTtsStatus=function(state,message){
+ var text=String(message||'').slice(0,140);
+ var output=document.getElementById('navTtsStatus');
+ if(output)output.textContent=text;
+ if(state==='error'){
+  host.classList.add('rush-tts-error');
+  showStatus(text,true);
+  setTimeout(function(){host.classList.remove('rush-tts-error')},6500);
+ }else host.classList.remove('rush-tts-error');
+};
+var testButton=document.getElementById('navTestSpeech');
+if(testButton)testButton.addEventListener('click',testSpeech);
+var openTtsSettings=document.getElementById('navTtsSettings');
+if(openTtsSettings)openTtsSettings.addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.openTtsSettings==='function')window.Rush.openTtsSettings();
+ else showStatus('Ajustes de voz disponibles en Android',true);
+});
 function updateGuidance(){
  if(!route||!destination||!fix)return;
  if(!freshGps()){
@@ -290,7 +327,7 @@ function updateGuidance(){
   var message=describeStep(turn);
   write(arrow,message.icon);write(title,message.text);
   write(nextDistance,distanceLabel(d)+' para maniobra');
-  if(voiceEnabled && speed>5 && accuracy<=70){
+  if(voiceEnabled && speed>5 && (accuracy<=70||externalGpsFresh())){
    var stage=d<=85?'short':d<=280?'near':'far';
    if(stage!=='far'&&voiceStage!==stage){
     voiceStage=stage;
@@ -331,7 +368,7 @@ function cancelRoute(){
  ++routeRequest;destination=null;route=null;routeBusy=false;
  currentStep=0;voiceStage='';offRouteCount=0;
  if(window.RushHomeMap)window.RushHomeMap.clearRoute();
- showing(guide,false);clearResults();query.value='';
+ showing(guide,false);host.classList.remove('has-active-route');clearResults();query.value='';
  showStatus('Modo conducción sin destino · mapa y GPS activos',true);
  if(nativeApp&&window.Rush.stopNavigationSpeech)window.Rush.stopNavigationSpeech();
 }
@@ -341,10 +378,10 @@ function pickCoordinate(lat,lon){
 }
 voiceButton.addEventListener('click',function(){
  voiceEnabled=!voiceEnabled;
- voiceButton.textContent=voiceEnabled?'Voz: sí':'Voz: no';
- voiceButton.setAttribute('aria-pressed',String(voiceEnabled));
+ syncVoiceButton();
  try{localStorage.setItem('rush_home_voice',voiceEnabled?'yes':'no')}catch(e){}
  if(!voiceEnabled&&nativeApp&&window.Rush.stopNavigationSpeech)window.Rush.stopNavigationSpeech();
+ if(voiceEnabled)testSpeech();
 });
 finish.addEventListener('click',cancelRoute);
 query.addEventListener('input',scheduleSuggestions);

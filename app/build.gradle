@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 55
-        versionName '4.20.3-3DBuildings'
+        versionCode 56
+        versionName '4.20.4-UnifiedVoice'
     }
 
     compileOptions {
