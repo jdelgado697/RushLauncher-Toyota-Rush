@@ -307,6 +307,21 @@ window.rushTtsStatus=function(state,message){
 };
 var testButton=document.getElementById('navTestSpeech');
 if(testButton)testButton.addEventListener('click',testSpeech);
+var soundButton=document.getElementById('navTestSound');
+if(soundButton)soundButton.addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.testAudioBeep==='function')window.Rush.testAudioBeep();
+ else showStatus('Prueba de sonido disponible en Android',true);
+});
+var diagButton=document.getElementById('navAudioDiag');
+if(diagButton)diagButton.addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.diagnoseAudio==='function')window.Rush.diagnoseAudio();
+ else showStatus('Diagnóstico de audio disponible en Android',true);
+});
+window.rushAudioDiagnostics=function(state,message){
+ var diag=document.getElementById('navAudioDiagStatus');
+ if(diag)diag.textContent=String(message||'').slice(0,280);
+ if(state==='error')showStatus(String(message||'').slice(0,130),true);
+};
 var openTtsSettings=document.getElementById('navTtsSettings');
 if(openTtsSettings)openTtsSettings.addEventListener('click',function(){
  if(nativeApp&&typeof window.Rush.openTtsSettings==='function')window.Rush.openTtsSettings();
