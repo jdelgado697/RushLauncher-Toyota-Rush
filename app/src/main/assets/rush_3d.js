@@ -108,14 +108,14 @@
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(c.x,c.y);
     ctx.lineTo(c.x,c.y-lift);ctx.lineTo(a.x,a.y-lift);ctx.closePath();
     ctx.fillStyle=c.x-a.x>0?
-      (dark?'rgba(31,70,107,.94)':'rgba(80,107,128,.92)'):
-      (dark?'rgba(18,48,78,.94)':'rgba(55,82,109,.92)');
+      'rgba(115,153,182,.83)':
+      'rgba(92,130,169,.82)';
     ctx.fill();
    }
    drawPoly(pts,lift);
-   ctx.fillStyle=dark?'rgba(91,144,187,.95)':'rgba(156,179,195,.96)';
+   ctx.fillStyle='rgba(165,197,222,.88)';
    ctx.fill();
-   ctx.strokeStyle=dark?'rgba(140,215,243,.72)':'rgba(241,249,255,.8)';
+   ctx.strokeStyle='rgba(237,250,255,.72)';
    ctx.stroke();
   }
  }
