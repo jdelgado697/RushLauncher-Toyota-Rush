@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.3 · Navegación 3D con edificios</title>
+<title>Rush Launcher 4.20.4 · Mapa único y voz de navegación</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -828,9 +828,7 @@
 .screen:not(.drive-ui) .home-map-tools{
  top:7px;right:7px;transform:scale(.87);transform-origin:top right
 }
-.screen:not(.drive-ui) .home-map-tiles img.rush-base-tile{
- filter:saturate(.75) contrast(.94) brightness(1.035)!important
-}
+/* Paleta del mapa igual en todas las vistas. */
 
 /* 4.20.2: MAPA UNICO. Se amplía .home-map y se restaura sin crear otro visor. */
 .home-map .home-map-header,.home-map .home-map-route,
@@ -856,9 +854,7 @@
 .home-map .home-map-footer{justify-content:flex-end!important;bottom:6px}
 .home-map .home-map-open{min-height:30px;padding:5px 9px;font-size:10px}
 .home-map .home-nav-status{padding:4px 7px;font-size:10px;max-height:46px}
-:root:not([data-theme=dark]) .home-map:not(.rush-tomtom-map) .home-map-tiles img.rush-base-tile{
- filter:saturate(.65) contrast(.9) brightness(1.07)!important
-}
+/* Los estilos cartográficos no dependen del tamaño del panel. */
 body>.home-map.rush-map-fullscreen{
  position:fixed!important;inset:6px!important;width:auto!important;height:auto!important;
  min-width:0!important;min-height:0!important;max-width:none!important;
@@ -935,6 +931,57 @@ body>.home-map.rush-map-fullscreen .home-map-attribution{
 body>.home-map.rush-map-fullscreen.rush-map-3d .home-map-tiles{
  transform-style:preserve-3d;backface-visibility:hidden
 }
+
+/* 4.20.4: guía ligera. Ambos paneles comparten los mismos mosaicos y zoom. */
+.home-map .home-nav-guide,
+.screen.drive-ui .home-nav-guide,
+body>.home-map.rush-map-fullscreen .home-nav-guide{
+ position:absolute!important;
+ top:51px!important;left:7px!important;
+ display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+ grid-template-rows:auto auto!important;
+ align-items:center!important;column-gap:6px!important;row-gap:1px!important;
+ width:min(375px,calc(100% - 104px))!important;
+ max-width:calc(100% - 104px)!important;min-width:0!important;
+ padding:5px 7px!important;
+ border-radius:9px!important;
+ border:1px solid #44bbecad!important;
+ background:#08223ce6!important;
+ box-shadow:0 2px 8px #00192f88!important;
+}
+.home-map .home-nav-guide[hidden]{display:none!important}
+.home-map .home-nav-guide-title{
+ grid-column:1;grid-row:1;min-width:0;gap:5px!important;
+}
+.home-map .home-nav-guide-title span{
+ font-size:19px!important;line-height:1!important;
+}
+.home-map .home-nav-guide-title strong{
+ font-size:11px!important;font-weight:850!important;line-height:1.16!important;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ max-width:100%;display:block;
+}
+.home-map .home-nav-guide>#homeNavDistance{
+ grid-column:1;grid-row:2;font-size:10px!important;
+ line-height:1.1!important;margin-left:24px;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.home-map .home-nav-guide>#homeNavSummary{display:none!important}
+.home-map .home-nav-guide-actions{
+ grid-column:2;grid-row:1/span 2;margin:0!important;gap:4px!important;
+ display:flex;align-items:center;
+}
+.home-map .home-nav-guide-actions button{
+ min-width:27px!important;min-height:27px!important;
+ padding:3px 4px!important;font-size:14px!important;
+ line-height:1!important;border:1px solid #4caaddc9;
+ border-radius:7px!important;
+}
+.home-map .home-nav-guide-actions #homeNavFinish{
+ background:#6b2947!important;border-color:#cc7097!important;
+}
+.home-map.has-active-route:not(.rush-tts-error) .home-nav-status{display:none!important}
+.home-map .home-nav-guide-actions #homeNavVoice[aria-pressed=false]{opacity:.65}
 </style>
 </head>
 <body>
@@ -954,7 +1001,7 @@ body>.home-map.rush-map-fullscreen.rush-map-3d .home-map-tiles{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.3</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.4</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1031,8 +1078,8 @@ body>.home-map.rush-map-fullscreen.rush-map-3d .home-map-tiles{
      <span id="homeNavDistance">Calculando indicaciones…</span>
      <small id="homeNavSummary">Sin información de distancia</small>
      <div class="home-nav-guide-actions">
-      <button id="homeNavVoice" type="button" aria-pressed="true">Voz: sí</button>
-      <button id="homeNavFinish" type="button">Finalizar ruta</button>
+      <button id="homeNavVoice" type="button" aria-pressed="true" aria-label="Activar o desactivar voz" title="Voz de navegación">🔊</button>
+      <button id="homeNavFinish" type="button" aria-label="Finalizar ruta" title="Finalizar ruta">✕</button>
      </div>
    </div>
    <div class="home-map-tools" aria-label="Controles de mapa">
@@ -1129,7 +1176,16 @@ body>.home-map.rush-map-fullscreen.rush-map-3d .home-map-tiles{
    <p class="muted">El tráfico TomTom superpone flujo vial e incidentes sobre el mapa. Actualiza mosaicos aproximadamente cada tres minutos mientras el tablero esté visible; disponibilidad según cobertura y API. No modifica las rutas ni el tiempo estimado actual. Atribución cartográfica: © TomTom · © OpenStreetMap contributors.</p>
    <p class="muted">La clave se guarda solo en el almacenamiento local de este Android WebView, y se envía a TomTom por HTTPS al solicitar mosaicos. Para un despliegue público se recomienda usar un proxy seguro y restricciones de clave.</p>
   </div>
-  <div class="set-line"><h3>Vista del mapa en Inicio</h3>
+  <div class="set-line">
+    <h3>Voz de navegación · Android</h3>
+    <p class="muted">Prueba el sonido antes de conducir. Si no se escucha, comprueba el volumen multimedia y que haya una voz en español instalada en el Carlinkit.</p>
+    <div class="tile-buttons">
+      <button type="button" class="actionbtn highlight" id="navTestSpeech">▶ Probar voz</button>
+      <button type="button" class="actionbtn" id="navTtsSettings">Configurar voz Android</button>
+    </div>
+    <p class="muted" id="navTtsStatus" role="status">Sin prueba de voz. El GPS del iPhone permite indicaciones sin informar precisión.</p>
+   </div>
+   <div class="set-line"><h3>Vista del mapa en Inicio</h3>
    <p class="muted">Rush Drive utiliza un mapa a nivel calle, con más carretera visible por delante del vehículo y una rotación más rápida. El acercamiento se adapta a la velocidad; los botones + y − permiten ajustarlo manualmente.</p>
    <div class="tile-buttons">
      <button type="button" id="mapStyleDrive" class="actionbtn highlight" aria-pressed="true">Rush Drive · cercano</button>
