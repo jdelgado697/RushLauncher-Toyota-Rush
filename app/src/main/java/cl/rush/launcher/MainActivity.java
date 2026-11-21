@@ -373,7 +373,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.6 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.7 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1251,16 +1251,16 @@ public class MainActivity extends Activity implements LocationListener {
         String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
                 aLon,aLat,bLon,bLat);
         String url="https://routing.openstreetmap.de/routed-car/route/v1/driving/"
-                +coords+"?overview=simplified&geometries=geojson&steps=true";
-        return new JSONObject(getNavText(url,550000,4800,7000));
+                +coords+"?overview=full&geometries=geojson&steps=true";
+        return new JSONObject(getNavText(url,900000,4800,7000));
     }
     private static JSONObject retrieveOsrmRoute(double aLat,double aLon,double bLat,
                                                  double bLon) throws Exception {
         String coords=String.format(Locale.US,"%.6f,%.6f;%.6f,%.6f",
                 aLon,aLat,bLon,bLat);
         String url="https://router.project-osrm.org/route/v1/driving/"
-                +coords+"?overview=simplified&geometries=geojson&steps=true";
-        return new JSONObject(getNavText(url,550000,4500,7000));
+                +coords+"?overview=full&geometries=geojson&steps=true";
+        return new JSONObject(getNavText(url,900000,4500,7000));
     }
     private static JSONObject retrieveValhallaRoute(double aLat,double aLon,double bLat,
                                                     double bLon) throws Exception {
@@ -1297,7 +1297,7 @@ public class MainActivity extends Activity implements LocationListener {
         if(!Double.isFinite(meters)||!Double.isFinite(seconds)||meters<=0||seconds<=0)
             throw new java.io.IOException("FORMATO_RUTA:Distancia o tiempo inválido");
         JSONArray coordsSafe=new JSONArray();
-        int jump=Math.max(1,(int)Math.ceil(raw.length()/750.0));
+        int jump=Math.max(1,(int)Math.ceil(raw.length()/1600.0));
         for(int i=0;i<raw.length();i+=jump){
             JSONArray pt=raw.optJSONArray(i);
             if(pt!=null&&pt.length()>=2&&validCoord(pt.optDouble(1,Double.NaN),

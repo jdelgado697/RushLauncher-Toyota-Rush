@@ -19,6 +19,56 @@ var fix=null,accuracy=999,speed=0,lastBearing=0,lastPositionAt=0;
 var currentStep=0,lastStepDistance=Infinity,offRouteCount=0,voiceStage='';
 var voiceEnabled=true,heldStatusTimer=null;
 var peek=$('homeNavPeek'),guideTimer=null,lastGuideStep=-1,lastGuideStage='';
+var routeCumulative=[],routeGeometryMeters=0,bestProgressMeters=0;
+// ETA según distancia realmente recorrida sobre la polilínea OSRM.
+function measureSegment(a,b){
+ var dx=(Number(b[0])-Number(a[0]))*111320*
+     Math.cos((Number(a[1])+Number(b[1]))*Math.PI/360);
+ var dy=(Number(b[1])-Number(a[1]))*111320;
+ return Math.hypot(dx,dy);
+}
+function indexRoute(){
+ routeCumulative=[0];routeGeometryMeters=0;bestProgressMeters=0;
+ var coords=route&&route.geometry||[];
+ for(var i=1;i<coords.length;i++){
+  var d=measureSegment(coords[i-1],coords[i]);
+  routeGeometryMeters+=Number.isFinite(d)?d:0;
+  routeCumulative.push(routeGeometryMeters);
+ }
+}
+function progressOnRoute(point){
+ if(!point||!route||routeGeometryMeters<1)return null;
+ var coords=route.geometry,cos=Math.cos(point.lat*Math.PI/180);
+ var closest=Infinity,along=0;
+ for(var i=1;i<coords.length;i++){
+  var a=coords[i-1],b=coords[i];
+  var ax=(Number(a[0])-point.lon)*111320*cos,ay=(Number(a[1])-point.lat)*111320;
+  var bx=(Number(b[0])-point.lon)*111320*cos,by=(Number(b[1])-point.lat)*111320;
+  var vx=bx-ax,vy=by-ay,len=vx*vx+vy*vy;
+  var t=len>.01?Math.max(0,Math.min(1,-(ax*vx+ay*vy)/len)):0;
+  var px=ax+t*vx,py=ay+t*vy,squared=px*px+py*py;
+  if(squared<closest){
+   closest=squared;
+   along=routeCumulative[i-1]+t*(routeCumulative[i]-routeCumulative[i-1]);
+  }
+ }
+ var offset=Math.sqrt(closest);
+ if(offset<=85)bestProgressMeters=Math.max(bestProgressMeters,along);
+ return {offset:offset,along:bestProgressMeters};
+}
+function etaForCurrentFix(){
+ if(!route||!fix||!(Number(route.seconds)>0)||routeGeometryMeters<1)return null;
+ var prog=progressOnRoute(fix);
+ if(!prog)return null;
+ var fraction=Math.max(0,Math.min(1,1-prog.along/routeGeometryMeters));
+ var metersLeft=Math.max(0,(Number(route.meters)||0)*fraction);
+ var minutesLeft=Math.ceil((Number(route.seconds)||0)*fraction/60);
+ var eta=new Date(Date.now()+minutesLeft*60000);
+ var hh=String(eta.getHours()).padStart(2,'0');
+ var mm=String(eta.getMinutes()).padStart(2,'0');
+ return {meters:metersLeft,minutes:minutesLeft,time:hh+':'+mm,offset:prog.offset};
+}
+
 function showGuideBriefly(){
  if(!route)return;
  if(guideTimer!==null){clearTimeout(guideTimer);guideTimer=null}
@@ -194,6 +244,7 @@ function selectDestination(lat,lon,name){
  ++routeRequest;
  routeBusy=false;route=null;offRouteCount=0;currentStep=0;voiceStage='';
  lastGuideStage='';lastGuideStep=-1;closeGuide();
+ routeCumulative=[];routeGeometryMeters=0;bestProgressMeters=0;
  if(peek)showing(peek,false);
  host.classList.remove('has-active-route');
  lastRouteAt=0;
@@ -235,6 +286,7 @@ window.rushHomeRoute=function(reply){
  }
  route=reply;currentStep=(route.steps[0]&&route.steps[0].type==='depart'&&route.steps.length>1)?1:0;
  lastStepDistance=Infinity;offRouteCount=0;voiceStage='';
+ indexRoute();
  if(window.RushHomeMap){
   window.RushHomeMap.setRoute(route.geometry);
   window.RushHomeMap.follow();
@@ -331,6 +383,7 @@ function updateGuidance(){
  if(!route||!destination||!fix)return;
  if(!freshGps()){
   write(nextDistance,'GPS sin actualizar · última posición');
+  if(peek)write(peek,'GPS sin actualizar · ETA pendiente');
   return;
  }
  var destDistance=meters(fix,destination);
@@ -343,7 +396,7 @@ function updateGuidance(){
   if(voiceStage!=='arrived'){voiceStage='arrived';speak('Llegaste a tu destino')}
   return;
  }
- var steps=route.steps||[];
+ var steps=route.steps||[],peekIcon='↑';
  if(!steps.length){
   write(arrow,'↑');write(title,'Sigue la ruta señalada');
   write(nextDistance,distanceLabel(destDistance)+' hasta destino');
@@ -362,7 +415,7 @@ function updateGuidance(){
   var message=describeStep(turn);
   write(arrow,message.icon);write(title,message.text);
   write(nextDistance,distanceLabel(d)+' para maniobra');
-  if(peek)write(peek,message.icon+' '+distanceLabel(d));
+  peekIcon=message.icon;
   var guideStage=d<=50?'imminent':d<=160?'near':d<=440?'upcoming':'cruise';
   // Mostrar indicación solo cuando cambia el giro o se entra en un tramo
   // próximo: no volver a abrir el cartel con cada lectura GPS (1Hz).
@@ -381,9 +434,18 @@ function updateGuidance(){
    }
   }
  }
- var km=(Number(route.meters)||0)/1000;
- var minutes=Math.round((Number(route.seconds)||0)/60);
- write(summary,km.toFixed(1)+' km · '+minutes+' min estimados · sin tráfico');
+ var eta=etaForCurrentFix();
+ if(eta){
+  var remaining=distanceLabel(eta.meters);
+  if(peek)write(peek,peekIcon+' '+remaining+' · ETA '+eta.time);
+  write(summary,'Restan '+remaining+' · '+eta.minutes+
+    ' min · llegada estimada '+eta.time+' · sin tráfico en tiempo real');
+ }else{
+  var km=(Number(route.meters)||0)/1000;
+  var minutes=Math.round((Number(route.seconds)||0)/60);
+  if(peek)write(peek,peekIcon+' '+km.toFixed(1)+' km');
+  write(summary,km.toFixed(1)+' km · '+minutes+' min estimados');
+ }
 }
 function updateFix(lat,lon,acc){
  if(!valid(lat,lon))return;
@@ -393,10 +455,12 @@ function updateFix(lat,lon,acc){
  }
  if(route){
   updateGuidance();
-  if(accuracy<=65&&speed>10){
+  if((accuracy<=65||externalGpsFresh())&&speed>10){
    var off=nearestToRoute(fix);
-   offRouteCount=off>115?offRouteCount+1:0;
-   if(offRouteCount>=3&&!routeBusy&&Date.now()-lastReroute>90000){
+   // Un fix NMEA RMC reciente basta para detectar desvío. Cuatro
+   // lecturas consecutivas evitan rerutas por un único salto de GPS.
+   offRouteCount=off>70?offRouteCount+1:0;
+   if(offRouteCount>=4&&!routeBusy&&Date.now()-lastReroute>90000){
     offRouteCount=0;lastReroute=Date.now();requestRoute(true);
    }
   }else offRouteCount=0;
@@ -412,6 +476,7 @@ function updateSpeed(kmh,bearing){
 function cancelRoute(){
  ++routeRequest;destination=null;route=null;routeBusy=false;
  currentStep=0;voiceStage='';offRouteCount=0;
+ routeCumulative=[];routeGeometryMeters=0;bestProgressMeters=0;
  if(window.RushHomeMap)window.RushHomeMap.clearRoute();
  closeGuide();if(peek)showing(peek,false);
  lastGuideStage='';lastGuideStep=-1;

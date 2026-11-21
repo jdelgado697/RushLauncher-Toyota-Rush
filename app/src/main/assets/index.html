@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.6 · Mapa Pastel de Prueba</title>
+<title>Rush Launcher 4.20.7 · Ruta precisa y hora de llegada</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -1164,6 +1164,51 @@ body>.home-map.rush-map-fullscreen.has-active-route .home-nav-guide{
 .home-map .home-map-footer .home-map-open{
  background:#0a6bbadf!important;
 }
+
+/* 4.20.7 · Ruta y ETA visibles con bajo uso de pantalla.
+   Un solo chip mantiene el giro, kilometros restantes y HORA de llegada.
+   La misma informacion es accesible al ampliar el mapa. */
+.home-map.has-active-route .home-nav-peek,
+body>.home-map.rush-map-fullscreen.has-active-route .home-nav-peek{
+ width:auto!important;min-width:0!important;
+ max-width:min(250px,calc(100% - 83px))!important;
+ padding:5px 9px!important;
+ height:30px!important;min-height:30px!important;
+ font-size:11px!important;line-height:1.1!important;
+ font-variant-numeric:tabular-nums;
+ border-color:#51d7c6!important;
+ background:#073a54ed!important;
+ color:#f3ffff!important;
+ text-align:left!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+}
+.home-map.has-active-route .home-map-attribution,
+body>.home-map.rush-map-fullscreen.has-active-route .home-map-attribution{
+ bottom:43px!important;left:7px!important;right:auto!important;
+ transform:none!important;max-width:140px;
+ background:#fffff4b3!important;color:#466276!important;
+}
+.home-map.has-active-route .home-map-traffic-legend{display:none!important}
+.home-map.has-active-route .rush-traffic-flow{
+ /* Flujo de tráfico secundario respecto de la ruta en verde menta:
+    evitar que una raya paralela TomTom se confunda con la ruta OSRM. */
+ opacity:.30!important;
+}
+.home-map #homeRouteLine,
+.home-map.rush-map-drive #homeRouteLine{
+ stroke:#22bfae!important;
+ stroke-width:7!important;
+ stroke-linejoin:round!important;
+ stroke-linecap:round!important;
+}
+.home-map #homeRouteBorder,
+.home-map.rush-map-drive #homeRouteBorder{
+ stroke:#ffffff!important;
+ stroke-width:11!important;
+ stroke-linecap:round!important;
+ stroke-linejoin:round!important;
+}
 </style>
 </head>
 <body>
@@ -1183,7 +1228,7 @@ body>.home-map.rush-map-fullscreen.has-active-route .home-nav-guide{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.6</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.7</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>

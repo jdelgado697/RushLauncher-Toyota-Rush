@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta]
 
 permissions:
   contents: read
@@ -81,7 +81,7 @@ jobs:
           assert "function syncPanelZoom()" in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "isClassicPanel()" not in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "if (saved.drive) window.RushHomeMap.follow()" not in js
-          assert "4.20.6" in html and "id=\"navTestSpeech\"" in html
+          assert "4.20.7" in html and "id=\"navTestSpeech\"" in html
           assert "id=\"navTtsSettings\"" in html
           assert "has-active-route" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert "externalGpsFresh()" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
@@ -94,12 +94,25 @@ jobs:
           assert 'id="navTestSound"' in html and 'id="navAudioDiag"' in html
           assert 'id="navAudioDiagStatus"' in html
           assert 'id="homeNavPeek"' in html
-          assert '4.20.6' in html and 'home-map-marker::after' in html
+          assert '4.20.7' in html and 'home-map-marker::after' in html
           assert '#5cd8bb' in html and '#8cd8ed' in html
-          assert "applicationId 'cl.rush.launcher.pastel'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert "applicationId 'cl.rush.launcher.pastelroute'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
-          assert 'Rush GTA Pastel (prueba)' in label
+          assert 'Rush GTA Ruta 4.20.7 (prueba)' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
+          nav=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
+          hm=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
+          assert 'function etaForCurrentFix()' in nav
+          assert 'routeCumulative=' in nav and 'indexRoute()' in nav
+          assert "ETA '+eta.time" in nav
+          assert 'accuracy<=65||externalGpsFresh()' in nav
+          assert 'offRouteCount>=4' in nav
+          assert 'NO se salta 1 de' in hm
+          assert 'Math.ceil(routeCoords.length/340)' not in hm
+          assert 'overview=full&geometries=geojson' in native
+          assert 'Math.ceil(raw.length()/1600.0)' in native
+          assert 'stroke:#22bfae' in html
+          assert '.home-map.has-active-route .home-nav-peek' in html
           assert '},4500)' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert "window.rushAudioDiagnostics=function" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert ".home-map:not(.rush-map-fullscreen) #homeMapZoomIn" in html
@@ -117,7 +130,7 @@ jobs:
           assert 'Overpass' in Path("app/src/main/java/cl/rush/launcher/BuildingData3D.java").read_text(encoding="utf-8")
           assert 'buildingData3D.request' in native and 'buildingData3D.shutdown()' in native
           assert 'public void fetch3dBuildings(' in native
-          assert 'RushLauncher/4.20.6' in native
+          assert 'RushLauncher/4.20.7' in native
           assert 'getString(NMEA_HOST' in native and 'trafficTileUrl' in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "rush-map-fullscreen" in js and 'document.body.appendChild(homeMapHost)' in js
           assert "window.Rush.stopMapGps()" in js
@@ -387,8 +400,8 @@ jobs:
           assert '1600L,0f,this,Looper.getMainLooper()' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.pastel'" in Path("app/build.gradle").read_text(encoding="utf-8")
-          assert 'RushLauncher/4.20.6' in native
+          assert "applicationId 'cl.rush.launcher.pastelroute'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert 'RushLauncher/4.20.7' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -413,7 +426,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 58" in gradle
+          assert "versionCode 59" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -635,7 +648,7 @@ jobs:
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
         with:
-          name: RushLauncher-4.20.6-Pastel-Paralelo-APK
+          name: RushLauncher-4.20.7-Pastel-Ruta-ETA-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
