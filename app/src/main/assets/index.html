@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.4 · Mapa único y voz de navegación</title>
+<title>Rush Launcher 4.20.5 · Interfaz despejada y diagnóstico de voz</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -982,6 +982,115 @@ body>.home-map.rush-map-fullscreen .home-nav-guide{
 }
 .home-map.has-active-route:not(.rush-tts-error) .home-nav-status{display:none!important}
 .home-map .home-nav-guide-actions #homeNavVoice[aria-pressed=false]{opacity:.65}
+
+/* 4.20.5: tablero despejado y controles que JAMAS se solapan.
+   Mapa único, 3D, tráfico y GPS NMEA permanecen idénticos. */
+/* Solo tres controles pequeños en el mapa del tablero: GPS, tráfico, 3D.
+   Zoom completo disponible al abrir el mapa a pantalla completa. */
+.home-map:not(.rush-map-fullscreen) .home-map-tools,
+.screen.drive-ui .home-map:not(.rush-map-fullscreen) .home-map-tools,
+.screen:not(.drive-ui) .home-map:not(.rush-map-fullscreen) .home-map-tools{
+ position:absolute!important;right:5px!important;top:7px!important;
+ transform:none!important;display:flex!important;flex-direction:column!important;
+ gap:3px!important;max-width:33px!important;align-items:stretch!important;
+}
+.home-map:not(.rush-map-fullscreen) .home-map-tools button{
+ width:31px!important;min-width:31px!important;max-width:31px!important;
+ height:29px!important;min-height:29px!important;max-height:29px!important;
+ padding:2px!important;font-size:11px!important;line-height:1!important;
+ border-radius:7px!important;white-space:nowrap!important;overflow:hidden!important;
+}
+.home-map:not(.rush-map-fullscreen) #homeMapTraffic{
+ font-size:0!important;
+}
+.home-map:not(.rush-map-fullscreen) #homeMapTraffic::after{
+ content:'T';font-size:11px;display:inline;vertical-align:middle;
+}
+.home-map:not(.rush-map-fullscreen) #homeMap3d{font-size:10px!important}
+.home-map:not(.rush-map-fullscreen) #homeMapZoomIn,
+.home-map:not(.rush-map-fullscreen) #homeMapZoomOut{display:none!important}
+.home-map:not(.rush-map-fullscreen) .home-nav-search{
+ top:6px!important;left:6px!important;
+ width:calc(100% - 54px)!important;
+ min-height:30px!important;
+}
+.home-map:not(.rush-map-fullscreen) .home-nav-search input,
+.home-map:not(.rush-map-fullscreen) .home-nav-search button{
+ min-height:30px!important;height:30px!important;
+ font-size:11px!important;
+}
+.home-map:not(.rush-map-fullscreen) .home-nav-search button{
+ min-width:50px!important;padding:3px 6px!important
+}
+.home-map:not(.rush-map-fullscreen) .home-map-footer{
+ bottom:5px!important;right:6px!important;left:auto!important;
+ width:auto!important;max-width:116px!important
+}
+.home-map:not(.rush-map-fullscreen) .home-map-open{
+ max-height:29px!important;min-height:28px!important;
+ padding:3px 7px!important;font-size:10px!important
+}
+/* Navegación en curso: se libera por completo la barra de búsqueda.
+   El conductor puede recuperar las indicaciones tocando la mini-etiqueta. */
+.home-map.has-active-route .home-nav-search{display:none!important}
+.home-map .home-nav-guide,.screen.drive-ui .home-nav-guide,
+body>.home-map.rush-map-fullscreen .home-nav-guide{
+ top:7px!important;left:7px!important;
+ width:min(290px,calc(100% - 53px))!important;
+ max-width:calc(100% - 53px)!important;
+ grid-template-columns:minmax(0,1fr) auto!important;
+ padding:4px 6px!important;box-shadow:0 2px 5px #00192f77!important;
+}
+.home-map .home-nav-guide-title strong{font-size:10px!important}
+.home-map .home-nav-guide-title span{font-size:17px!important}
+.home-map .home-nav-guide-actions button{
+ min-width:26px!important;min-height:26px!important;
+ font-size:13px!important
+}
+.home-map .home-nav-peek{
+ position:absolute;z-index:9;bottom:5px;left:7px;
+ max-width:95px;min-height:28px;padding:3px 7px;
+ background:#082748db;border:1px solid #4dc4f5c9;border-radius:8px;
+ color:#e8f9ff;font-size:11px;font-weight:850;
+ box-shadow:0 2px 5px #00172a66;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.home-map .home-nav-peek[hidden]{display:none!important}
+.home-map .home-map-attribution{
+ bottom:5px!important;right:auto!important;left:50%!important;
+ transform:translateX(-50%)!important;
+ max-width:110px;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;font-size:7px!important;
+ opacity:.78;pointer-events:none!important;
+}
+/* Mapa ampliado: botones grandes y accesibles en una columna completa. */
+body>.home-map.rush-map-fullscreen .home-map-tools{
+ top:60px!important;right:10px!important;
+ transform:none!important;max-width:43px!important;
+ gap:5px!important;
+}
+body>.home-map.rush-map-fullscreen .home-map-tools button{
+ width:39px!important;height:38px!important;
+ min-width:39px!important;min-height:38px!important;
+ max-height:39px!important;padding:4px!important;
+ font-size:11px!important;overflow:hidden!important;
+}
+body>.home-map.rush-map-fullscreen .home-map-open{
+ min-height:36px!important;max-height:40px!important;
+ padding:6px 10px!important;
+}
+body>.home-map.rush-map-fullscreen .home-map-footer{
+ bottom:10px!important;right:9px!important;left:auto!important
+}
+body>.home-map.rush-map-fullscreen .home-nav-peek{
+ bottom:10px!important;left:10px!important
+}
+body>.home-map.rush-map-fullscreen .home-map-attribution{
+ bottom:5px!important;left:50%!important;right:auto!important
+}
+body>.home-map.rush-map-fullscreen.has-active-route .home-nav-guide{
+ top:10px!important;width:min(325px,calc(100% - 70px))!important
+}
 </style>
 </head>
 <body>
@@ -1001,7 +1110,7 @@ body>.home-map.rush-map-fullscreen .home-nav-guide{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.4</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.5</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1072,6 +1181,7 @@ body>.home-map.rush-map-fullscreen .home-nav-guide{
    </div>
    <div id="homeNavResults" class="home-nav-results" hidden aria-label="Lugares sugeridos"></div>
    <div id="homeNavStatus" class="home-nav-status" role="status" hidden></div>
+    <button id="homeNavPeek" class="home-nav-peek" type="button" aria-label="Mostrar la siguiente indicación de la ruta" title="Mostrar indicación o finalizar ruta" hidden>↱ Ruta</button>
    <div id="homeNavGuide" class="home-nav-guide" hidden aria-live="polite">
      <div class="home-nav-guide-title"><span id="homeNavTurnIcon">↑</span>
       <strong id="homeNavInstruction">Sigue la ruta</strong></div>
@@ -1181,9 +1291,12 @@ body>.home-map.rush-map-fullscreen .home-nav-guide{
     <p class="muted">Prueba el sonido antes de conducir. Si no se escucha, comprueba el volumen multimedia y que haya una voz en español instalada en el Carlinkit.</p>
     <div class="tile-buttons">
       <button type="button" class="actionbtn highlight" id="navTestSpeech">▶ Probar voz</button>
+      <button type="button" class="actionbtn" id="navTestSound">♪ Probar sonido</button>
+      <button type="button" class="actionbtn" id="navAudioDiag">Diagnóstico audio</button>
       <button type="button" class="actionbtn" id="navTtsSettings">Configurar voz Android</button>
     </div>
-    <p class="muted" id="navTtsStatus" role="status">Sin prueba de voz. El GPS del iPhone permite indicaciones sin informar precisión.</p>
+    <p class="muted" id="navTtsStatus" role="status">Prueba por separado el sonido y la voz: así sabremos si falla la salida multimedia o el motor TTS de Android.</p>
+    <p class="muted" id="navAudioDiagStatus" role="status">Sin diagnóstico de audio.</p>
    </div>
    <div class="set-line"><h3>Vista del mapa en Inicio</h3>
    <p class="muted">Rush Drive utiliza un mapa a nivel calle, con más carretera visible por delante del vehículo y una rotación más rápida. El acercamiento se adapta a la velocidad; los botones + y − permiten ajustarlo manualmente.</p>

@@ -18,6 +18,20 @@ var searchSeq=100,searchTimer=null,lastSearchAt=0,lastRouteAt=0,lastReroute=0;
 var fix=null,accuracy=999,speed=0,lastBearing=0,lastPositionAt=0;
 var currentStep=0,lastStepDistance=Infinity,offRouteCount=0,voiceStage='';
 var voiceEnabled=true,heldStatusTimer=null;
+var peek=$('homeNavPeek'),guideTimer=null,lastGuideStep=-1,lastGuideStage='';
+function showGuideBriefly(){
+ if(!route)return;
+ if(guideTimer!==null){clearTimeout(guideTimer);guideTimer=null}
+ showing(guide,true);
+ // No dejar un recuadro permanente sobre las calles ni tapar el giro.
+ guideTimer=setTimeout(function(){showing(guide,false);guideTimer=null},4500);
+}
+function closeGuide(){
+ if(guideTimer!==null)clearTimeout(guideTimer);
+ guideTimer=null;showing(guide,false);
+}
+if(peek)peek.addEventListener('click',showGuideBriefly);
+
 try{voiceEnabled=localStorage.getItem('rush_home_voice')!=='no'}catch(e){}
 function syncVoiceButton(){
  voiceButton.textContent=voiceEnabled?'🔊':'🔇';
@@ -179,6 +193,8 @@ function selectDestination(lat,lon,name){
  // Ignorar cualquier respuesta antigua cuando cambia el destino.
  ++routeRequest;
  routeBusy=false;route=null;offRouteCount=0;currentStep=0;voiceStage='';
+ lastGuideStage='';lastGuideStep=-1;closeGuide();
+ if(peek)showing(peek,false);
  host.classList.remove('has-active-route');
  lastRouteAt=0;
  destination={lat:lat,lon:lon,name:name||'Destino seleccionado'};
@@ -223,10 +239,11 @@ window.rushHomeRoute=function(reply){
   window.RushHomeMap.setRoute(route.geometry);
   window.RushHomeMap.follow();
  }
- showing(guide,true);
  host.classList.add('has-active-route');
  showing(status,false);
+ if(peek)showing(peek,true);
  updateGuidance();
+ showGuideBriefly();
  speak('Ruta calculada. Comienza la navegación.',true);
 };
 function describeStep(step){
@@ -290,6 +307,21 @@ window.rushTtsStatus=function(state,message){
 };
 var testButton=document.getElementById('navTestSpeech');
 if(testButton)testButton.addEventListener('click',testSpeech);
+var soundButton=document.getElementById('navTestSound');
+if(soundButton)soundButton.addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.testAudioBeep==='function')window.Rush.testAudioBeep();
+ else showStatus('Prueba de sonido disponible en Android',true);
+});
+var diagButton=document.getElementById('navAudioDiag');
+if(diagButton)diagButton.addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.diagnoseAudio==='function')window.Rush.diagnoseAudio();
+ else showStatus('Diagnóstico de audio disponible en Android',true);
+});
+window.rushAudioDiagnostics=function(state,message){
+ var diag=document.getElementById('navAudioDiagStatus');
+ if(diag)diag.textContent=String(message||'').slice(0,280);
+ if(state==='error')showStatus(String(message||'').slice(0,130),true);
+};
 var openTtsSettings=document.getElementById('navTtsSettings');
 if(openTtsSettings)openTtsSettings.addEventListener('click',function(){
  if(nativeApp&&typeof window.Rush.openTtsSettings==='function')window.Rush.openTtsSettings();
@@ -303,6 +335,8 @@ function updateGuidance(){
  }
  var destDistance=meters(fix,destination);
  if(destDistance<35){
+  if(peek)write(peek,'● Llegada');
+  if(lastGuideStage!=='arrived'){lastGuideStage='arrived';showGuideBriefly()}
   write(arrow,'●');write(title,'Llegaste al destino');
   write(nextDistance,'Destino alcanzado');
   write(summary,'Finaliza la ruta para continuar sin destino');
@@ -313,6 +347,7 @@ function updateGuidance(){
  if(!steps.length){
   write(arrow,'↑');write(title,'Sigue la ruta señalada');
   write(nextDistance,distanceLabel(destDistance)+' hasta destino');
+  if(peek)write(peek,'↑ '+distanceLabel(destDistance));
  }else{
   var turn=steps[Math.min(currentStep,steps.length-1)];
   var d=meters(fix,turn);
@@ -327,6 +362,16 @@ function updateGuidance(){
   var message=describeStep(turn);
   write(arrow,message.icon);write(title,message.text);
   write(nextDistance,distanceLabel(d)+' para maniobra');
+  if(peek)write(peek,message.icon+' '+distanceLabel(d));
+  var guideStage=d<=50?'imminent':d<=160?'near':d<=440?'upcoming':'cruise';
+  // Mostrar indicación solo cuando cambia el giro o se entra en un tramo
+  // próximo: no volver a abrir el cartel con cada lectura GPS (1Hz).
+  if(currentStep!==lastGuideStep||
+     (guideStage!==lastGuideStage&&guideStage!=='cruise')){
+   lastGuideStep=currentStep;lastGuideStage=guideStage;
+   showGuideBriefly();
+  }else{lastGuideStep=currentStep;lastGuideStage=guideStage}
+
   if(voiceEnabled && speed>5 && (accuracy<=70||externalGpsFresh())){
    var stage=d<=85?'short':d<=280?'near':'far';
    if(stage!=='far'&&voiceStage!==stage){
@@ -368,7 +413,9 @@ function cancelRoute(){
  ++routeRequest;destination=null;route=null;routeBusy=false;
  currentStep=0;voiceStage='';offRouteCount=0;
  if(window.RushHomeMap)window.RushHomeMap.clearRoute();
- showing(guide,false);host.classList.remove('has-active-route');clearResults();query.value='';
+ closeGuide();if(peek)showing(peek,false);
+ lastGuideStage='';lastGuideStep=-1;
+ host.classList.remove('has-active-route');clearResults();query.value='';
  showStatus('Modo conducción sin destino · mapa y GPS activos',true);
  if(nativeApp&&window.Rush.stopNavigationSpeech)window.Rush.stopNavigationSpeech();
 }
@@ -414,6 +461,7 @@ window.rushGpsData=function(kmh,bearing){
  updateSpeed(kmh,bearing);
 };
 window.RushHomeNavigation={
+ showGuide:showGuideBriefly,
  pickCoordinate:pickCoordinate,clearRoute:cancelRoute,
  choose:selectDestination,getDestination:function(){return destination},
  isActive:function(){return !!route}

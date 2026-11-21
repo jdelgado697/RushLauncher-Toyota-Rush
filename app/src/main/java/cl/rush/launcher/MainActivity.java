@@ -18,6 +18,7 @@ import android.graphics.drawable.Drawable;
 import android.util.Base64;
 import android.util.LruCache;
 import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.bluetooth.BluetoothAdapter;
@@ -130,6 +131,8 @@ public class MainActivity extends Activity implements LocationListener {
     private SpotifyArtworkFetcher spotifyArtwork;
     private TextToSpeech navSpeech;
     private boolean navSpeechReady = false;
+    private final AudioManager.OnAudioFocusChangeListener navAudioFocusListener = change -> { };
+    private boolean navFocusHeld = false;
     private String pendingNavSpeech = null;
     private WebView webView;
     private LocationManager locationManager;
@@ -370,7 +373,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.4 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.5 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1470,6 +1473,79 @@ public class MainActivity extends Activity implements LocationListener {
         });
     }
 
+    // Voz 4.20.5: audio multimedia, test de ruta y diagnóstico TTS/audio separado.
+    private void acquireNavigationAudioFocus(){
+        AudioManager audio=(AudioManager)getSystemService(AUDIO_SERVICE);
+        if(audio==null)return;
+        try{
+            int result=audio.requestAudioFocus(navAudioFocusListener,
+                AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK);
+            navFocusHeld=result==AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        }catch(Exception ignored){}
+    }
+    private void releaseNavigationAudioFocus(){
+        if(!navFocusHeld)return;
+        navFocusHeld=false;
+        AudioManager audio=(AudioManager)getSystemService(AUDIO_SERVICE);
+        if(audio!=null)try{audio.abandonAudioFocus(navAudioFocusListener);}
+            catch(Exception ignored){}
+    }
+    private void diagnoseNavigationAudio() {
+        AudioManager audio=(AudioManager)getSystemService(AUDIO_SERVICE);
+        if(audio==null){
+            reportAudioDiagnostic("error","Android no informa AudioManager.");
+            return;
+        }
+        int volume=audio.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maximum=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        String engine="Sin inicializar";
+        try{
+            if(navSpeech!=null){
+                String selected=navSpeech.getDefaultEngine();
+                int count=navSpeech.getEngines().size();
+                engine=(selected==null?"sin predeterminado":selected)+
+                  " ("+count+" motores)";
+            }else{
+                int count=getPackageManager().queryIntentServices(
+                    new Intent("android.intent.action.TTS_SERVICE"),0).size();
+                engine=count+" motores detectados";
+            }
+        }catch(Exception ignored){engine="No se pudo consultar el motor";}
+        String msg="Multimedia "+volume+"/"+maximum+
+            (volume==0?" (SILENCIO)":"")+
+            " · TTS: "+engine+
+            " · Motor listo: "+(navSpeechReady?"sí":"no");
+        reportAudioDiagnostic(volume==0?"error":"diag",msg);
+    }
+    private void reportAudioDiagnostic(String state,String message){
+        javascript("if(window.rushAudioDiagnostics)window.rushAudioDiagnostics("+
+            JSONObject.quote(state)+","+JSONObject.quote(message)+");");
+    }
+    private void testNavigationTone(){
+        AudioManager audio=(AudioManager)getSystemService(AUDIO_SERVICE);
+        if(audio==null){reportAudioDiagnostic("error","Android no tiene salida AudioManager");return;}
+        int vol=audio.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maximum=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        if(vol<=0){
+            reportAudioDiagnostic("error","Volumen multimedia Android 0/"+maximum+
+               ". Sube volumen de medios del TBox y prueba otra vez.");
+            return;
+        }
+        try{
+            final ToneGenerator tone=new ToneGenerator(AudioManager.STREAM_MUSIC,95);
+            if(tone.startTone(ToneGenerator.TONE_PROP_BEEP,650)){
+                reportAudioDiagnostic("diag","Tono enviado al audio multimedia ("+
+                    vol+"/"+maximum+"). ¿Lo escuchaste por la radio?");
+            }else{
+                reportAudioDiagnostic("error","Android rechazó el tono de prueba.");
+            }
+            mainHandler.postDelayed(() -> tone.release(),950L);
+        }catch(Exception exception){
+            reportAudioDiagnostic("error",
+               "No se pudo iniciar la prueba de sonido: "+exception.getClass().getSimpleName());
+        }
+    }
+
     // Voz de navegacion 4.20.4: usar el mismo canal multimedia del TBox.
     // Diagnostico visible: no confundir un boton "Voz si" con audio real.
     private void reportNavigationSpeech(String state,String message) {
@@ -1516,8 +1592,11 @@ public class MainActivity extends Activity implements LocationListener {
                                 reportNavigationSpeech("speaking",
                                     "Motor de voz activo. Si no se oye, revisa volumen multimedia.");
                             }
-                            @Override public void onDone(String id) {}
+                            @Override public void onDone(String id) {
+                                releaseNavigationAudioFocus();
+                            }
                             @Override public void onError(String id) {
+                                releaseNavigationAudioFocus();
                                 reportNavigationSpeech("error",
                                     "El motor de voz no pudo reproducir audio. Revisa TTS Android.");
                             }
@@ -1548,9 +1627,11 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void playNavigationSpeech(String phrase){
         if(navSpeech==null||!navSpeechReady)return;
+        acquireNavigationAudioFocus();
         int result=navSpeech.speak(phrase,TextToSpeech.QUEUE_FLUSH,null,
             "rush-turn-"+System.currentTimeMillis());
         if(result==TextToSpeech.ERROR){
+            releaseNavigationAudioFocus();
             reportNavigationSpeech("error",
                 "El motor TTS rechazó el audio. Comprueba ajustes de voz.");
         }
@@ -1559,6 +1640,7 @@ public class MainActivity extends Activity implements LocationListener {
     private void stopNavigationSpeechInternal() {
         pendingNavSpeech=null;
         if(navSpeech!=null)navSpeech.stop();
+        releaseNavigationAudioFocus();
     }
 
     private void startGps() {
@@ -1966,6 +2048,12 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void speakNavigation(String message) {
             runUi(() -> speakNavigationInternal(message));
+        }
+        @JavascriptInterface public void testAudioBeep(){
+            runUi(() -> testNavigationTone());
+        }
+        @JavascriptInterface public void diagnoseAudio(){
+            runUi(() -> diagnoseNavigationAudio());
         }
         @JavascriptInterface public void openTtsSettings() {
             runUi(() -> {
