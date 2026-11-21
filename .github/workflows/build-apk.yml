@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible]
 
 permissions:
   contents: read
@@ -68,9 +68,13 @@ jobs:
           assert 'id="mapRetryGps"' in html
           assert '© OpenStreetMap contributors' in html
           assert 'data-action="map"' in html
-          assert "script.src='live_map.js'" in js
+          assert "script.src='live_map.js'" not in js
+          assert 'document.body.appendChild(homeMapHost)' in js
+          assert 'closeFullMap()' in js and 'id="homeMapExpandLabel"' in html
+          assert 'rush-map-fullscreen' in html and 'rush-map-fullscreen' in js
+          assert 'tileLimit=host.classList.contains' in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "window.Rush.stopMapGps()" in js
-          assert "window.Rush.startMapGps()" in js
+          assert "window.Rush.askGps()" in js
           assert 'Tablero en vivo' in html
           assert 'data-action="map"' in html
           assert 'Abrir navegación' in html
@@ -222,7 +226,7 @@ jobs:
           assert 'if(!active||motionFrame!==null||!driving||!following)return;' in mapjs
           assert 'window.rushNavMapOpened=function()' in navigation
           assert 'window.rushNavFollowing=function()' in navigation
-          assert "window.rushNavMapOpened==='function'" in js
+          assert 'window.rushOpenEmbeddedMap=function(destination)' in js
           assert 'window.RushLiveMap.drivingMode(true)' in js
           assert 'schedulePanReturn()' in mapjs
           assert '},15000)' in mapjs
@@ -362,7 +366,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 53" in gradle
+          assert "versionCode 54" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -584,7 +588,7 @@ jobs:
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
         with:
-          name: RushLauncher-APK-debug
+          name: RushLauncher-4.20.2-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

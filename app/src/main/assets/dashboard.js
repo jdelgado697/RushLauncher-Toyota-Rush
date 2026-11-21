@@ -68,6 +68,7 @@ function applyTheme(){
 }
 function store(key,value){try{localStorage.setItem(key,value)}catch(e){}}
 function openOverlay(id){
+ closeFullMap();
  show($(id),true);
  if(id==='settingsPanel')cartoControlsUpdate();
  if(id==='appsPanel'&&nativeApp){write('appsCount','Buscando…');$('appsSearch').value='';window.Rush.listApps()}
@@ -210,48 +211,66 @@ $('navStartRoute').addEventListener('click',function(){
 });
 $('navClearRoute').addEventListener('click',navClear);
 
-function openMap(){
- // 4.20.1: navegación 2D dentro del WebView ya activo.
- // Evita iniciar MapLibre GL nativo en GPUs incompatibles del TBox.
- navGpsMeta.started=Date.now();
- openOverlay('mapPanel');
- write('mapSubtitle','Busca un destino o elige un punto en el mapa');
- function activateMap(){
-  if($('mapPanel').hidden||!window.RushLiveMap)return;
-  window.RushLiveMap.activate();
-  if(typeof window.rushNavMapOpened==='function')window.rushNavMapOpened();
-  if(state.location&&state.location.receivedAt&&Date.now()-state.location.receivedAt<15000){
-   window.RushLiveMap.updatePosition(state.location.lat,state.location.lon,state.location.accuracy);
-  }
-  if(nativeApp&&typeof window.Rush.startMapGps==='function')window.Rush.startMapGps();
-  else window.RushLiveMap.setStatus('Ubicación Android no disponible');
- }
- if(mapScriptLoaded){activateMap();return;}
- if(mapScriptLoading)return;
- mapScriptLoading=true;
- var script=document.createElement('script');script.src='live_map.js';
- script.onload=function(){mapScriptLoading=false;mapScriptLoaded=!!window.RushLiveMap;activateMap()};
- script.onerror=function(){
-  mapScriptLoading=false;
-  write('mapSubtitle','No se pudo cargar el mapa. Comprueba la instalación.');
-  write('mapWaiting','No se pudo iniciar el mapa integrado.');
- };
- document.body.appendChild(script);
+// 4.20.2: un SOLO mapa de verdad. El nodo del mapa del Inicio se expande
+// en pantalla completa: misma instancia, mosaicos, GPS, estilo, ruta y tráfico.
+// Al cerrarlo vuelve exactamente al mismo lugar sin reiniciar el renderizador.
+var homeMapHost=document.querySelector('.home-map');
+var homeMapParent=homeMapHost?homeMapHost.parentNode:null;
+var homeMapNext=homeMapHost?homeMapHost.nextSibling:null;
+function refreshExpandedMap(){
+ if(!window.RushHomeMap||typeof window.RushHomeMap.refresh!=='function')return;
+ requestAnimationFrame(function(){
+  window.RushHomeMap.refresh();
+  requestAnimationFrame(function(){window.RushHomeMap.refresh()});
+ });
 }
-// También atiende los accesos nativos del puente Java sin lanzar otra Activity.
+function closeFullMap(){
+ if(!homeMapHost||!homeMapHost.classList.contains('rush-map-fullscreen'))return false;
+ if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+ homeMapHost.classList.remove('rush-map-fullscreen','search-keyboard');
+ if(homeMapParent){
+  if(homeMapNext&&homeMapNext.parentNode===homeMapParent)
+   homeMapParent.insertBefore(homeMapHost,homeMapNext);
+  else homeMapParent.appendChild(homeMapHost);
+ }
+ write('homeMapExpandLabel','Abrir mapa');
+ homeMapHost.setAttribute('aria-label','Mapa del panel y acceso a navegación');
+ refreshExpandedMap();
+ return true;
+}
+function openMap(){
+ if(!homeMapHost){notice('Mapa integrado no disponible');return}
+ if(homeMapHost.classList.contains('rush-map-fullscreen')){
+  closeFullMap();return;
+ }
+ // Cerrar únicamente paneles emergentes, no rutas GPS ni audio Spotify.
+ Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(panel){
+  if(!panel.hidden)closeOverlay(panel.id);
+ });
+ homeMapHost.classList.add('rush-map-fullscreen');
+ document.body.appendChild(homeMapHost);
+ write('homeMapExpandLabel','Volver al panel');
+ homeMapHost.setAttribute('aria-label','Mapa único Rush Drive a pantalla completa');
+ if(nativeApp&&typeof window.Rush.askGps==='function')window.Rush.askGps();
+ refreshExpandedMap();
+}
+window.rushCloseFullMap=closeFullMap;
+// Los accesos nativos y el dock abren EXACTAMENTE el mismo mapa del panel.
 window.rushOpenEmbeddedMap=function(destination){
- openMap();
+ if(!homeMapHost||!homeMapHost.classList.contains('rush-map-fullscreen'))openMap();
  if(typeof destination==='string'&&destination.trim()){
-  $('navQuery').value=destination.trim().slice(0,140);
-  $('navSearchBtn').click();
+  $('homeNavInput').value=destination.trim().slice(0,100);
+  $('homeNavSearchButton').click();
  }
 };
 function rushReturnHome(){
+ closeFullMap();
  Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){
   if(!p.hidden)closeOverlay(p.id);
  });
 }
 window.rushHandleBack=function(){
+ if(closeFullMap())return true;
  var visible=Array.prototype.filter.call(document.querySelectorAll('.scrim'),function(p){return !p.hidden;});
  if(!visible.length)return false;
  closeOverlay(visible[visible.length-1].id);
@@ -993,10 +1012,16 @@ window.rushInstalledApps=function(items){
 };
 $('appsSearch').addEventListener('input',paintApps);
 document.addEventListener('keydown',function(e){
- if(e.key==='Escape')Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){if(!p.hidden)closeOverlay(p.id)});
+ if(e.key==='Escape'){
+  closeFullMap();
+  Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(p){if(!p.hidden)closeOverlay(p.id)});
+ }
 });
 document.addEventListener('visibilitychange',function(){
- if(document.hidden&&!$('mapPanel').hidden)closeOverlay('mapPanel');
+ if(document.hidden){
+  closeFullMap();
+  if(!$('mapPanel').hidden)closeOverlay('mapPanel');
+ }
 });
 window.addEventListener('focus',function(){
  applyTheme();
