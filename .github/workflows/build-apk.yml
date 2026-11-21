@@ -226,7 +226,7 @@ jobs:
           assert 'if(!active||motionFrame!==null||!driving||!following)return;' in mapjs
           assert 'window.rushNavMapOpened=function()' in navigation
           assert 'window.rushNavFollowing=function()' in navigation
-          assert "window.rushNavMapOpened==='function'" in js
+          assert 'window.rushOpenEmbeddedMap=function(destination)' in js
           assert 'window.RushLiveMap.drivingMode(true)' in js
           assert 'schedulePanReturn()' in mapjs
           assert '},15000)' in mapjs
