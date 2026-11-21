@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.1 · Mapa estable y panel limpio</title>
+<title>Rush Launcher 4.20.2 · Un solo mapa sin sobrecarga</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -831,6 +831,78 @@
 .screen:not(.drive-ui) .home-map-tiles img.rush-base-tile{
  filter:saturate(.75) contrast(.94) brightness(1.035)!important
 }
+
+/* 4.20.2: MAPA UNICO. Se amplía .home-map y se restaura sin crear otro visor. */
+.home-map .home-map-header,.home-map .home-map-route,
+.home-map .home-map-footer>span,.home-map .home-map-traffic-legend,
+.home-map .home-map-trafficstatus,.home-map #homeMapRetryGps,
+.home-map #homeMapIphoneGps{display:none!important}
+.home-map .home-map-grid{opacity:0!important}
+.home-map:not(.rush-map-fullscreen) .home-nav-search{
+ top:7px!important;left:7px!important;width:calc(100% - 93px)!important;
+ max-width:none!important;min-height:32px
+}
+.home-map:not(.rush-map-fullscreen) .home-nav-search input,
+.home-map:not(.rush-map-fullscreen) .home-nav-search button{
+ min-height:32px;font-size:11px
+}
+.home-map:not(.rush-map-fullscreen) .home-nav-results{
+ top:44px!important;left:7px!important;max-height:60%
+}
+.home-map:not(.rush-map-fullscreen) .home-map-tools{
+ top:45px!important;right:6px!important;transform:scale(.88);
+ transform-origin:top right
+}
+.home-map .home-map-footer{justify-content:flex-end!important;bottom:6px}
+.home-map .home-map-open{min-height:30px;padding:5px 9px;font-size:10px}
+.home-map .home-nav-status{padding:4px 7px;font-size:10px;max-height:46px}
+:root:not([data-theme=dark]) .home-map:not(.rush-tomtom-map) .home-map-tiles img.rush-base-tile{
+ filter:saturate(.65) contrast(.9) brightness(1.07)!important
+}
+body>.home-map.rush-map-fullscreen{
+ position:fixed!important;inset:6px!important;width:auto!important;height:auto!important;
+ min-width:0!important;min-height:0!important;max-width:none!important;
+ max-height:none!important;margin:0!important;z-index:75!important;
+ display:block!important;grid-column:auto!important;grid-row:auto!important;
+ border:1px solid #3cbfff!important;border-radius:12px!important;
+ box-shadow:0 0 0 200vmax #000c,0 0 20px #004d9c88!important;
+ background:#10233a;transform:none!important;isolation:isolate
+}
+body>.home-map.rush-map-fullscreen .home-nav-search{
+ top:10px!important;left:10px!important;width:calc(100% - 165px)!important;
+ max-width:600px!important;min-height:38px
+}
+body>.home-map.rush-map-fullscreen .home-nav-search input,
+body>.home-map.rush-map-fullscreen .home-nav-search button{min-height:38px;font-size:14px}
+body>.home-map.rush-map-fullscreen .home-map-tools{
+ top:56px!important;right:9px!important;transform:none!important
+}
+body>.home-map.rush-map-fullscreen .home-map-tools button{
+ min-width:39px!important;min-height:39px!important;font-size:14px
+}
+body>.home-map.rush-map-fullscreen .home-nav-results{
+ top:55px!important;left:10px!important;width:min(70%,520px)!important;
+ max-height:55%
+}
+body>.home-map.rush-map-fullscreen .home-nav-guide{top:100px}
+body>.home-map.rush-map-fullscreen .home-map-footer{bottom:12px;right:10px}
+body>.home-map.rush-map-fullscreen .home-map-open{
+ min-height:40px;font-size:13px;padding:8px 14px;
+ background:linear-gradient(90deg,#063d75,#0f81c9)
+}
+body>.home-map.rush-map-fullscreen .home-map-attribution{
+ right:8px;bottom:8px;font-size:8px
+}
+@media(max-width:860px){
+ body>.home-map.rush-map-fullscreen .home-nav-search{
+  width:calc(100% - 155px)!important
+ }
+ body>.home-map.rush-map-fullscreen .home-nav-search input{font-size:13px}
+ body>.home-map.rush-map-fullscreen .home-nav-guide{top:76px}
+ body>.home-map.rush-map-fullscreen .home-map-tools button{
+  min-height:35px!important;min-width:35px!important
+ }
+}
 </style>
 </head>
 <body>
@@ -850,7 +922,7 @@
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.1</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.2</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -945,7 +1017,7 @@
     <span><i class="rush-flow-medium"></i> Lento</span>
     <span><i class="rush-flow-bad"></i> Congestión</span>
    </div>
-   <div class="home-map-footer"><span id="homeMapInfo">Rush Drive · calles cercanas · rumbo arriba</span><button type="button" data-action="map" class="home-map-open">Abrir mapa completo <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+   <div class="home-map-footer"><span id="homeMapInfo">Rush Drive · calles cercanas · rumbo arriba</span><button type="button" data-action="map" class="home-map-open" aria-label="Ampliar o cerrar mapa"><span id="homeMapExpandLabel">Abrir mapa</span> <svg class="icon"><use href="#i-arrow"/></svg></button></div>
   </section>
   <div class="widgets">
    <section class="music glass" aria-label="Reproductor multimedia">
@@ -1032,7 +1104,7 @@
    </div>
    <p class="muted">Puedes elegir la cartografía OpenStreetMap o TomTom. La capa de tráfico requiere una clave API activa. Pulsa ▲ Conduciendo para recuperar el zoom automático después de usar + o −.</p>
   </div>
-  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Rush Navigator: mapa 2D integrado en el launcher, sin iniciar la pantalla gráfica MapLibre. Permite buscar destinos y calcular rutas por internet; admite la ubicación Android y las coordenadas del GPS del iPhone. El servicio de rutas es experimental.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
+  <div class="set-line"><h3>Mapa ligero</h3><p class="muted">Mapa único Rush Drive: amplía directamente el mapa del panel, sin crear otro visor ni perder el seguimiento GPS, la ruta o el tráfico TomTom. Al volver, el mismo mapa recupera su lugar. La búsqueda de destinos y las rutas necesitan internet.</p><div class="tile-buttons"><button type="button" class="actionbtn" data-action="map">Abrir Rush Navigator</button></div></div>
 
   <div class="set-line">
    <h3>Inicio y navegación del TBox</h3>
@@ -1222,7 +1294,7 @@
 <div class="scrim" id="routePanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Navegación integrada">
   <div class="sheet-head"><h2>Navegación en Rush Launcher</h2><button type="button" class="close" data-close="routePanel">Cerrar ✕</button></div>
-  <p class="muted">Abre Rush Navigator, escribe una dirección y pulsa Buscar. Selecciona el destino y pulsa Calcular ruta. También puedes pulsar «Elegir en mapa» y tocar un punto. El cálculo necesita conexión a internet y ubicación Android.</p>
+  <p class="muted">Abre el mismo mapa del panel en pantalla completa, escribe tu destino y selecciona una sugerencia. La ruta aparece sobre ese mismo mapa; también puedes mantener pulsado un punto para elegirlo. El cálculo necesita internet y una ubicación GPS actual.</p>
   <div class="tile-buttons"><button id="startRoute" type="button" class="actionbtn highlight">Abrir Rush Navigator</button><button id="justMap" type="button" class="actionbtn">Ver mapa</button></div>
   <p class="muted">Las indicaciones son orientativas: no sustituyen señalización vial ni un sistema GPS fiable. Configura el recorrido antes de conducir.</p>
  </div>
