@@ -2002,6 +2002,9 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public boolean offlineMapAvailable(){
             return offlineChile!=null&&offlineChile.available();
         }
+        @JavascriptInterface public boolean offlineMapReady(){
+            return offlineChile!=null&&offlineChile.ready();
+        }
         @JavascriptInterface public boolean hasValidatedInternet(){
             try {
                 ConnectivityManager cm=(ConnectivityManager)
