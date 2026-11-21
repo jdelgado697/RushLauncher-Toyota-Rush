@@ -7,11 +7,12 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'cl.rush.launcher.obd415'
+        // Edición paralela: nunca reemplaza ni borra Rush Launcher instalado.
+        applicationId 'cl.rush.launcher.pastel'
         minSdk 26
         targetSdk 33
-        versionCode 57
-        versionName '4.20.5-CleanNavAudio'
+        versionCode 58
+        versionName '4.20.6-PastelParallel'
     }
 
     compileOptions {
