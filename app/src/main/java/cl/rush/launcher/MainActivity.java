@@ -61,6 +61,7 @@ public class MainActivity extends Activity implements LocationListener {
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
     private ObdReader obdReader;
     private ExternalNmeaGps externalNmea;
+    private final BuildingData3D buildingData3D = new BuildingData3D();
     private static final String NMEA_PREFS = "rush_gps_iphone_direct";
     private static final String NMEA_HOST = "host";
     private static final String NMEA_PORT = "port";
@@ -368,7 +369,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.15.0 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.3 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1701,6 +1702,7 @@ public class MainActivity extends Activity implements LocationListener {
         mainHandler.removeCallbacks(obdAutoPoll);
         stopGpsWatchdog();
         if(externalNmea!=null)externalNmea.disconnect();
+        buildingData3D.shutdown();
         if(locationManager!=null){
             try{locationManager.removeUpdates(this);}catch(SecurityException ignored){}
         }
@@ -1825,6 +1827,13 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public void getIphoneGpsSettings() {
             runUi(() -> nmeaInfoToWeb(nmeaSettings().getBoolean(NMEA_ENABLED,false) ?
                 "Configurado · esperando conexión" : "GPS iPhone no conectado"));
+        }
+        // Edificios reales de OpenStreetMap, sin WebGL ni CORS en file://.
+        // La consulta se ejecuta en un executor independiente del navegador.
+        @JavascriptInterface public void fetch3dBuildings(double lat,double lon,int radius,int requestId) {
+            buildingData3D.request(lat,lon,radius,requestId,(id,result) ->
+                javascript("if(window.rush3dBuildings)window.rush3dBuildings("+id+
+                    ","+result.toString()+");"));
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> { gpsRequested = true; startGps(); });
