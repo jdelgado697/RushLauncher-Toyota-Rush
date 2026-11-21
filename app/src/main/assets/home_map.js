@@ -16,6 +16,7 @@ var followButton=document.getElementById('homeMapFollow');
 var zoomIn=document.getElementById('homeMapZoomIn');
 var zoomOut=document.getElementById('homeMapZoomOut');
 if(!host||!layer||!marker||!surface||!followButton||!zoomIn||!zoomOut)return;
+if(window.Rush3D)window.Rush3D.mount(host,layer);
 
 var current={lat:-39.367,lon:-72.632},position=null;
 // Vista de conducción cercana a nivel calle; los cambios de rumbo no
@@ -45,17 +46,17 @@ var trafficLegend=document.getElementById('homeMapTrafficLegend');
 var trafficButton=document.getElementById('homeMapTraffic');
 var attribution=document.getElementById('homeMapAttribution');
 var trafficCachePeriod=180000; // 3 min para limitar consumo y costos.
-var lastThemeOnTiles='', lastClassicPanel=null;
+var lastThemeOnTiles='', lastClassicPanel=null,lastPanel3d=null;
 function isClassicPanel(){
  var screen=document.getElementById('rushScreen');
  return !!(screen&&!screen.classList.contains('drive-ui'));
 }
 function syncPanelZoom(){
- var classic=isClassicPanel();
- if(lastClassicPanel===classic)return;
- lastClassicPanel=classic;
+ var classic=isClassicPanel(),threeD=!!(window.Rush3D&&window.Rush3D.isEnabled());
+ if(lastClassicPanel===classic&&lastPanel3d===threeD)return;
+ lastClassicPanel=classic;lastPanel3d=threeD;
  autoZoom=!classic&&mapStyle==='drive';
- zoom=classic?14:(mapStyle==='drive'?
+ zoom=classic?(threeD?16:14):(mapStyle==='drive'?
    (motionSpeed>=85?16:motionSpeed>=50?17:18):15);
 }
 try {
@@ -290,9 +291,14 @@ function render(){
   if(!tNames[key]){trafficTiles[key].remove();delete trafficTiles[key]}
  });
  host.classList.add('home-map-has-tiles');
- layer.style.transform=following&&live?
-   'translate3d(0,'+driveOffset()+'px,0) rotate('+(-visualBearing)+'deg)':'none';
+ if(window.Rush3D){
+  layer.style.transform=window.Rush3D.cameraTransform(visualBearing,driveOffset(),following,live);
+ }else{
+  layer.style.transform=following&&live?
+    'translate3d(0,'+driveOffset()+'px,0) rotate('+(-visualBearing)+'deg)':'none';
+ }
  drawRoute(center,w,h);
+ if(window.Rush3D)window.Rush3D.update(current.lat,current.lon,zoom,project,w,h,live);
  drawMarker();
  setStatus();
  trafficStatus();
@@ -400,7 +406,7 @@ function activateFollow(){
  following=true;
  autoZoom=mapStyle==='drive'&&!isClassicPanel();
  if(autoZoom)zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
- else if(isClassicPanel())zoom=14;
+ else if(isClassicPanel())zoom=(window.Rush3D&&window.Rush3D.isEnabled())?16:14;
  if(position)current={lat:position.lat,lon:position.lon};
  followButton.textContent='➤';followButton.title='GPS: siguiendo vehículo';
  followButton.setAttribute('aria-pressed','true');
@@ -418,7 +424,7 @@ function setStyle(mode){
  try{localStorage.setItem('rush_map_style',mapStyle)}catch(e){}
  host.classList.toggle('rush-map-drive',mapStyle==='drive');
  autoZoom=mapStyle==='drive'&&!isClassicPanel();
- zoom=isClassicPanel()?14:
+ zoom=isClassicPanel()?((window.Rush3D&&window.Rush3D.isEnabled())?16:14):
    (mapStyle==='drive'?(motionSpeed>=85?16:motionSpeed>=50?17:18):15);
  if(following&&position)current={lat:position.lat,lon:position.lon};
  if(document.getElementById('mapStyleDrive'))
@@ -436,6 +442,8 @@ function scaleZoom(change){
  queueDraw();
 }
 function changeCenter(dx,dy){
+ var factor=window.Rush3D?window.Rush3D.inputScale():{x:1,y:1};
+ dx*=factor.x;dy*=factor.y;
  var center=project(current.lat,current.lon),angle=following&&live?bearing*Math.PI/180:0;
  var mx=dx*Math.cos(angle)-dy*Math.sin(angle);
  var my=dx*Math.sin(angle)+dy*Math.cos(angle);
@@ -454,6 +462,8 @@ function pointerStart(event){
   var rect=host.getBoundingClientRect();
   var dx=activePointer.x-rect.left-rect.width/2,
       dy=activePointer.y-rect.top-rect.height/2-driveOffset();
+  var factor=window.Rush3D?window.Rush3D.inputScale():{x:1,y:1};
+  dx*=factor.x;dy*=factor.y;
   var radians=following&&live?bearing*Math.PI/180:0;
   var x=dx*Math.cos(radians)-dy*Math.sin(radians);
   var y=dx*Math.sin(radians)+dy*Math.cos(radians);
