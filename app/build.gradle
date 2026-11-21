@@ -10,8 +10,8 @@ android {
         applicationId 'cl.rush.launcher.obd415'
         minSdk 26
         targetSdk 33
-        versionCode 56
-        versionName '4.20.4-UnifiedVoice'
+        versionCode 57
+        versionName '4.20.5-CleanNavAudio'
     }
 
     compileOptions {
