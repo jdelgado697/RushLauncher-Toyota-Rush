@@ -304,18 +304,32 @@ function drawRoute(center,w,h){
   routeLine.setAttribute('d','');routeShadow.setAttribute('d','');
   routeDestination.style.display='none';return;
  }
- routeSvg.removeAttribute('hidden');routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
- var path='',step=Math.max(1,Math.ceil(routeCoords.length/340));
- for(var i=0;i<routeCoords.length;i+=step){
-  var p=project(routeCoords[i].lat,routeCoords[i].lon);
-  var x=Math.round((p.x-center.x+w/2)*10)/10;
-  var y=Math.round((p.y-center.y+h/2)*10)/10;
-  path+=(path?' L':'M')+x+' '+y;
+ // Todos los segmentos que cruzan la ventana del mapa se proyectan
+ // con la MISMA matriz Mercator que las teselas. Ya NO se salta 1 de
+ // cada N puntos: eso trazaba cuerdas sobre curvas de la carretera.
+ // Los segmentos fuera de pantalla no se dibujan: menos trabajo en TBox.
+ routeSvg.removeAttribute('hidden');
+ routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
+ var margin=160,lastVisible=false,path='',previous=null;
+ for(var i=0;i<routeCoords.length;i++){
+  var pt=project(routeCoords[i].lat,routeCoords[i].lon);
+  var cur={x:pt.x-center.x+w/2,y:pt.y-center.y+h/2};
+  if(previous){
+   var intersects=Math.max(previous.x,cur.x)>=-margin &&
+       Math.min(previous.x,cur.x)<=w+margin &&
+       Math.max(previous.y,cur.y)>=-margin &&
+       Math.min(previous.y,cur.y)<=h+margin;
+   if(intersects){
+    if(!lastVisible)path+='M'+previous.x.toFixed(1)+' '+previous.y.toFixed(1);
+    path+='L'+cur.x.toFixed(1)+' '+cur.y.toFixed(1);
+   }
+   lastVisible=intersects;
+  }
+  previous=cur;
  }
- var last=routeCoords[routeCoords.length-1],end=project(last.lat,last.lon);
- path+=' L'+(end.x-center.x+w/2).toFixed(1)+' '+(end.y-center.y+h/2).toFixed(1);
  routeShadow.setAttribute('d',path);
  routeLine.setAttribute('d',path);
+ var last=routeCoords[routeCoords.length-1],end=project(last.lat,last.lon);
  routeDestination.style.display='';
  routeDestination.setAttribute('cx',(end.x-center.x+w/2).toFixed(1));
  routeDestination.setAttribute('cy',(end.y-center.y+h/2).toFixed(1));
