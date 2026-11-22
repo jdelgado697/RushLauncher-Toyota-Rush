@@ -1,0 +1,54 @@
+name: Publicar APK Chile Offline para descarga directa
+
+on:
+  push:
+    branches:
+      - rush-launcher-4208-fluid-offline-chile
+    paths:
+      - .github/workflows/publish-offline-apk.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Recuperar el APK ya compilado y verificado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/14721733916/zip" > artefacto.zip
+          unzip -q artefacto.zip -d artefacto
+          find artefacto -type f -maxdepth 5
+          FILE=$(find artefacto -type f -name '*.apk' -print -quit)
+          test -n "$FILE"
+          cp "$FILE" RushLauncher-4.20.8-GPS-Fluido-Chile-Offline.apk
+          python3 - <<'PY'
+          import zipfile,hashlib
+          path='RushLauncher-4.20.8-GPS-Fluido-Chile-Offline.apk'
+          with zipfile.ZipFile(path) as apk:
+              assert apk.testzip() is None
+              f=apk.getinfo('assets/chile_offline.db')
+              assert f.file_size>200000000, f.file_size
+              print('Tamaño base offline', f.file_size)
+          print('SHA256', hashlib.sha256(open(path,'rb').read()).hexdigest())
+          PY
+
+      - name: Publicar descarga directa y permanente de la versión
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create v4.20.8-offline-chile \
+            RushLauncher-4.20.8-GPS-Fluido-Chile-Offline.apk \
+            --repo "$REPO" \
+            --title "Rush Launcher 4.20.8 - Chile Offline" \
+            --notes "APK Android para Carlinkit TBox Lite S. Mapa vial de Chile offline (datos OSM/Geofabrik), GPS suavizado y ruta con ETA. Se instala como app independiente; no desinstalar versiones anteriores. Sin internet no se calculan rutas nuevas ni trafico en vivo. Datos OpenStreetMap contributors, licencia ODbL." \
+            --target "${{ github.sha }}" \
+            --latest=false

@@ -21,6 +21,9 @@ import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.media.AudioAttributes;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
 import android.bluetooth.BluetoothAdapter;
 import android.os.Build;
 import android.os.Bundle;
@@ -34,6 +37,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.widget.Toast;
 import android.speech.tts.TextToSpeech;
 
@@ -64,6 +69,7 @@ public class MainActivity extends Activity implements LocationListener {
     private ObdReader obdReader;
     private ExternalNmeaGps externalNmea;
     private final BuildingData3D buildingData3D = new BuildingData3D();
+    private OfflineChileTiles offlineChile;
     private static final String NMEA_PREFS = "rush_gps_iphone_direct";
     private static final String NMEA_HOST = "host";
     private static final String NMEA_PORT = "port";
@@ -360,6 +366,9 @@ public class MainActivity extends Activity implements LocationListener {
                 javascript("window.rushObdData(" + snapshot.toString() + ");");
             }
         });
+        // Base nacional de calles: se descomprime una sola vez en segundo plano.
+        offlineChile=new OfflineChileTiles(this);
+        new Thread(offlineChile::warmUp,"rush-offline-chile").start();
         webView = new WebView(this);
         webView.setBackgroundColor(0xFFE9EDF4);
         WebSettings settings = webView.getSettings();
@@ -373,11 +382,21 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.7 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.8 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view,
+                    WebResourceRequest request) {
+                if(request==null||request.getUrl()==null)return null;
+                if("rush-offline.local".equals(request.getUrl().getHost())&&
+                    offlineChile!=null)
+                    return OfflineChileTiles.intercept(
+                        request.getUrl().toString(),offlineChile);
+                return null;
+            }
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageLoaded = true;
@@ -1847,6 +1866,7 @@ public class MainActivity extends Activity implements LocationListener {
         stopGpsWatchdog();
         if(externalNmea!=null)externalNmea.disconnect();
         buildingData3D.shutdown();
+        if(offlineChile!=null)offlineChile.close();
         if(locationManager!=null){
             try{locationManager.removeUpdates(this);}catch(SecurityException ignored){}
         }
@@ -1978,6 +1998,28 @@ public class MainActivity extends Activity implements LocationListener {
             buildingData3D.request(lat,lon,radius,requestId,(id,result) ->
                 javascript("if(window.rush3dBuildings)window.rush3dBuildings("+id+
                     ","+result.toString()+");"));
+        }
+        @JavascriptInterface public boolean offlineMapAvailable(){
+            return offlineChile!=null&&offlineChile.available();
+        }
+        @JavascriptInterface public boolean offlineMapReady(){
+            return offlineChile!=null&&offlineChile.ready();
+        }
+        @JavascriptInterface public boolean hasValidatedInternet(){
+            try {
+                ConnectivityManager cm=(ConnectivityManager)
+                    getSystemService(CONNECTIVITY_SERVICE);
+                if(cm==null)return false;
+                if(Build.VERSION.SDK_INT>=23){
+                    android.net.Network n=cm.getActiveNetwork();
+                    NetworkCapabilities caps=n!=null?cm.getNetworkCapabilities(n):null;
+                    return caps!=null &&
+                        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                }
+                NetworkInfo info=cm.getActiveNetworkInfo();
+                return info!=null&&info.isConnected();
+            }catch(Exception ex){return false;}
         }
         @JavascriptInterface public void askGps() {
             runUi(() -> { gpsRequested = true; startGps(); });

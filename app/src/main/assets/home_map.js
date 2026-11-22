@@ -36,6 +36,45 @@ var lastGpsAt=0,lastRenderedCenter=null;
 var externalActive=false;
 var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
 var previousFix=null;
+var centerMotion=null,centerMotionFrame=0,lastSmoothDraw=0;
+var offlineAvailable=!!(window.Rush&&typeof window.Rush.offlineMapAvailable==='function'&&window.Rush.offlineMapAvailable());
+var hasInternet=true,lastNetworkCheck=0,offlineMode=false,offlineReady=false;
+var offlineChip=document.getElementById('homeMapOfflineChip');
+function localTileUrl(z,x,y){return 'https://rush-offline.local/'+z+'/'+x+'/'+y+'.png'}
+function checkNetwork(){
+ if(Date.now()-lastNetworkCheck<5000)return;
+ lastNetworkCheck=Date.now();
+ if(window.Rush&&typeof window.Rush.hasValidatedInternet==='function'){
+  try{hasInternet=!!window.Rush.hasValidatedInternet()}catch(e){hasInternet=navigator.onLine}
+ }else hasInternet=navigator.onLine;
+ offlineMode=offlineAvailable&&!hasInternet;
+ if(window.Rush&&typeof window.Rush.offlineMapReady==='function'){
+  try{offlineReady=!!window.Rush.offlineMapReady()}catch(e){}
+ }
+ if(offlineChip)offlineChip.hidden=!offlineMode;
+}
+function smoothCenterFrame(now){
+ if(!centerMotion||!following){centerMotionFrame=0;return}
+ var fraction=Math.min(1,Math.max(0,(now-centerMotion.started)/centerMotion.duration));
+ current={
+  lat:centerMotion.from.lat+(centerMotion.to.lat-centerMotion.from.lat)*fraction,
+  lon:centerMotion.from.lon+(centerMotion.to.lon-centerMotion.from.lon)*fraction
+ };
+ if(now-lastSmoothDraw>=65||fraction>=1){lastSmoothDraw=now;queueDraw()}
+ if(fraction<1)centerMotionFrame=requestAnimationFrame(smoothCenterFrame);
+ else{centerMotion=null;centerMotionFrame=0}
+}
+function followSmoothly(lat,lon){
+ var meters=Math.hypot((lat-current.lat)*111320,
+   (lon-current.lon)*111320*Math.cos(lat*Math.PI/180));
+ if(meters<1||meters>200||motionSpeed<2){
+  centerMotion=null;current={lat:lat,lon:lon};queueDraw();return;
+ }
+ centerMotion={from:{lat:current.lat,lon:current.lon},to:{lat:lat,lon:lon},
+               started:performance.now(),duration:960};
+ if(!centerMotionFrame)centerMotionFrame=requestAnimationFrame(smoothCenterFrame);
+}
+
 // Rush 4.20: cartografía y tráfico TomTom Orbis v2. Sin credenciales,
 // OSM continúa siendo el mapa estable; nunca se dibuja tráfico inventado.
 var mapProvider='osm',tomtomKey='',trafficEnabled=false;
@@ -58,9 +97,10 @@ try {
 }catch(e){}
 function validTomtomKey(){return /^[A-Za-z0-9_-]{12,128}$/.test(tomtomKey)}
 if(!validTomtomKey()){mapProvider='osm';trafficEnabled=false;}
-function trafficReady(){return trafficEnabled&&validTomtomKey()}
+function trafficReady(){return trafficEnabled&&validTomtomKey()&&!offlineMode}
 function currentMapTheme(){return document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'}
 function baseTileUrl(z,x,y){
+ if(offlineMode)return localTileUrl(z,x,y);
  if(mapProvider!=='tomtom'||!validTomtomKey())
   return 'https://tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png';
  var style=currentMapTheme()==='dark'?'street-dark':'street-light';
@@ -198,6 +238,7 @@ function render(){
  // En el panel clásico mostrar menos etiquetas raster por nivel de zoom.
  // En conducción mantener la cartografía cercana de seguimiento.
  syncPanelZoom();
+ checkNetwork();
  var w=layer.clientWidth,h=layer.clientHeight;
  if(w<15||h<15)return;
  var center=project(current.lat,current.lon),n=numZoom();
@@ -206,7 +247,7 @@ function render(){
  var names=Object.create(null),tNames=Object.create(null),count=0;
  // Pantalla completa: presupuesto adaptativo para evitar zonas vacias.
  var tileLimit=host.classList.contains('rush-map-fullscreen')?48:maxTiles;
- var theme=currentMapTheme();
+ var theme=currentMapTheme()+':'+(offlineMode?'offline':'online')+':'+offlineReady;
  if(lastThemeOnTiles!==theme){
   lastThemeOnTiles=theme;
   resetMapTiles();
@@ -228,18 +269,19 @@ function render(){
     img.style.transition='none';
     img.dataset.xyz=key;
     img.onerror=function(){
-      // Conserva siempre cartografía al fallar la clave o el proveedor.
-      if(this.dataset.fallback!=='yes' && mapProvider==='tomtom'){
-       this.dataset.fallback='yes';
-       this.src='https://tile.openstreetmap.org/'+this.dataset.xyz+'.png';
-      }else this.style.visibility='hidden';
-      lastMapError=Date.now();
-    };
-    img.src=baseTileUrl(zoom,wrapped,y);
+       if(this.dataset.fallback!=='osm'&&mapProvider==='tomtom'&&!offlineMode){
+        this.dataset.fallback='osm';
+        this.src='https://tile.openstreetmap.org/'+this.dataset.xyz+'.png';
+       }else if(offlineAvailable&&this.dataset.fallback!=='offline'){
+        this.dataset.fallback='offline';
+        this.src='https://rush-offline.local/'+this.dataset.xyz+'.png';
+       }else this.style.visibility='hidden';
+       lastMapError=Date.now();
+     };
+     img.src=baseTileUrl(zoom,wrapped,y);
     tiles[key]=img;layer.appendChild(img);
    }else{
-    img.style.transition=following&&motionSpeed>6?
-      'left 880ms linear, top 880ms linear':'none';
+    img.style.transition='none';
    }
    var px=Math.round(x*tile-center.x+w/2)+'px',py=Math.round(y*tile-center.y+h/2)+'px';
    img.style.left=px;img.style.top=py;
@@ -266,8 +308,7 @@ function render(){
       overlay.src=trafficTileUrl(type,zoom,wrapped,y);
       trafficTiles[tkey]=overlay;layer.appendChild(overlay);
      }else{
-      overlay.style.transition=following&&motionSpeed>6?
-       'left 880ms linear, top 880ms linear':'none';
+      overlay.style.transition='none';
      }
      overlay.style.left=px;overlay.style.top=py;
     });
@@ -379,21 +420,26 @@ function setPosition(lat,lon,acc){
  // Si se exploró el mapa durante un viaje, volver al seguimiento automático.
  if(!following&&motionSpeed>8&&lastManualPanAt &&
        Date.now()-lastManualPanAt>12000)activateFollow();
+ var firstFix=!live;
  position={lat:lat,lon:lon};
  live=true;accuracy=Number.isFinite(acc)&&acc>=0?acc:null;lastGpsAt=Date.now();
- if(following)current={lat:lat,lon:lon};
- var moved=!lastRenderedCenter||Math.abs(lastRenderedCenter.lat-current.lat)+
-    Math.abs(lastRenderedCenter.lon-current.lon)>0.000015;
- if(moved || Date.now()-lastDraw>4500)queueDraw();
- else {drawMarker();setStatus()}
+ if(following){
+  if(firstFix){centerMotion=null;current={lat:lat,lon:lon};queueDraw()}
+  else followSmoothly(lat,lon);
+ }else if(Date.now()-lastDraw>4500)queueDraw();
+ else{drawMarker();setStatus()}
 }
 function setHeading(heading,speed){
  motionSpeed=Number.isFinite(speed)?Math.max(0,speed):0;
- // Zoom automático sensible a la velocidad, evitando saltos frecuentes.
- // <50 km/h: detalle de calles (z18); 50-84: z17; >=85: z16.
+ // Cambiar nivel con histéresis evita tirones en autopista cuando
+ // la velocidad oscila alrededor de 50 u 85 km/h.
  if(autoZoom && mapStyle==='drive' && following && live){
-  var target=motionSpeed>=85?16:motionSpeed>=50?17:18;
-  if(target!==zoom && Date.now()-lastAutoZoomAt>9000){
+  var target=zoom;
+  if(zoom===16&&motionSpeed<72)target=17;
+  else if(zoom===17&&motionSpeed>100)target=16;
+  else if(zoom===17&&motionSpeed<37)target=18;
+  else if(zoom===18&&motionSpeed>57)target=17;
+  if(target!==zoom && Date.now()-lastAutoZoomAt>25000){
    zoom=target;lastAutoZoomAt=Date.now();queueDraw();
   }
  }
@@ -413,7 +459,7 @@ function activateFollow(){
  autoZoom=mapStyle==='drive';
  if(autoZoom)zoom=motionSpeed>=85?16:motionSpeed>=50?17:18;
  else zoom=15;
- if(position)current={lat:position.lat,lon:position.lon};
+ centerMotion=null;if(position)current={lat:position.lat,lon:position.lon};
  followButton.textContent='➤';followButton.title='GPS: siguiendo vehículo';
  followButton.setAttribute('aria-pressed','true');
  queueDraw();
@@ -421,7 +467,7 @@ function activateFollow(){
 function freeMove(){
  lastManualPanAt=Date.now();
  if(!following)return;
- following=false;layer.style.transform='none';
+ following=false;centerMotion=null;layer.style.transform='none';
  followButton.textContent='◎';followButton.title='Reanudar seguimiento GPS';
  followButton.setAttribute('aria-pressed','false');
 }
@@ -431,7 +477,7 @@ function setStyle(mode){
  host.classList.toggle('rush-map-drive',mapStyle==='drive');
  autoZoom=mapStyle==='drive';
  zoom=mapStyle==='drive'?(motionSpeed>=85?16:motionSpeed>=50?17:18):15;
- if(following&&position)current={lat:position.lat,lon:position.lon};
+ centerMotion=null;if(following&&position)current={lat:position.lat,lon:position.lon};
  if(document.getElementById('mapStyleDrive'))
   document.getElementById('mapStyleDrive').setAttribute('aria-pressed',
     mapStyle==='drive'?'true':'false');
@@ -569,4 +615,11 @@ setInterval(function(){
   if(currentMapTheme()!==lastThemeOnTiles)queueDraw();
  }
 },30000);
+// Cambiar entre fuentes raster online y locales cuando se va la señal 4G.
+setInterval(function(){
+ if(!host.offsetWidth)return;
+ var before=offlineMode,wasReady=offlineReady;
+ lastNetworkCheck=0;checkNetwork();
+ if(before!==offlineMode||wasReady!==offlineReady)queueDraw();
+},7000);
 })();
