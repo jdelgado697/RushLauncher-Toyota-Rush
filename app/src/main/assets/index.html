@@ -1432,6 +1432,34 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
+  <div class="set-line" id="vehicleLightsSettings">
+   <h3>Luces en la imagen del Toyota Rush</h3>
+   <p class="muted">Faros, neblineros y luces traseras se iluminan en el auto virtual. OBD automático exige una señal CAN calibrada; no hay un PID OBD-II estándar de luces.</p>
+   <div class="tile-buttons" aria-label="Modo de luces">
+    <button type="button" class="actionbtn highlight" data-vehicle-light-mode="obd" aria-pressed="true">Auto OBD</button>
+    <button type="button" class="actionbtn" data-vehicle-light-mode="night" aria-pressed="false">Modo noche</button>
+    <button type="button" class="actionbtn" data-vehicle-light-mode="on" aria-pressed="false">Luces ON</button>
+    <button type="button" class="actionbtn" data-vehicle-light-mode="off" aria-pressed="false">Luces OFF</button>
+   </div>
+   <p id="vehicleLightStatus" class="muted" role="status">Esperando datos de luces</p>
+   <p id="vehicleLightDetail" class="muted">En ausencia de señal CAN se utiliza el modo noche como respaldo, identificado.</p>
+   <h3>Calibración CAN experimental · vehículo estacionado</h3>
+   <p class="muted">Conecta ELM327, mantén velocidad ECU en 0 km/h y registra apagadas → encendidas → apagadas → encendidas. La escucha ATMA es pasiva, no escribe comandos en la ECU. Algunas redes Toyota no exponen este dato.</p>
+   <p class="muted" id="vehicleLightsLearnStep">1/4 · Luces apagadas</p>
+   <div class="tile-buttons">
+    <button type="button" class="actionbtn highlight" id="vehicleLightsLearn">Registrar fase 1/4</button>
+    <button type="button" class="actionbtn" id="vehicleLightsClearSignal">Borrar calibración CAN</button>
+    <button type="button" class="actionbtn" data-action="obd">Conectar ELM327</button>
+   </div>
+   <p id="vehicleLightsProfile" class="muted">Sin señal CAN calibrada</p>
+   <div class="tile-buttons">
+    <label class="muted" for="vehicleLightsSignals">Señal candidata
+     <select id="vehicleLightsSignals" class="nameinput" hidden aria-label="Señal CAN detectada"></select>
+    </label>
+    <button type="button" id="vehicleLightsSaveSignal" class="actionbtn highlight" hidden>Activar señal OBD</button>
+   </div>
+   <p class="muted">Valida la señal seleccionada encendiendo y apagando los faros con el vehículo detenido, antes de confiar en la automatización.</p>
+  </div>
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
   <div class="set-line">
    <h3>GPS del iPhone — NMEA directo</h3>
