@@ -8,11 +8,11 @@ android {
 
     defaultConfig {
         // Edición paralela: nunca reemplaza ni borra Rush Launcher instalado.
-        applicationId 'cl.rush.launcher.chileoffline'
+        applicationId 'cl.rush.launcher.lightsobd'
         minSdk 26
         targetSdk 33
-        versionCode 60
-        versionName '4.20.8-SmoothOfflineChile'
+        versionCode 61
+        versionName '4.20.9-HeadlightsCan'
     }
 
     compileOptions {
