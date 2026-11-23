@@ -27,6 +27,7 @@ public final class ObdReader {
     public interface Listener {
         void onStatus(String message);
         void onData(JSONObject snapshot);
+        void onLightCan(JSONObject info);
     }
 
     private static final UUID SERIAL_PORT =
@@ -38,6 +39,111 @@ public final class ObdReader {
     private volatile boolean running;
     private volatile BluetoothSocket socket;
     private volatile Thread worker;
+    private volatile LightCanMonitor.Profile lightProfile;
+    private volatile int learnRequest=0;
+    private volatile boolean canMonitorUnavailable=false;
+    private final LightCanMonitor.Capture[] learning=new LightCanMonitor.Capture[4];
+    private volatile java.util.ArrayList<LightCanMonitor.Profile> foundSignals=
+            new java.util.ArrayList<>();
+    private long lastCanMonitorAt=0;
+    private void lightMessage(JSONObject info){ui.post(() -> listener.onLightCan(info));}
+    private void reportLight(String kind,String message) {
+        JSONObject info=new JSONObject();
+        try{
+            info.put("kind",kind);
+            info.put("message",message);
+            info.put("at",System.currentTimeMillis());
+        }catch(Exception ignored){}
+        lightMessage(info);
+    }
+    public void setLightProfile(LightCanMonitor.Profile value){
+        lightProfile=value;
+        canMonitorUnavailable=false;
+        lastCanMonitorAt=0;
+        reportLight("configured",value==null?
+            "No hay señal CAN calibrada para los faros":
+            "Señal CAN configurada; esperando lectura real del vehículo");
+    }
+    public void requestLightCalibration(int step){
+        if(step<1||step>4||!running){
+            reportLight("error","Conecta primero el ELM327; calibra con el vehículo detenido.");
+            return;
+        }
+        if(step==1){
+            for(int i=0;i<4;i++)learning[i]=null;
+            foundSignals=new java.util.ArrayList<>();
+        }else if(learning[step-2]==null){
+            reportLight("error","Realiza las cuatro etapas en orden: OFF, ON, OFF, ON.");
+            return;
+        }
+        learnRequest=step;
+        reportLight("progress","Preparando captura CAN de fase "+step+"/4. Mantén las luces en su estado.");
+    }
+    public boolean isLightCandidate(String id,int byteIndex,int bitMask,int onBit){
+        for(LightCanMonitor.Profile p:foundSignals)
+            if(p.id.equalsIgnoreCase(id)&&p.index==byteIndex&&
+                p.mask==bitMask&&p.onBit==onBit)return true;
+        return false;
+    }
+    private void monitorLights(OutputStream out,InputStream in,Map<String,Double> values){
+        int stage=learnRequest;
+        if(stage!=0)learnRequest=0;
+        if(stage==0&&(lightProfile==null||canMonitorUnavailable||
+           System.currentTimeMillis()-lastCanMonitorAt<5000))return;
+        // ELM y bus CAN compartidos con las mediciones OBD. Sólo lo escucha
+        // en una ventana breve, NUNCA transmite tramas de control al auto.
+        if(stage!=0){
+            Double vehicleSpeed=values.get("0D");
+            if(vehicleSpeed==null||vehicleSpeed>1.5){
+                reportLight("error","Calibración cancelada: velocidad ECU no disponible o vehículo en movimiento.");
+                return;
+            }
+        }
+        lastCanMonitorAt=System.currentTimeMillis();
+        try{
+            LightCanMonitor.Capture capture=LightCanMonitor.listen(
+                out,in,stage!=0?1400:650);
+            if(stage!=0){
+                if(capture.messages<6){
+                    reportLight("error","ELM327 no muestra suficientes tramas CAN: "+capture.messages+
+                        ". Este vehículo/adaptador podría no exponer el estado de luces.");
+                    return;
+                }
+                learning[stage-1]=capture;
+                JSONObject result=new JSONObject();
+                result.put("kind","phase");
+                result.put("step",stage);
+                result.put("messages",capture.messages);
+                result.put("message","Fase "+stage+"/4 registrada; "+
+                    capture.messages+" tramas CAN recibidas.");
+                if(stage==4){
+                    foundSignals=LightCanMonitor.candidates(learning);
+                    JSONArray candidates=new JSONArray();
+                    for(LightCanMonitor.Profile profile:foundSignals)candidates.put(profile.json());
+                    result.put("candidates",candidates);
+                    result.put("message",foundSignals.size()>0?
+                        "Calibración completa. Selecciona una señal candidata y verifica que cambie realmente con las luces.":
+                        "Sin bits CAN que reproduzcan OFF/ON/OFF/ON; no se detectaron faros por OBD.");
+                }
+                lightMessage(result);
+                return;
+            }
+            Boolean active=LightCanMonitor.read(lightProfile,capture);
+            JSONObject reading=new JSONObject();
+            reading.put("kind","reading");
+            reading.put("valid",active!=null);
+            if(active!=null)reading.put("on",active);
+            reading.put("at",System.currentTimeMillis());
+            reading.put("message",active==null?
+                "Sin trama CAN válida para luces; estado desconocido.":
+                active?"Luces ON detectadas por CAN":"Luces OFF detectadas por CAN");
+            lightMessage(reading);
+        }catch(Exception error){
+            canMonitorUnavailable=true;
+            reportLight("unavailable","No se pudo escuchar CAN por ELM327: "+
+                shortMessage(error)+". No se inventará el estado de las luces.");
+        }
+    }
 
     public ObdReader(Listener listener) { this.listener=listener; }
     /** Conexión Bluetooth o lectura en curso; evita múltiples RFCOMM simultáneos. */
@@ -101,6 +207,8 @@ public final class ObdReader {
                     if (!next) known=false;
                 }
                 Map<String,Double> values=new HashMap<>();
+                canMonitorUnavailable=false;
+                lastCanMonitorAt=0;
                 status(known ? "OBD-II conectado · sensores detectados" :
                         "OBD-II conectado · sondeo de sensores");
                 int cycle=0;
@@ -123,6 +231,7 @@ public final class ObdReader {
                             if(v==null) values.remove(extra); else values.put(extra,v);
                         }
                         data(snapshot(values,supported,known));
+                        if(running)monitorLights(out,in,values);
                     }
                     cycle++;
                     Thread.sleep(220);
@@ -148,6 +257,7 @@ public final class ObdReader {
         if(previous!=null)previous.interrupt();
         status("OBD desconectado");
         data(new JSONObject());
+        reportLight("offline","OBD desconectado: sin estado real de los faros.");
     }
 
     private static JSONObject snapshot(Map<String,Double> values,Set<String> supported,
