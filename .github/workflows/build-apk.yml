@@ -4,10 +4,11 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can]
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   apk:
@@ -47,6 +48,7 @@ jobs:
           node --check app/src/main/assets/home_map.js
           node --check app/src/main/assets/rush_3d.js
           node --check app/src/main/assets/home_navigation.js
+          node --check app/src/main/assets/vehicle_lights.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -81,7 +83,7 @@ jobs:
           assert "function syncPanelZoom()" in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "isClassicPanel()" not in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "if (saved.drive) window.RushHomeMap.follow()" not in js
-          assert "4.20.8" in html and "id=\"navTestSpeech\"" in html
+          assert "4.20.9" in html and "id=\"navTestSpeech\"" in html
           assert "id=\"navTtsSettings\"" in html
           assert "has-active-route" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert "externalGpsFresh()" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
@@ -95,6 +97,21 @@ jobs:
           assert 'id="navAudioDiagStatus"' in html
           assert 'id="homeNavPeek"' in html
           assert 'id="homeMapOfflineChip"' in html
+          assert 'id="rushVehicleLightArt"' in html
+          assert 'id="vehicleLightsLearn"' in html
+          assert 'data-vehicle-light-mode="obd"' in html
+          assert '<script src="vehicle_lights.js"></script>' in html
+          can=Path('app/src/main/java/cl/rush/launcher/LightCanMonitor.java').read_text(encoding='utf-8')
+          reader=Path('app/src/main/java/cl/rush/launcher/ObdReader.java').read_text(encoding='utf-8')
+          lights=Path('app/src/main/assets/vehicle_lights.js').read_text(encoding='utf-8')
+          assert 'ATMA' in can and 'candidates(Capture[] four)' in can
+          assert 'onLightCan(JSONObject info)' in reader
+          assert 'monitorLights(out,in,values)' in reader
+          assert 'calibrateObdLights(int step)' in native
+          assert 'selectObdLightsSignal(' in native
+          assert 'rushLightCanEvent' in lights
+          assert 'rush-lights-on' in html
+          assert 'vehicleLightStatus' in html
           assert 'Chile sin internet' in html
           offline=Path('app/src/main/java/cl/rush/launcher/OfflineChileTiles.java').read_text(encoding='utf-8')
           builder=Path('scripts/build_chile_offline.py').read_text(encoding='utf-8')
@@ -105,11 +122,11 @@ jobs:
           assert 'function followSmoothly(lat,lon)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'offlineMode' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'if(zoom===16&&motionSpeed<72)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
-          assert '4.20.8' in html and 'home-map-marker::after' in html
+          assert '4.20.9' in html and 'home-map-marker::after' in html
           assert '#5cd8bb' in html and '#8cd8ed' in html
-          assert "applicationId 'cl.rush.launcher.chileoffline'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert "applicationId 'cl.rush.launcher.lightsobd'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
-          assert 'Rush Chile Offline 4.20.8' in label
+          assert 'Rush Faros OBD 4.20.9' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           nav=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           hm=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
@@ -141,7 +158,7 @@ jobs:
           assert 'Overpass' in Path("app/src/main/java/cl/rush/launcher/BuildingData3D.java").read_text(encoding="utf-8")
           assert 'buildingData3D.request' in native and 'buildingData3D.shutdown()' in native
           assert 'public void fetch3dBuildings(' in native
-          assert 'RushLauncher/4.20.8' in native
+          assert 'RushLauncher/4.20.9' in native
           assert 'getString(NMEA_HOST' in native and 'trafficTileUrl' in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "rush-map-fullscreen" in js and 'document.body.appendChild(homeMapHost)' in js
           assert "window.Rush.stopMapGps()" in js
@@ -411,8 +428,8 @@ jobs:
           assert '1600L,0f,this,Looper.getMainLooper()' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.chileoffline'" in Path("app/build.gradle").read_text(encoding="utf-8")
-          assert 'RushLauncher/4.20.8' in native
+          assert "applicationId 'cl.rush.launcher.lightsobd'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert 'RushLauncher/4.20.9' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -437,7 +454,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 60" in gradle
+          assert "versionCode 61" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -629,34 +646,27 @@ jobs:
           console.log('OK: Xuper primero entre videos; otros videos, música y otras apps ordenadas.');
           NODE
 
-      - name: Construir mapa sin internet de todo Chile
+      - name: Reutilizar mapa nacional verificado de 4.20.8
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check --quiet osmium
-          # Descargar DATOS ABIERTOS OSM para crear las teselas propias.
-          # Está prohibido copiar masivamente imágenes del servidor OSM.
-          DATA=/tmp/chile-latest.osm.pbf
-          curl --fail --location --retry 4 --retry-delay 8 \
-            --connect-timeout 25 --max-time 1000 --output "$DATA" \
-            "https://download.geofabrik.de/south-america/chile-latest.osm.pbf"
-          test $(stat -c%s "$DATA") -gt 250000000
-          python3 scripts/build_chile_offline.py "$DATA" \
-            app/src/main/assets/chile_offline.db
-          rm -f "$DATA"
+          gh api "repos/$REPO/actions/artifacts/14721733916/zip" > /tmp/old-offline.zip
+          unzip -q /tmp/old-offline.zip -d /tmp/old-artifact
+          OLD_APK=$(find /tmp/old-artifact -type f -name '*.apk' -print -quit)
+          test -n "$OLD_APK"
+          unzip -p "$OLD_APK" assets/chile_offline.db > app/src/main/assets/chile_offline.db
           python3 - <<'PY'
-          import sqlite3,os
+          import sqlite3
           path='app/src/main/assets/chile_offline.db'
-          db=sqlite3.connect(path)
-          roads=db.execute('SELECT COUNT(*) FROM roads').fetchone()[0]
-          cities=db.execute('SELECT COUNT(*) FROM places').fetchone()[0]
-          # Evidencia de cobertura vial nacional de norte a sur.
-          lat_range=db.execute('SELECT MIN(miny),MAX(maxy) FROM bounds').fetchone()
-          print('Chile Offline: carreteras',roads,'lugares',cities,
-                'cobertura latitud',lat_range,'MB',round(os.path.getsize(path)/1048576,1))
-          assert roads>20000 and cities>200
-          assert lat_range[0]<-50 and lat_range[1]>-20
-          db.close()
+          con=sqlite3.connect(path)
+          roads=con.execute('SELECT COUNT(*) FROM roads').fetchone()[0]
+          cities=con.execute('SELECT COUNT(*) FROM places').fetchone()[0]
+          assert roads>1000000 and cities>15000
+          print('Chile offline reutilizado: vías',roads,'lugares',cities)
+          con.close()
           PY
 
       - name: Compilar APK de prueba
@@ -704,7 +714,7 @@ jobs:
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
         with:
-          name: RushLauncher-4.20.8-Fluido-Chile-Offline-APK
+          name: RushLauncher-4.20.9-Faros-OBD-CAN-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

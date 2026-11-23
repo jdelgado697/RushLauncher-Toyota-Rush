@@ -65,6 +65,8 @@ function applyTheme(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-theme-choice]'),function(b){
   b.classList.toggle('is-selected',b.getAttribute('data-theme-choice')===saved.theme);
  });
+ if(window.RushVehicleLights&&window.RushVehicleLights.refresh)
+  window.RushVehicleLights.refresh();
 }
 function store(key,value){try{localStorage.setItem(key,value)}catch(e){}}
 function openOverlay(id){
@@ -578,7 +580,11 @@ window.rushPosition=function(lat,lon,accuracy){
 window.rushObdStatus=function(status){
  var val=String(status||'Sin conexión');
  state.obdConnected=/conectado|leyendo|datos obd/i.test(val)&&!/desconectado|no conectado/i.test(val);
- if(!state.obdConnected){state.obdSpeed=null;state.rpm=null;state.coolant=null;state.obd=null}
+ if(!state.obdConnected){
+  state.obdSpeed=null;state.rpm=null;state.coolant=null;state.obd=null;
+  if(window.RushVehicleLights&&window.RushVehicleLights.onObdDisconnected)
+   window.RushVehicleLights.onObdDisconnected();
+ }
  write('obdStatusText',val);renderMetrics();renderObdAdvanced();
 };
 // El lector entrega un JSON exclusivamente con respuestas OBD-II reales.

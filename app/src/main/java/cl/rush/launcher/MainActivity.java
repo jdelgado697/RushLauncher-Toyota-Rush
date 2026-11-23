@@ -123,6 +123,10 @@ public class MainActivity extends Activity implements LocationListener {
     private static final String OBD_PREFS = "rush_obd_autoconnect";
     private static final String OBD_MAC = "paired_elm327";
     private static final String OBD_AUTOMATIC = "enabled";
+    private static final String LIGHT_CAN_ID="rush_light_can_id";
+    private static final String LIGHT_CAN_BYTE="rush_light_can_byte";
+    private static final String LIGHT_CAN_MASK="rush_light_can_mask";
+    private static final String LIGHT_CAN_ON="rush_light_can_on";
     private boolean obdPermissionRequested = false;
     private boolean obdInForeground = false;
     private final Runnable obdAutoPoll = new Runnable() {
@@ -365,7 +369,12 @@ public class MainActivity extends Activity implements LocationListener {
             @Override public void onData(JSONObject snapshot) {
                 javascript("window.rushObdData(" + snapshot.toString() + ");");
             }
+            @Override public void onLightCan(JSONObject info) {
+                javascript("if(window.rushLightCanEvent)window.rushLightCanEvent("+
+                    info.toString()+");");
+            }
         });
+        obdReader.setLightProfile(loadLightCanProfile());
         // Base nacional de calles: se descomprime una sola vez en segundo plano.
         offlineChile=new OfflineChileTiles(this);
         new Thread(offlineChile::warmUp,"rush-offline-chile").start();
@@ -382,7 +391,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.8 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.9 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -410,6 +419,7 @@ public class MainActivity extends Activity implements LocationListener {
                 dispatchExternalNavigation();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
                 sendObdAutoState();
+                sendLightCanProfile();
                 nmeaInfoToWeb("GPS iPhone listo");
                 connectSavedNmea();
             }
@@ -843,6 +853,36 @@ public class MainActivity extends Activity implements LocationListener {
 
     private SharedPreferences obdSettings() {
         return getSharedPreferences(OBD_PREFS, MODE_PRIVATE);
+    }
+    private LightCanMonitor.Profile loadLightCanProfile(){
+        SharedPreferences prefs=obdSettings();
+        String id=prefs.getString(LIGHT_CAN_ID,"");
+        int index=prefs.getInt(LIGHT_CAN_BYTE,-1);
+        int mask=prefs.getInt(LIGHT_CAN_MASK,0);
+        int on=prefs.getInt(LIGHT_CAN_ON,-1);
+        if(!id.matches("(?i)(?:[0-9a-f]{3}|[0-9a-f]{8})")||
+            index<0||index>7||Integer.bitCount(mask)!=1||
+            mask>128||on<0||on>1)return null;
+        return new LightCanMonitor.Profile(id,index,mask,on);
+    }
+    private void sendLightCanProfile(){
+        LightCanMonitor.Profile p=loadLightCanProfile();
+        String payload=p!=null?p.json().toString():"null";
+        javascript("if(window.rushLightCanProfile)window.rushLightCanProfile("+
+            payload+");");
+    }
+    private void saveLightCanProfile(LightCanMonitor.Profile p){
+        SharedPreferences.Editor edit=obdSettings().edit();
+        if(p==null){
+            edit.remove(LIGHT_CAN_ID).remove(LIGHT_CAN_BYTE)
+                .remove(LIGHT_CAN_MASK).remove(LIGHT_CAN_ON);
+        }else{
+            edit.putString(LIGHT_CAN_ID,p.id).putInt(LIGHT_CAN_BYTE,p.index)
+                .putInt(LIGHT_CAN_MASK,p.mask).putInt(LIGHT_CAN_ON,p.onBit);
+        }
+        edit.apply();
+        if(obdReader!=null)obdReader.setLightProfile(p);
+        sendLightCanProfile();
     }
 
     private void sendObdAutoState() {
@@ -2125,6 +2165,35 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void getWeather(double latitude, double longitude) {
             runUi(() -> fetchWeather(latitude, longitude));
+        }
+        @JavascriptInterface public void calibrateObdLights(int step){
+            runUi(() -> {
+                if(!bluetoothAvailable()||obdReader==null)return;
+                obdReader.requestLightCalibration(step);
+            });
+        }
+        @JavascriptInterface public void selectObdLightsSignal(
+                String id,int index,int mask,int whenOn){
+            runUi(() -> {
+                if(obdReader==null||
+                   !obdReader.isLightCandidate(id,index,mask,whenOn)){
+                    JSONObject error=new JSONObject();
+                    try{
+                        error.put("kind","error");
+                        error.put("message","Calibra OFF/ON/OFF/ON antes de seleccionar la señal.");
+                    }catch(Exception ignored){}
+                    javascript("if(window.rushLightCanEvent)window.rushLightCanEvent("+
+                        error.toString()+");");
+                    return;
+                }
+                saveLightCanProfile(new LightCanMonitor.Profile(id,index,mask,whenOn));
+            });
+        }
+        @JavascriptInterface public void clearObdLightsSignal(){
+            runUi(() -> saveLightCanProfile(null));
+        }
+        @JavascriptInterface public void getObdLightsSignal(){
+            runUi(() -> sendLightCanProfile());
         }
         @JavascriptInterface public void requestObdDevices() {
             runUi(() -> showPairedObd());
