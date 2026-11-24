@@ -392,7 +392,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.10 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.11 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -1376,6 +1376,137 @@ public class MainActivity extends Activity implements LocationListener {
                 +URLEncoder.encode(request.toString(),"UTF-8");
         return new JSONObject(getNavText(url,700000,6500,10000));
     }
+
+    /**
+     * Rush 4.20.11: TomTom Routing V1 ofrece rutas alternativas,
+     * indicaciones localizadas y ETA que incluye tráfico. No son datos de
+     * Waze ni reportes comunitarios de usuarios Waze.
+     * La clave viaja solo por HTTPS, nunca se escribe en logs o en un APK.
+     */
+    private static JSONObject retrieveTomTomTrafficRoute(double aLat,double aLon,
+            double bLat,double bLon,String apiKey,boolean avoidTolls,
+            boolean avoidMotorways,boolean avoidUnpaved) throws Exception {
+        if(apiKey==null||!apiKey.matches("[A-Za-z0-9_-]{12,128}"))
+            throw new IllegalArgumentException("Clave TomTom no configurada");
+        String pts=String.format(Locale.US,"%.6f,%.6f:%.6f,%.6f",
+                aLat,aLon,bLat,bLon);
+        StringBuilder url=new StringBuilder("https://api.tomtom.com/routing/1/calculateRoute/")
+            .append(pts).append("/json?key=").append(
+                URLEncoder.encode(apiKey,"UTF-8"))
+            .append("&traffic=true&travelMode=car&routeType=fastest")
+            .append("&maxAlternatives=2&alternativeType=anyRoute")
+            .append("&routeRepresentation=polyline")
+            .append("&computeTravelTimeFor=all")
+            .append("&instructionsType=text&language=es-ES")
+            .append("&sectionType=traffic&sectionType=tollRoad")
+            .append("&sectionType=roadClosure");
+        if(avoidTolls)url.append("&avoid=tollRoads");
+        if(avoidMotorways)url.append("&avoid=motorways");
+        if(avoidUnpaved)url.append("&avoid=unpavedRoads");
+        return new JSONObject(getNavText(url.toString(),2400000,6500,12000));
+    }
+
+    private static JSONObject normalizeTomTomRouteItem(JSONObject tt,int number)
+            throws Exception {
+        JSONObject summary=tt.optJSONObject("summary");
+        if(summary==null)throw new java.io.IOException("TomTom sin resumen de ruta");
+        double meters=summary.optDouble("lengthInMeters",0);
+        double seconds=summary.optDouble("travelTimeInSeconds",0);
+        if(!Double.isFinite(meters)||!Double.isFinite(seconds)||
+                meters<=0||seconds<=0)
+            throw new java.io.IOException("TomTom distancia o ETA no válida");
+
+        JSONArray all=new JSONArray(),legs=tt.optJSONArray("legs");
+        if(legs==null||legs.length()==0)
+            throw new java.io.IOException("TomTom sin geometría vial");
+        // Polilínea real de los tramos; conservar extremos y usar un máximo
+        // ~1400 puntos por ruta para el WebView del TBox 4 GB.
+        int total=0;
+        for(int k=0;k<legs.length();k++){
+            JSONArray p=legs.optJSONObject(k).optJSONArray("points");
+            if(p!=null)total+=p.length();
+        }
+        int stride=Math.max(1,(int)Math.ceil(total/1400.0));
+        int index=0;
+        JSONArray lastPoint=null;
+        for(int k=0;k<legs.length();k++){
+            JSONArray p=legs.optJSONObject(k).optJSONArray("points");
+            if(p==null)continue;
+            for(int i=0;i<p.length();i++){
+                JSONObject point=p.optJSONObject(i);
+                if(point==null)continue;
+                double lat=point.optDouble("latitude",Double.NaN);
+                double lon=point.optDouble("longitude",Double.NaN);
+                if(!validCoord(lat,lon))continue;
+                JSONArray pair=new JSONArray();pair.put(lon);pair.put(lat);
+                if(index%stride==0)all.put(pair);
+                index++;lastPoint=pair;
+            }
+        }
+        if(lastPoint!=null)all.put(lastPoint);
+        if(all.length()<2)
+            throw new java.io.IOException("TomTom devolvió geometría insuficiente");
+
+        JSONObject normalized=new JSONObject();
+        normalized.put("ok",true);normalized.put("provider","TomTom Traffic");
+        normalized.put("meters",meters);normalized.put("seconds",seconds);
+        normalized.put("geometry",all);
+        normalized.put("traffic",true);
+        normalized.put("trafficDelaySeconds",
+            Math.max(0,summary.optInt("trafficDelayInSeconds",0)));
+        normalized.put("arrivalTime",summary.optString("arrivalTime",""));
+        normalized.put("noTrafficSeconds",
+            summary.optDouble("noTrafficTravelTimeInSeconds",seconds));
+        normalized.put("routeIndex",number);
+
+        JSONArray steps=new JSONArray();
+        JSONObject guidance=tt.optJSONObject("guidance");
+        JSONArray instructions=guidance!=null?guidance.optJSONArray("instructions"):null;
+        if(instructions!=null)for(int i=0;i<instructions.length()&&steps.length()<140;i++){
+            JSONObject instr=instructions.optJSONObject(i);
+            if(instr==null)continue;
+            JSONObject point=instr.optJSONObject("point");
+            if(point==null)continue;
+            double lat=point.optDouble("latitude",Double.NaN);
+            double lon=point.optDouble("longitude",Double.NaN);
+            if(!validCoord(lat,lon))continue;
+            String maneuver=instr.optString("maneuver","").toUpperCase(Locale.US);
+            JSONObject step=new JSONObject();
+            step.put("lat",lat);step.put("lon",lon);
+            String type=maneuver.contains("ROUNDABOUT")?"roundabout":
+                maneuver.contains("ARRIVE")?"arrive":
+                maneuver.contains("DEPART")?"depart":
+                maneuver.contains("U_TURN")||maneuver.contains("UTURN")?"uturn":"turn";
+            String modifier=maneuver.contains("LEFT")?"left":
+                maneuver.contains("RIGHT")?"right":"straight";
+            step.put("type",type);step.put("modifier",modifier);
+            step.put("road",instr.optString("street",""));
+            step.put("text",instr.optString("message",""));
+            step.put("meters",instr.optDouble("routeOffsetInMeters",0));
+            steps.put(step);
+        }
+        normalized.put("steps",steps);
+        return normalized;
+    }
+
+    private static JSONObject normalizedTomTomRoutes(JSONObject response) throws Exception {
+        JSONArray routes=response.optJSONArray("routes");
+        if(routes==null||routes.length()==0)
+            throw new java.io.IOException("TomTom no encontró rutas");
+        JSONArray found=new JSONArray();
+        for(int i=0;i<routes.length()&&found.length()<3;i++){
+            try{found.put(normalizeTomTomRouteItem(routes.getJSONObject(i),i));}
+            catch(Exception ignored){if(i==0)throw ignored;}
+        }
+        if(found.length()==0)throw new java.io.IOException("TomTom sin ruta legible");
+        JSONObject primary=found.getJSONObject(0);
+        JSONArray alternatives=new JSONArray();
+        for(int i=1;i<found.length();i++)alternatives.put(found.getJSONObject(i));
+        primary.put("alternatives",alternatives);
+        primary.put("optionsCount",found.length());
+        return primary;
+    }
+
     private static JSONObject normalizedRoute(JSONObject root,String provider) throws Exception {
         String code=root.optString("code","Ok");
         if(!"Ok".equalsIgnoreCase(code)) {
@@ -1566,6 +1697,61 @@ public class MainActivity extends Activity implements LocationListener {
                         +tlsProviderStatus+". Comprueba internet, certificados y GPS.";
             }
             routeReply(forHome,navError(message),requestId);
+        });
+    }
+
+    private void fetchAdvancedHomeRoute(double aLat,double aLon,
+            double bLat,double bLon,String key,boolean tolls,boolean motorways,
+            boolean unpaved,int requestId){
+        if(!validCoord(aLat,aLon)||!validCoord(bLat,bLon)){
+            routeReply(true,navError("Origen o destino no válidos."),requestId);return;
+        }
+        if(key==null||!key.matches("[A-Za-z0-9_-]{12,128}")){
+            fetchNavigationRoute(aLat,aLon,bLat,bLon,true,requestId);
+            return;
+        }
+        long now=System.currentTimeMillis();
+        if(now-lastRouteRequest<3000L){
+            routeReply(true,navError("Espera antes de pedir una nueva ruta."),requestId);
+            return;
+        }
+        lastRouteRequest=now;
+        navigationExecutor.execute(()->{
+            routeProgressFor(true,"TomTom: buscando rutas alternativas con tráfico…",requestId);
+            ensureModernTlsProvider();
+            String tomTomError="";
+            try {
+                JSONObject selected=normalizedTomTomRoutes(
+                    retrieveTomTomTrafficRoute(aLat,aLon,bLat,bLon,key,tolls,
+                        motorways,unpaved));
+                routeReply(true,selected,requestId);
+                return;
+            }catch(Exception ex){
+                // Jamás incluir API key en mensajes de error al WebView.
+                tomTomError=ex.getClass().getSimpleName();
+            }
+            routeProgressFor(true,
+                "TomTom no disponible ("+tomTomError+
+                "). Intentando ruta básica OSRM sin tráfico en ETA…",requestId);
+            try{
+                JSONObject selected=normalizedRoute(
+                    retrieveFossgisRoute(aLat,aLon,bLat,bLon),"OSRM FOSSGIS");
+                selected.put("traffic",false);
+                selected.put("warning","Respaldo OSRM: sin tráfico en ETA"+
+                    ((tolls||motorways||unpaved)?" ni restricciones viales TomTom":""));
+                routeReply(true,selected,requestId);return;
+            }catch(Exception ignored){}
+            try{
+                JSONObject selected=normalizedRoute(
+                    retrieveOsrmRoute(aLat,aLon,bLat,bLon),"OSRM alternativo");
+                selected.put("traffic",false);
+                selected.put("warning","Respaldo OSRM: sin tráfico en ETA"+
+                    ((tolls||motorways||unpaved)?" ni restricciones viales TomTom":""));
+                routeReply(true,selected,requestId);return;
+            }catch(Exception ignored){}
+            routeReply(true,navError(
+                "No se pudo calcular: TomTom y OSRM sin respuesta. "+
+                "Revisa internet y tu clave TomTom."),requestId);
         });
     }
 
@@ -2199,6 +2385,36 @@ public class MainActivity extends Activity implements LocationListener {
         @JavascriptInterface public void routeHomeNav(double aLat,double aLon,
                         double bLat,double bLon,int requestId) {
             if(requestId>0)fetchNavigationRoute(aLat,aLon,bLat,bLon,true,requestId);
+        }
+        @JavascriptInterface public void routeHomeNavAdvanced(double aLat,double aLon,
+                double bLat,double bLon,String apiKey,boolean avoidTolls,
+                boolean avoidMotorways,boolean avoidUnpaved,int requestId){
+            if(requestId>0)fetchAdvancedHomeRoute(aLat,aLon,bLat,bLon,
+                apiKey,avoidTolls,avoidMotorways,avoidUnpaved,requestId);
+        }
+        @JavascriptInterface public void openWazeDestination(double lat,double lon) {
+            runUi(()->{
+                if(!validCoord(lat,lon)){
+                    message("Elige un destino antes de abrir Waze.");return;
+                }
+                try {
+                    Intent installed=getPackageManager()
+                        .getLaunchIntentForPackage("com.waze");
+                    if(installed==null){
+                        message("Waze no está instalado en el Carlinkit. "+
+                            "Úsalo en tu iPhone mediante CarPlay si está disponible.");
+                        return;
+                    }
+                    String location=String.format(Locale.US,"%.6f,%.6f",lat,lon);
+                    Intent navigate=new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("https://waze.com/ul?ll="+location+
+                            "&navigate=yes&utm_source=rush_launcher"));
+                    navigate.setPackage("com.waze");
+                    startActivity(navigate);
+                }catch(Exception ex){
+                    message("No fue posible abrir Waze: "+ex.getClass().getSimpleName());
+                }
+            });
         }
         @JavascriptInterface public void getWeather(double latitude, double longitude) {
             runUi(() -> fetchWeather(latitude, longitude));
