@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.11 · Navegación con rutas y tráfico</title>
+<title>Rush Launcher 4.20.12 · Rush Diagnostic integrado</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -1306,6 +1306,74 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 .home-map-tools #homeNavWaze[hidden]{display:none!important}
 #rushNavRoutingSettings label{display:block;margin:6px 0;font-size:13px}
 #rushNavRoutingSettings input[type=checkbox]{width:17px;height:17px;vertical-align:middle}
+
+/* 4.20.12 · Rush Diagnostic integrado, optimizado para radio 800x480 */
+.rush-diagnostic-sheet{
+ width:min(790px,97vw);max-width:97vw;max-height:95vh;
+ overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;
+}
+.rush-diagnostic-sheet .sheet-head{margin-bottom:0}
+.rush-diagnostic-sheet .sheet-head h2{font-size:18px;letter-spacing:.2px}
+.rush-diagnostic-sheet .sheet-head small{font-size:10px;font-weight:600;opacity:.75}
+.rush-diag-subtitle{font-size:10px;color:var(--sub);margin:0}
+.rush-diag-toolbar,.rush-diag-history-top{
+ display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:space-between
+}
+.rush-diag-toolbar .actionbtn,.rush-diag-history-top .actionbtn{
+ min-height:32px;padding:6px 10px
+}
+.rush-diag-status{
+ font-size:11px;line-height:1.25;border:1px solid var(--line);
+ border-radius:8px;background:var(--card);padding:6px 8px;margin:0
+}
+.rush-diag-status[data-kind=error]{border-color:#e58d69}
+.rush-diag-status[data-kind=progress]{border-color:#56c0eb}
+.rush-diag-summary{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px
+}
+.rush-diag-summary>div{
+ background:var(--card);border:1px solid var(--line);
+ border-radius:9px;padding:6px;min-width:0;display:flex;
+ flex-direction:column;gap:3px
+}
+.rush-diag-summary span{font-size:10px;color:var(--sub)}
+.rush-diag-summary strong{font-size:15px;line-height:1.1;font-variant-numeric:tabular-nums}
+.rush-diag-layout{display:grid;grid-template-columns:1.15fr 1fr;gap:7px}
+.rush-diag-card{
+ min-width:0;padding:8px;border:1px solid var(--line);
+ border-radius:9px;background:var(--card)
+}
+.rush-diag-card h3{font-size:12px;margin:1px 0 6px}
+.rush-diag-group{margin-bottom:6px}
+.rush-diag-group h4{font-size:11px;margin:0 0 4px}
+.rush-diag-group h4 small{font-size:9px;opacity:.7}
+.rush-diag-codes{font-size:11px;line-height:1.45;color:var(--sub)}
+.rush-diag-code{
+ display:flex;gap:8px;align-items:center;justify-content:space-between;
+ margin:3px 0;padding:4px 6px;border:1px solid var(--line);
+ border-radius:7px;background:var(--surface)
+}
+.rush-diag-code b{font-size:13px;font-variant-numeric:tabular-nums}
+.rush-diag-code span{flex:1;font-size:10px;line-height:1.2}
+.rush-diag-info{
+ display:flex;justify-content:space-between;gap:8px;
+ font-size:10px;margin:5px 0
+}
+.rush-diag-info span{color:var(--sub)}
+.rush-diag-info strong{font-size:10px;text-align:right}
+.rush-diag-freeze{font-size:10px;line-height:1.4;white-space:pre-line}
+.rush-diag-explainer{font-size:10px;line-height:1.4;color:var(--sub)}
+.rush-diag-history{
+ border:1px solid var(--line);border-radius:8px;padding:7px;
+ background:var(--card)
+}
+.rush-diag-history-top strong{font-size:11px}
+.rush-diag-history-list{font-size:10px;color:var(--sub);line-height:1.5}
+.rush-diag-disclaimer{font-size:10px;color:var(--sub);line-height:1.4;margin:3px 0}
+@media(max-width:550px){
+ .rush-diag-layout{grid-template-columns:1fr}
+ .rush-diag-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -1325,7 +1393,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.11</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.12</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1500,7 +1568,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.20.11 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.20.12 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -1650,7 +1718,11 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
   <button type="button" id="obdAutoToggle" class="actionbtn" aria-pressed="true">Desactivar conexión automática</button>
   <div class="tile-buttons"><button class="actionbtn highlight" type="button" id="scanDevices">Buscar vinculados</button><button class="actionbtn" type="button" id="disconnectObd">Desconectar</button><button type="button" class="actionbtn" data-action="bluetoothSettings">Ajustes Bluetooth</button></div>
   <div class="list" id="deviceList">Sin dispositivos</div>
-  <p class="muted">Estado: <span id="obdResult">Sin conexión</span> · RPM: <span id="rpmResult">—</span> · Refrigerante: <span id="coolantResult">—</span></p><button type="button" class="actionbtn highlight" data-action="obdDashboard">Ver tablero avanzado</button>
+  <p class="muted">Estado: <span id="obdResult">Sin conexión</span> · RPM: <span id="rpmResult">—</span> · Refrigerante: <span id="coolantResult">—</span></p>
+  <div class="tile-buttons">
+   <button type="button" class="actionbtn highlight" data-action="obdDashboard">Ver tablero avanzado</button>
+   <button type="button" class="actionbtn" id="rushDiagOpenFromConnect">Rush Diagnostic · Escáner</button>
+  </div>
  </div>
 </div>
 <div class="scrim" id="obdDashboardPanel" hidden>
@@ -1692,8 +1764,58 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
    <div class="obd-metric"><span>Ajuste largo LTFT</span><strong data-obd-metric="ltft1">—</strong><small data-obd-state="ltft1">Desconectado</small></div>
    <div class="obd-metric"><span>Temperatura catalizador</span><strong data-obd-metric="catalyst">—</strong><small data-obd-state="catalyst">Desconectado</small></div>
   </div>
-  <div class="tile-buttons"><button type="button" class="actionbtn highlight" id="obdAdvancedConnect">Conectar ELM327</button><button type="button" class="actionbtn" data-action="bluetoothSettings">Bluetooth Android</button></div>
+  <div class="tile-buttons">
+    <button type="button" class="actionbtn highlight" id="rushDiagOpenFromDashboard">Rush Diagnostic · Escanear fallas</button>
+    <button type="button" class="actionbtn" id="obdAdvancedConnect">Conectar ELM327</button>
+    <button type="button" class="actionbtn" data-action="bluetoothSettings">Bluetooth Android</button>
+   </div>
   <p class="muted">Solo datos OBD-II reales de la ECU y voltaje reportado por el adaptador. La disponibilidad depende del vehículo. No usar para diagnosticar averías ni mirar la pantalla mientras conduces.</p>
+ </div>
+</div>
+<div class="scrim" id="obdDiagnosticPanel" hidden>
+ <div class="sheet rush-diagnostic-sheet" role="dialog" aria-modal="true"
+  aria-label="Rush Diagnostic — escáner OBD-II">
+  <div class="sheet-head">
+   <h2>RUSH DIAGNOSTIC <small>1.0 · Toyota Rush</small></h2>
+   <button class="close" type="button" data-close="obdDiagnosticPanel">Volver ✕</button>
+  </div>
+  <p class="rush-diag-subtitle">Diagnóstico del motor y emisiones · lectura OBD-II real · ELM327 Bluetooth</p>
+  <div class="rush-diag-toolbar">
+   <button type="button" id="rushDiagScan" class="actionbtn highlight">Escanear ECU</button>
+   <button type="button" id="rushDiagExport" class="actionbtn">Guardar CSV</button>
+   <button type="button" id="rushDiagConnect" class="actionbtn">Conectar ELM327</button>
+  </div>
+  <p class="rush-diag-status" id="rushDiagStatus" role="status">Sin análisis. Conecta el ELM327 y deja el vehículo detenido, con contacto activado.</p>
+  <div class="rush-diag-summary" aria-label="Estado general del motor">
+   <div><span>Testigo de motor (MIL)</span><strong id="rushDiagMil">—</strong></div>
+   <div><span>Códigos confirmados</span><strong id="rushDiagConfirmedCount">—</strong></div>
+   <div><span>Monitores pendientes</span><strong id="rushDiagMonitors">—</strong></div>
+   <div><span>Última lectura</span><strong id="rushDiagLastTime">—</strong></div>
+  </div>
+  <div class="rush-diag-layout">
+   <section class="rush-diag-card">
+    <h3>Fallas del motor</h3>
+    <div class="rush-diag-group"><h4>Confirmadas <small>(03)</small></h4><div id="rushDiagConfirmed" class="rush-diag-codes">Sin escanear</div></div>
+    <div class="rush-diag-group"><h4>Pendientes <small>(07)</small></h4><div id="rushDiagPending" class="rush-diag-codes">Sin escanear</div></div>
+    <div class="rush-diag-group"><h4>Permanentes <small>(0A)</small></h4><div id="rushDiagPermanent" class="rush-diag-codes">Sin escanear</div></div>
+   </section>
+   <section class="rush-diag-card">
+    <h3>Información de ECU</h3>
+    <div class="rush-diag-info"><span>VIN (parcial)</span><strong id="rushDiagVin">—</strong></div>
+    <div class="rush-diag-info"><span>Preparación emisiones</span><strong id="rushDiagReadiness">—</strong></div>
+    <h3>Datos al detectar falla</h3>
+    <div class="rush-diag-freeze" id="rushDiagFreeze">La ECU no ha entregado datos congelados.</div>
+    <p class="rush-diag-explainer">Los datos «no disponibles» no equivalen a ausencia de fallas. No analiza ABS, airbags ni módulos Toyota específicos.</p>
+   </section>
+  </div>
+  <div class="rush-diag-history">
+   <div class="rush-diag-history-top">
+    <strong>Historial de lecturas</strong>
+    <button type="button" id="rushDiagClearHistory" class="actionbtn">Borrar historial local</button>
+   </div>
+   <div id="rushDiagHistory" class="rush-diag-history-list">No hay lecturas guardadas.</div>
+  </div>
+  <p class="rush-diag-disclaimer">Solo lectura. Nunca borra códigos de falla, programa la ECU ni ejecuta actuadores. Escanea únicamente con el vehículo estacionado y contacto conectado. Un DTC no confirma por sí solo la causa de la avería.</p>
  </div>
 </div>
 <div class="scrim" id="mapPanel" hidden>
@@ -1823,6 +1945,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 <script src="rush_3d.js"></script>
 <script src="home_map.js"></script>
 <script src="dashboard.js"></script>
+<script src="rush_diagnostic.js"></script>
 <script src="vehicle_lights.js"></script>
 <script src="nav_autocomplete.js"></script>
 <script src="navigation_mode.js"></script>
