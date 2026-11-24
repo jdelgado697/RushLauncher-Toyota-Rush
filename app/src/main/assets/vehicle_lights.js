@@ -1,158 +1,217 @@
-/* Rush Launcher 4.20.9 - iluminación visual Toyota Rush con OBD/CAN calibrado.
-   No existe un PID OBD-II estándar de luces, no estimar usando RPM ni
-   voltaje. Modo OBD sólo afirma estado real con trama CAN reciente.
-   Fallback declarado a modo noche y override manual ON/OFF.
+/* Rush Launcher 4.20.10 — iluminación visual y CAN pasivo rápido.
+   Estado real únicamente de señales CAN calibradas. No inferir intermitentes
+   por el GPS o por estar doblando. Sin señal, indicar respaldo/diagnóstico.
 */
 (function(){
 'use strict';
-var find=function(id){return document.getElementById(id)};
-var car=find('rushCarArea'),status=find('vehicleLightStatus'),
-    detail=find('vehicleLightDetail'),badge=find('vehicleLightBadge'),
-    steps=find('vehicleLightsLearnStep'),learnButton=find('vehicleLightsLearn'),
-    profileStatus=find('vehicleLightsProfile'),signalSelect=find('vehicleLightsSignals'),
-    saveSignal=find('vehicleLightsSaveSignal'),clearSignal=find('vehicleLightsClearSignal');
+var el=function(id){return document.getElementById(id)};
+var car=el('rushCarArea'),status=el('vehicleLightStatus'),detail=el('vehicleLightDetail'),
+    badge=el('vehicleLightBadge'),selectType=el('vehicleLightsTarget'),
+    steps=el('vehicleLightsLearnStep'),learn=el('vehicleLightsLearn'),
+    profileStatus=el('vehicleLightsProfile'),signalSelect=el('vehicleLightsSignals'),
+    saveSignal=el('vehicleLightsSaveSignal'),clearSignal=el('vehicleLightsClearSignal'),
+    latency=el('vehicleLightsResponse');
 if(!car||!status)return;
-var modes={obd:true,night:true,on:true,off:true};
-var mode='obd';
+var MODES={obd:true,night:true,on:true,off:true};
+var TYPES={low:'luces bajas',high:'luces altas',left:'direccional izquierda',
+           right:'direccional derecha',hazard:'balizas'};
+var SIGNALS=['low','high','left','right','hazard'];
+var mode='obd',target='low',phase=1,candidates=[],lastMessage='';
+var native=!!(window.Rush&&typeof window.Rush.calibrateObdSignal==='function');
+var profiles={low:null,high:null,left:null,right:null,hazard:null};
+var readings={},lastValidAt={},indicatorHighAt={left:0,right:0,hazard:0};
+var startedAt=0,observedDelay=null,preview='',previewUntil=0;
 try{
- var persisted=localStorage.getItem('rush_vehicle_light_mode_4209');
- if(modes[persisted])mode=persisted;
+ var saved=localStorage.getItem('rush_vehicle_light_mode_4209');
+ if(MODES[saved])mode=saved;
 }catch(e){}
-var sensor=null,reading=null,lastMessage='OBD: no calibrado',phase=1,candidates=[];
-var native=!!(window.Rush&&typeof window.Rush.calibrateObdLights==='function');
-var phases=[
- {title:'1/4 · Luces apagadas',hint:'Apaga las luces exteriores. Vehículo detenido. Pulsa Registrar.'},
- {title:'2/4 · Luces encendidas',hint:'Enciende las luces exteriores y espera un instante. Pulsa Registrar.'},
- {title:'3/4 · Luces apagadas de nuevo',hint:'Apaga nuevamente los faros. Pulsa Registrar.'},
- {title:'4/4 · Luces encendidas de nuevo',hint:'Enciende los faros otra vez. Pulsa Registrar.'}
-];
-function save(name,value){try{localStorage.setItem(name,value)}catch(e){}}
-function currentNight(){return document.documentElement.getAttribute('data-theme')==='dark'}
-function selectedSource(){
- if(mode==='on')return {on:true,label:'Manual ON',note:'Luces visuales encendidas manualmente'};
- if(mode==='off')return {on:false,label:'Manual OFF',note:'Luces visuales apagadas manualmente'};
- if(mode==='night')return {on:currentNight(),label:'Modo noche',
-    note:'Automático por tema de Android/Rush; no confirma faros reales'};
- var ready=sensor&&reading&&reading.valid&&
-      Date.now()-reading.received<18000;
- if(ready)return {on:reading.on,label:'OBD CAN '+(reading.on?'ON':'OFF'),
-      note:'Estado recibido de señal CAN calibrada'};
- return {on:currentNight(),label:'Noche (respaldo)',
-    note:sensor?'Sin lectura CAN válida reciente; se usa tema noche':
-       'Sin señal OBD calibrada; se usa tema noche. Calibra con el auto detenido'};
+function store(key,val){try{localStorage.setItem(key,val)}catch(e){}}
+function night(){return document.documentElement.getAttribute('data-theme')==='dark'}
+function recent(type,ms){
+ return typeof readings[type]==='boolean'&&
+        Date.now()-(lastValidAt[type]||0)<ms;
 }
-function refresh(){
- var selected=selectedSource();
- car.classList.toggle('rush-lights-on',!!selected.on);
+function real(type){return recent(type,2200)?readings[type]:null}
+function primary(){
+ if(mode==='on')return {on:true,source:'Manual ON',note:'Imagen encendida manualmente'};
+ if(mode==='off')return {on:false,source:'Manual OFF',note:'Imagen apagada manualmente'};
+ if(mode==='night')return {on:night(),source:'Modo noche',
+   note:'No es una lectura real de las luces del vehículo'};
+ if(real('low')!==null)return {on:real('low'),source:'OBD CAN',
+   note:'Luces bajas obtenidas de señal CAN calibrada'};
+ return {on:night(),source:'Noche (respaldo)',
+   note:profiles.low?'Sin lectura CAN reciente: usando tema noche':
+         'Luces bajas CAN sin calibrar: usando tema noche'};
+}
+function busyPreview(type){return preview===type&&Date.now()<previewUntil}
+function indicatorActive(type){
+ if(busyPreview(type)||busyPreview('hazard'))return true;
+ if(mode!=='obd')return false;
+ // En indicadores intermitentes, mantener el estado visual entre pulsos
+ // CAN separados hasta 1.5 s y destellar con CSS. Nunca activar con GPS.
+ if(recent(type,2200)&&readings[type]===true)
+  indicatorHighAt[type]=Date.now();
+ return Date.now()-(indicatorHighAt[type]||0)<1550;
+}
+function render(){
+ var chosen=primary(),high=mode!=='off'&&
+   (busyPreview('high')||(mode==='obd'&&real('high')===true));
+ var h=mode!=='off'&&indicatorActive('hazard');
+ var left=mode!=='off'&&(h||indicatorActive('left'));
+ var right=mode!=='off'&&(h||indicatorActive('right'));
+ var low=chosen.on||high;
+ car.classList.toggle('rush-lights-on',!!low);
+ car.classList.toggle('rush-lights-high',!!high);
+ car.classList.toggle('rush-turn-left-active',!!left);
+ car.classList.toggle('rush-turn-right-active',!!right);
+ car.classList.toggle('rush-hazard-active',!!(h||(left&&right)));
  car.setAttribute('data-lights-mode',mode);
- car.setAttribute('data-lights-source',selected.label);
- status.textContent='Luces: '+selected.label;
- if(badge)badge.textContent=selected.on?'✦ Luces ON':'Luces OFF';
- if(detail)detail.textContent=selected.note+(lastMessage?' · '+lastMessage:'');
- Array.prototype.forEach.call(document.querySelectorAll('[data-vehicle-light-mode]'),
-  function(button){
-   var active=button.getAttribute('data-vehicle-light-mode')===mode;
-   button.classList.toggle('is-selected',active);
-   button.setAttribute('aria-pressed',String(active));
-  });
+ car.setAttribute('data-lights-source',chosen.source);
+ status.textContent='Luces: '+chosen.source+(high?' · ALTAS':'')+
+     (h?' · BALIZAS':left?' · IZQUIERDA':right?' · DERECHA':'');
+ if(badge)badge.textContent=h?'⚠ BALIZAS':left&&right?'↔ DIRECCIONALES':
+   left?'◀ GIRO':right?'▶ GIRO':high?'✦ ALTAS':low?'✦ BAJAS':'Luces OFF';
+ if(detail)detail.textContent=chosen.note+(lastMessage?' · '+lastMessage:'');
+ if(latency)latency.textContent=observedDelay===null?
+    'CAN rápido: ventana de 260 ms; latencia real depende del ELM327':
+    'Tiempo observado última transición CAN: '+observedDelay+' ms';
+ document.querySelectorAll('[data-vehicle-light-mode]').forEach(function(btn){
+  var active=btn.getAttribute('data-vehicle-light-mode')===mode;
+  btn.classList.toggle('is-selected',active);
+  btn.setAttribute('aria-pressed',String(active));
+ });
+ document.querySelectorAll('[data-light-preview]').forEach(function(btn){
+  var active=busyPreview(btn.getAttribute('data-light-preview'));
+  btn.setAttribute('aria-pressed',String(active));
+ });
 }
-function syncLearnControls(){
- var state=phases[phase-1];
- if(steps)steps.textContent=state?state.title+' — '+state.hint:
-   'Calibración terminada: selecciona una señal detectada';
- if(learnButton){
-  learnButton.textContent=state?'Registrar fase '+phase+'/4':'Repetir calibración';
-  learnButton.disabled=!native;
- }
- if(profileStatus)profileStatus.textContent=sensor?
-    'Señal registrada '+sensor.id+' · byte '+sensor.byte+' · bit '+sensor.mask+
-    '. Verifica ON y OFF con el vehículo detenido.':
-    'Sin señal de faros verificada. OBD-II estándar no incluye este dato.';
- if(signalSelect)signalSelect.hidden=candidates.length===0;
- if(saveSignal)saveSignal.hidden=candidates.length===0;
+function titleFor(type){return TYPES[type]||type}
+function syncCalibration(){
+ var name=titleFor(target),off=phase===1||phase===3;
+ if(steps)steps.textContent=phase<=4?
+   phase+'/4 · '+name+' '+(off?'APAGADA':'ENCENDIDA')+
+   ' — con el auto detenido, '+(off?'desactívala':'actívala')+
+   ' y pulsa Registrar. Para intermitentes, déjalos parpadear durante toda la captura.':
+   'Calibración completada: selecciona y verifica una señal CAN';
+ if(learn){learn.textContent=phase<=4?'Registrar fase '+phase+'/4':'Repetir calibración';learn.disabled=!native;}
+ if(profileStatus)profileStatus.textContent=profiles[target]?
+   'Perfil CAN '+name+': '+profiles[target].id+' · byte '+
+      profiles[target].byte+' · máscara '+profiles[target].mask+
+      (profiles[target].pulse?' (intermitente)':'') :
+   'Sin perfil CAN calibrado para '+name;
+ if(signalSelect)signalSelect.hidden=!candidates.length;
+ if(saveSignal)saveSignal.hidden=!candidates.length;
 }
-function setMode(value){
- if(!modes[value])return;
- mode=value;save('rush_vehicle_light_mode_4209',value);
- refresh();
+function changeTarget(t){
+ if(!TYPES[t])return;
+ target=t;phase=1;candidates=[];observedDelay=null;
+ if(signalSelect)signalSelect.innerHTML='';
+ if(selectType)selectType.value=t;
+ syncCalibration();render();
 }
-Array.prototype.forEach.call(document.querySelectorAll('[data-vehicle-light-mode]'),
- function(button){button.addEventListener('click',function(){
-  setMode(button.getAttribute('data-vehicle-light-mode'));
- })});
-if(learnButton)learnButton.addEventListener('click',function(){
- if(!native){lastMessage='Calibración disponible solo en la APK Android';refresh();return}
- if(phase>4){phase=1;candidates=[];if(signalSelect)signalSelect.innerHTML=''}
- if(!phases[phase-1])return;
- lastMessage='Escuchando CAN sin escribir en el vehículo. Mantén luces '+(phase%2===1?'OFF':'ON')+'…';
- refresh();
- window.Rush.calibrateObdLights(phase);
+if(selectType)selectType.addEventListener('change',function(){changeTarget(this.value)});
+document.querySelectorAll('[data-vehicle-light-mode]').forEach(function(btn){
+ btn.addEventListener('click',function(){
+  var next=btn.getAttribute('data-vehicle-light-mode');
+  if(!MODES[next])return;
+  mode=next;store('rush_vehicle_light_mode_4209',next);render();
+ });
+});
+document.querySelectorAll('[data-light-preview]').forEach(function(btn){
+ btn.addEventListener('click',function(){
+  var t=btn.getAttribute('data-light-preview');
+  preview=busyPreview(t)?'':t;
+  previewUntil=preview?Date.now()+8500:0;
+  lastMessage=preview?'Simulación de '+titleFor(preview)+' por 8 s; no acciona el vehículo':
+     'Prueba visual finalizada';
+  render();
+ });
+});
+if(learn)learn.addEventListener('click',function(){
+ if(!native){lastMessage='Calibración solo disponible dentro del APK Android';render();return;}
+ if(phase>4){phase=1;candidates=[];if(signalSelect)signalSelect.innerHTML='';}
+ lastMessage='Capturando '+titleFor(target)+' · fase '+phase+'/4';
+ render();
+ window.Rush.calibrateObdSignal(target,phase);
 });
 if(saveSignal)saveSignal.addEventListener('click',function(){
- if(!native||!candidates.length)return;
- var idx=signalSelect?Number(signalSelect.value):NaN;
- if(!Number.isInteger(idx)||idx<0||idx>=candidates.length)return;
- var candidate=candidates[idx];
- window.Rush.selectObdLightsSignal(candidate.id,candidate.byte,
-   candidate.mask,candidate.onBit);
- lastMessage='Verificando señal candidata en tiempo real…';
- refresh();
+ var idx=signalSelect?Number(signalSelect.value):-1;
+ if(!native||idx<0||idx>=candidates.length)return;
+ var p=candidates[idx];
+ window.Rush.selectObdSignal(target,p.id,Number(p.byte),
+    Number(p.mask),Number(p.onBit),p.pulse===true);
+ lastMessage='Perfil seleccionado; verifica ON/OFF con el vehículo detenido';
+ render();
 });
 if(clearSignal)clearSignal.addEventListener('click',function(){
- if(native&&typeof window.Rush.clearObdLightsSignal==='function')
-  window.Rush.clearObdLightsSignal();
- sensor=null;reading=null;candidates=[];phase=1;
- if(signalSelect)signalSelect.innerHTML='';
- lastMessage='Calibración borrada';
- syncLearnControls();refresh();
+ if(native&&typeof window.Rush.clearObdSignal==='function')
+  window.Rush.clearObdSignal(target);
+ profiles[target]=null;readings[target]=null;lastValidAt[target]=0;
+ candidates=[];phase=1;lastMessage='Perfil eliminado para '+titleFor(target);
+ syncCalibration();render();
 });
-window.rushLightCanProfile=function(data){
- sensor=data&&typeof data.id==='string'?data:null;
- reading=null;
- lastMessage=sensor?'Perfil CAN cargado; esperando datos del vehículo':
-                     'Sin perfil CAN de faros';
- syncLearnControls();refresh();
+window.rushLightCanProfiles=function(saved){
+ if(!saved||typeof saved!=='object')return;
+ SIGNALS.forEach(function(type){
+  profiles[type]=saved[type]&&typeof saved[type].id==='string'?saved[type]:null;
+ });
+ syncCalibration();render();
+};
+// Mantener compatibilidad con callback de 4.20.9 para luces bajas.
+window.rushLightCanProfile=function(saved){
+ profiles.low=saved&&typeof saved.id==='string'?saved:null;
+ syncCalibration();render();
 };
 window.rushLightCanEvent=function(event){
  if(!event||typeof event!=='object')return;
- lastMessage=String(event.message||'').slice(0,180);
- if(event.kind==='reading'){
-  reading={
-   valid:event.valid===true&&typeof event.on==='boolean',
-   on:event.on===true,received:Date.now()
-  };
- }else if(event.kind==='offline'||event.kind==='unavailable'){
-  reading=null;
+ lastMessage=String(event.message||'').slice(0,135);
+ var type=event.target||'low',now=Date.now();
+ if(event.kind==='readings'){
+  SIGNALS.forEach(function(signal){
+   var hasValue=event.valid&&event.valid[signal]===true &&
+      event.values&&typeof event.values[signal]==='boolean';
+   if(!hasValue){readings[signal]=null;return;}
+   var next=event.values[signal];
+   if(typeof readings[signal]==='boolean'&&readings[signal]!==next&&startedAt){
+    observedDelay=Math.max(0,now-startedAt);
+    startedAt=0;
+   }
+   readings[signal]=next;lastValidAt[signal]=now;
+   if((signal==='left'||signal==='right'||signal==='hazard')&&next)
+    indicatorHighAt[signal]=now;
+  });
  }else if(event.kind==='phase'){
-  if(event.step===phase){
-   phase+=1;
-   if(phase===5){
+  if(type===target&&event.step===phase){
+   phase++;
+   if(phase>4){
     candidates=Array.isArray(event.candidates)?event.candidates:[];
     if(signalSelect){
      signalSelect.innerHTML='';
      candidates.forEach(function(p,i){
       var opt=document.createElement('option');
       opt.value=String(i);
-      opt.textContent='Señal '+(i+1)+' · '+p.id+
-       ' / byte '+p.byte+' / bit '+p.mask;
+      opt.textContent=(i+1)+'. '+p.id+' · byte '+p.byte+
+        ' · bit '+p.mask+(p.pulse?' (pulso)':'');
       signalSelect.appendChild(opt);
      });
     }
    }
+   syncCalibration();
   }
-  syncLearnControls();
+ }else if(event.kind==='unavailable'||event.kind==='offline'){
+  SIGNALS.forEach(function(t){readings[t]=null;lastValidAt[t]=0;});
  }
- if(detail)detail.textContent=lastMessage;
- refresh();
+ render();
 };
 window.RushVehicleLights={
- refresh:refresh,
- onObdDisconnected:function(){reading=null;lastMessage='ELM327 desconectado';refresh()},
+ refresh:render,
+ onObdDisconnected:function(){
+  SIGNALS.forEach(function(t){readings[t]=null;lastValidAt[t]=0;});
+  lastMessage='OBD desconectado; sin lectura de iluminación real';render();
+ },
  getMode:function(){return mode}
 };
-syncLearnControls();refresh();
-if(native&&typeof window.Rush.getObdLightsSignal==='function')
- window.Rush.getObdLightsSignal();
-// Las señales ELM llegan cada pocos segundos; caducar un fix ausente.
-setInterval(refresh,3500);
+syncCalibration();render();
+if(native&&typeof window.Rush.getObdSignals==='function')window.Rush.getObdSignals();
+setInterval(render,180);
 })();
