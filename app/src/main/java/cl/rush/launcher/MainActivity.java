@@ -1398,8 +1398,7 @@ public class MainActivity extends Activity implements LocationListener {
             .append("&routeRepresentation=polyline")
             .append("&computeTravelTimeFor=all")
             .append("&instructionsType=text&language=es-ES")
-            .append("&sectionType=traffic&sectionType=tollRoad")
-            .append("&sectionType=roadClosure");
+            .append("&sectionType=traffic&sectionType=tollRoad");
         if(avoidTolls)url.append("&avoid=tollRoads");
         if(avoidMotorways)url.append("&avoid=motorways");
         if(avoidUnpaved)url.append("&avoid=unpavedRoads");
