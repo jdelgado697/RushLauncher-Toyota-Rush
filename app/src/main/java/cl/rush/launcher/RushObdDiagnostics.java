@@ -95,7 +95,7 @@ final class RushObdDiagnostics {
 
     static JSONObject readReadiness(String response) throws Exception {
         int[] data=responseData(response,"41","01",4);
-        if(data==null)return JSONObject.NULL instanceof JSONObject?null:unsupportedReadiness();
+        if(data==null)return unsupportedReadiness();
         int a=data[0],b=data[1],c=data[2],d=data[3];
         JSONObject result=new JSONObject();
         result.put("supported",true);
