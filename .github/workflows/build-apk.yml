@@ -114,7 +114,7 @@ jobs:
           assert 'rush-turn-left-active' in html and 'rush-turn-right-active' in html
           assert 'rush-lights-high' in html and 'id="vehicleLightsTarget"' in html
           assert 'data-light-preview="hazard"' in html
-          assert 'function read(Profile profile,Capture capture)' in can
+          assert 'static Boolean read(Profile profile,Capture capture)' in can
           assert 'candidates(Capture[] four,boolean pulse)' in can
           assert 'monitorConfigured=monitorLights' in reader
           assert 'Thread.sleep(30)' in reader
