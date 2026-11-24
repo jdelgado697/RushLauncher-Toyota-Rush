@@ -374,7 +374,8 @@ public class MainActivity extends Activity implements LocationListener {
                     info.toString()+");");
             }
         });
-        obdReader.setLightProfile(loadLightCanProfile());
+        for(String signal:new String[]{"low","high","left","right","hazard"})
+            obdReader.setLightProfile(signal,loadLightCanProfile(signal));
         // Base nacional de calles: se descomprime una sola vez en segundo plano.
         offlineChile=new OfflineChileTiles(this);
         new Thread(offlineChile::warmUp,"rush-offline-chile").start();
@@ -391,7 +392,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.9 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.10 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -419,7 +420,7 @@ public class MainActivity extends Activity implements LocationListener {
                 dispatchExternalNavigation();
                 if (spotifyConnect != null) spotifyConnect.uiReady();
                 sendObdAutoState();
-                sendLightCanProfile();
+                sendLightCanProfiles();
                 nmeaInfoToWeb("GPS iPhone listo");
                 connectSavedNmea();
             }
@@ -854,35 +855,71 @@ public class MainActivity extends Activity implements LocationListener {
     private SharedPreferences obdSettings() {
         return getSharedPreferences(OBD_PREFS, MODE_PRIVATE);
     }
+    private static boolean validLightTarget(String target){
+        return "low".equals(target)||"high".equals(target)||
+            "left".equals(target)||"right".equals(target)||"hazard".equals(target);
+    }
     private LightCanMonitor.Profile loadLightCanProfile(){
-        SharedPreferences prefs=obdSettings();
-        String id=prefs.getString(LIGHT_CAN_ID,"");
-        int index=prefs.getInt(LIGHT_CAN_BYTE,-1);
-        int mask=prefs.getInt(LIGHT_CAN_MASK,0);
-        int on=prefs.getInt(LIGHT_CAN_ON,-1);
+        return loadLightCanProfile("low");
+    }
+    private LightCanMonitor.Profile loadLightCanProfile(String target){
+        if(!validLightTarget(target))return null;
+        SharedPreferences pref=obdSettings();
+        String suffix="_"+target;
+        String id=pref.getString(LIGHT_CAN_ID+suffix,
+            "low".equals(target)?pref.getString(LIGHT_CAN_ID,""):"");
+        int index=pref.getInt(LIGHT_CAN_BYTE+suffix,
+            "low".equals(target)?pref.getInt(LIGHT_CAN_BYTE,-1):-1);
+        int mask=pref.getInt(LIGHT_CAN_MASK+suffix,
+            "low".equals(target)?pref.getInt(LIGHT_CAN_MASK,0):0);
+        int on=pref.getInt(LIGHT_CAN_ON+suffix,
+            "low".equals(target)?pref.getInt(LIGHT_CAN_ON,-1):-1);
+        boolean pulse=pref.getBoolean("rush_light_can_pulse"+suffix,
+            "left".equals(target)||"right".equals(target)||"hazard".equals(target));
         if(!id.matches("(?i)(?:[0-9a-f]{3}|[0-9a-f]{8})")||
-            index<0||index>7||Integer.bitCount(mask)!=1||
-            mask>128||on<0||on>1)return null;
-        return new LightCanMonitor.Profile(id,index,mask,on);
+           index<0||index>7||Integer.bitCount(mask)!=1||
+           mask>128||on<0||on>1)return null;
+        return new LightCanMonitor.Profile(id,index,mask,on,pulse);
     }
     private void sendLightCanProfile(){
         LightCanMonitor.Profile p=loadLightCanProfile();
-        String payload=p!=null?p.json().toString():"null";
         javascript("if(window.rushLightCanProfile)window.rushLightCanProfile("+
-            payload+");");
+            (p!=null?p.json().toString():"null")+");");
+        sendLightCanProfiles();
     }
-    private void saveLightCanProfile(LightCanMonitor.Profile p){
+    private void sendLightCanProfiles(){
+        JSONObject all=new JSONObject();
+        for(String signal:new String[]{"low","high","left","right","hazard"}){
+            LightCanMonitor.Profile p=loadLightCanProfile(signal);
+            try{all.put(signal,p==null?JSONObject.NULL:p.json());}catch(Exception ignored){}
+        }
+        javascript("if(window.rushLightCanProfiles)window.rushLightCanProfiles("+
+            all.toString()+");");
+    }
+    private void saveLightCanProfile(LightCanMonitor.Profile profile){
+        saveLightCanProfile("low",profile);
+    }
+    private void saveLightCanProfile(String target,LightCanMonitor.Profile profile){
+        if(!validLightTarget(target))return;
+        String suffix="_"+target;
         SharedPreferences.Editor edit=obdSettings().edit();
-        if(p==null){
-            edit.remove(LIGHT_CAN_ID).remove(LIGHT_CAN_BYTE)
-                .remove(LIGHT_CAN_MASK).remove(LIGHT_CAN_ON);
-        }else{
-            edit.putString(LIGHT_CAN_ID,p.id).putInt(LIGHT_CAN_BYTE,p.index)
-                .putInt(LIGHT_CAN_MASK,p.mask).putInt(LIGHT_CAN_ON,p.onBit);
+        if(profile==null){
+            edit.remove(LIGHT_CAN_ID+suffix).remove(LIGHT_CAN_BYTE+suffix)
+                .remove(LIGHT_CAN_MASK+suffix).remove(LIGHT_CAN_ON+suffix)
+                .remove("rush_light_can_pulse"+suffix);
+            if("low".equals(target))
+                edit.remove(LIGHT_CAN_ID).remove(LIGHT_CAN_BYTE)
+                    .remove(LIGHT_CAN_MASK).remove(LIGHT_CAN_ON);
+        }else {
+            edit.putString(LIGHT_CAN_ID+suffix,profile.id)
+                .putInt(LIGHT_CAN_BYTE+suffix,profile.index)
+                .putInt(LIGHT_CAN_MASK+suffix,profile.mask)
+                .putInt(LIGHT_CAN_ON+suffix,profile.onBit)
+                .putBoolean("rush_light_can_pulse"+suffix,profile.pulse);
         }
         edit.apply();
-        if(obdReader!=null)obdReader.setLightProfile(p);
-        sendLightCanProfile();
+        if(obdReader!=null)obdReader.setLightProfile(target,profile);
+        sendLightCanProfiles();
     }
 
     private void sendObdAutoState() {
@@ -2194,6 +2231,37 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void getObdLightsSignal(){
             runUi(() -> sendLightCanProfile());
+        }
+        @JavascriptInterface public void calibrateObdSignal(String target,int step){
+            runUi(() -> {
+                if(!validLightTarget(target)||!bluetoothAvailable()||obdReader==null)
+                    return;
+                obdReader.requestLightCalibration(target,step);
+            });
+        }
+        @JavascriptInterface public void selectObdSignal(String target,String id,
+                    int index,int mask,int whenOn,boolean pulse){
+            runUi(() -> {
+                if(!validLightTarget(target)||obdReader==null||
+                    !obdReader.isLightCandidate(target,id,index,mask,whenOn,pulse)){
+                    JSONObject error=new JSONObject();
+                    try{
+                        error.put("kind","error");error.put("target",target);
+                        error.put("message","Registra las cuatro fases y elige una señal CAN válida.");
+                    }catch(Exception ignored){}
+                    javascript("if(window.rushLightCanEvent)window.rushLightCanEvent("+
+                        error.toString()+");");
+                    return;
+                }
+                saveLightCanProfile(target,
+                    new LightCanMonitor.Profile(id,index,mask,whenOn,pulse));
+            });
+        }
+        @JavascriptInterface public void clearObdSignal(String target){
+            runUi(() -> saveLightCanProfile(target,null));
+        }
+        @JavascriptInterface public void getObdSignals(){
+            runUi(() -> sendLightCanProfiles());
         }
         @JavascriptInterface public void requestObdDevices() {
             runUi(() -> showPairedObd());
