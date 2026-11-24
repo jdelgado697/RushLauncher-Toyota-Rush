@@ -20,6 +20,91 @@ var currentStep=0,lastStepDistance=Infinity,offRouteCount=0,voiceStage='';
 var voiceEnabled=true,heldStatusTimer=null;
 var peek=$('homeNavPeek'),guideTimer=null,lastGuideStep=-1,lastGuideStage='';
 var routeCumulative=[],routeGeometryMeters=0,bestProgressMeters=0;
+/* Rush 4.20.11 · Alternativas TomTom, preferencias y Waze externo.
+   Nunca se afirman alertas comunitarias exclusivas de Waze. */
+var routeOptions=[],selectedOption=0,lastTrafficRefresh=0;
+var altPanel=$('homeNavAlternatives'),optionsButton=$('homeNavOptions'),
+    wazeButton=$('homeNavWaze'),avoidTolls=$('rushAvoidTolls'),
+    avoidMotorways=$('rushAvoidMotorways'),avoidUnpaved=$('rushAvoidUnpaved');
+function storedBool(key){try{return localStorage.getItem(key)==='yes'}catch(e){return false}}
+[[avoidTolls,'rush_nav_avoid_tolls'],
+ [avoidMotorways,'rush_nav_avoid_motorways'],
+ [avoidUnpaved,'rush_nav_avoid_unpaved']].forEach(function(pair){
+ var input=pair[0];if(!input)return;
+ input.checked=storedBool(pair[1]);
+ input.addEventListener('change',function(){
+  try{localStorage.setItem(pair[1],input.checked?'yes':'no'}catch(e){}
+  if(destination&&route&&stopped()){
+   lastRouteAt=0;requestRoute(false);
+  }else if(destination)showStatus('Se aplicará al próximo recálculo detenido',true);
+ });
+});
+function preferences(){
+ return {tolls:!!(avoidTolls&&avoidTolls.checked),
+   motorways:!!(avoidMotorways&&avoidMotorways.checked),
+   unpaved:!!(avoidUnpaved&&avoidUnpaved.checked)};
+}
+function ttKey(){
+ try{var v=localStorage.getItem('rush_tomtom_key_420')||'';
+  return /^[A-Za-z0-9_-]{12,128}$/.test(v)?v:''}
+ catch(e){return ''}
+}
+function minLabel(s){return Math.max(1,Math.ceil(Number(s||0)/60))+' min'}
+function renderAltButtons(){
+ if(!altPanel)return;
+ altPanel.textContent='';
+ if(routeOptions.length<=1){
+  altPanel.hidden=true;if(optionsButton)optionsButton.hidden=true;return;
+ }
+ var caption=document.createElement('strong');
+ caption.textContent='Rutas · selección con vehículo detenido';
+ altPanel.appendChild(caption);
+ routeOptions.forEach(function(item,i){
+  var button=document.createElement('button');button.type='button';
+  button.disabled=!stopped();
+  button.className=i===selectedOption?'rush-alt-selected':'';
+  button.textContent=(i===0?'Rápida':'Alternativa '+(i+1))+
+    ' · '+minLabel(item.seconds)+' · '+distanceLabel(item.meters);
+  if(item.traffic&&Number(item.trafficDelaySeconds)>30)
+   button.textContent+=' · +'+minLabel(item.trafficDelaySeconds)+' tráfico';
+  button.addEventListener('click',function(){
+   if(!stopped()){showStatus('Detén el vehículo para seleccionar otra ruta',true);return;}
+   chooseAlternative(i);
+  });
+  altPanel.appendChild(button);
+ });
+ if(optionsButton)optionsButton.hidden=false;
+}
+function chooseAlternative(index){
+ if(!routeOptions[index]||!routeResultValid(routeOptions[index]))return;
+ route=routeOptions[index];selectedOption=index;lastTrafficRefresh=Date.now();
+ currentStep=(route.steps[0]&&route.steps[0].type==='depart'&&
+   route.steps.length>1)?1:0;
+ lastStepDistance=Infinity;voiceStage='';offRouteCount=0;
+ indexRoute();
+ if(window.RushHomeMap){
+  window.RushHomeMap.setRoute(route.geometry);
+  if(window.RushHomeMap.setAlternates)
+   window.RushHomeMap.setAlternates(routeOptions.filter(function(x,i){return i!==index}));
+  window.RushHomeMap.follow();
+ }
+ renderAltButtons();
+ if(altPanel)altPanel.hidden=true;
+ updateGuidance();showGuideBriefly();
+}
+if(optionsButton)optionsButton.addEventListener('click',function(){
+ if(!stopped()){showStatus('Detén el vehículo para cambiar ruta',true);return;}
+ renderAltButtons();
+ if(altPanel&&routeOptions.length>1)altPanel.hidden=!altPanel.hidden;
+});
+if(wazeButton)wazeButton.addEventListener('click',function(){
+ if(!destination){showStatus('Selecciona primero un destino',true);return;}
+ if(!stopped()){showStatus('Detén el vehículo antes de abrir Waze',true);return;}
+ if(window.Rush&&typeof window.Rush.openWazeDestination==='function')
+  window.Rush.openWazeDestination(destination.lat,destination.lon);
+ else showStatus('Waze externo requiere aplicación Android instalada',true);
+});
+
 // ETA según distancia realmente recorrida sobre la polilínea OSRM.
 function measureSegment(a,b){
  var dx=(Number(b[0])-Number(a[0]))*111320*
