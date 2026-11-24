@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.9 · Faros Toyota Rush OBD CAN</title>
+<title>Rush Launcher 4.20.10 · Faros rápidos y direccionales</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -1257,6 +1257,27 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 #vehicleLightsSettings #vehicleLightsSignals{min-width:230px}
 #vehicleLightsSettings #vehicleLightsSignals[hidden],
 #vehicleLightsSettings #vehicleLightsSaveSignal[hidden]{display:none!important}
+
+/* 4.20.10 — faros altos y destellos sincronizados con CAN calibrado */
+.cararea .rush-car-light-layer{opacity:1!important;transition:none!important}
+.cararea .rush-car-light-layer .rush-low-beams,
+.cararea .rush-car-light-layer .rush-high-beams,
+.cararea .rush-car-light-layer .rush-indicator-left,
+.cararea .rush-car-light-layer .rush-indicator-right{opacity:0}
+.cararea.rush-lights-on .rush-car-light-layer .rush-low-beams{opacity:1}
+.cararea.rush-lights-high .rush-car-light-layer .rush-high-beams{opacity:1}
+@keyframes rushIndicatorBlink{
+  0%,46%{opacity:1}
+  50%,100%{opacity:0}
+}
+.cararea.rush-turn-left-active .rush-car-light-layer .rush-indicator-left,
+.cararea.rush-turn-right-active .rush-car-light-layer .rush-indicator-right{
+ animation:rushIndicatorBlink 920ms steps(1,end) infinite;
+}
+.cararea.rush-lights-high .rush-light-badge{color:#c6efff;border-color:#6ce9ff;background:#14465de8}
+.cararea.rush-hazard-active .rush-light-badge{color:#ffe2a0;border-color:#ffb455;background:#613b0ce8}
+#vehicleLightsSettings [data-light-preview][aria-pressed=true]{outline:2px solid #ffc04c}
+#vehicleLightsSettings #vehicleLightsTarget{margin:5px 0 7px;max-width:300px}
 </style>
 </head>
 <body>
@@ -1276,7 +1297,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.9</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.10</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1325,14 +1346,32 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
      <defs>
       <radialGradient id="rushHeadGlow"><stop stop-color="#fffefa" stop-opacity=".99"/><stop offset=".18" stop-color="#fffbda" stop-opacity=".93"/><stop offset=".42" stop-color="#ffe8a5" stop-opacity=".42"/><stop offset="1" stop-color="#c5f5ff" stop-opacity="0"/></radialGradient>
       <radialGradient id="rushTailGlow"><stop stop-color="#ff3541" stop-opacity=".93"/><stop offset=".3" stop-color="#ff232b" stop-opacity=".70"/><stop offset="1" stop-color="#fd2222" stop-opacity="0"/></radialGradient>
+      <radialGradient id="rushHighGlow"><stop stop-color="#eaffff" stop-opacity="1"/><stop offset=".25" stop-color="#beefff" stop-opacity=".92"/><stop offset=".55" stop-color="#75caff" stop-opacity=".35"/><stop offset="1" stop-color="#83dbff" stop-opacity="0"/></radialGradient>
+      <radialGradient id="rushAmberGlow"><stop stop-color="#fff9b8" stop-opacity="1"/><stop offset=".25" stop-color="#ffbb26" stop-opacity=".96"/><stop offset=".53" stop-color="#ff8a0c" stop-opacity=".5"/><stop offset="1" stop-color="#ffae12" stop-opacity="0"/></radialGradient>
       <linearGradient id="rushLightBeam"><stop stop-color="#fff1bf" stop-opacity=".65"/><stop offset=".45" stop-color="#feefd5" stop-opacity=".25"/><stop offset="1" stop-color="#f9f7ea" stop-opacity="0"/></linearGradient>
      </defs>
+     <g class="rush-low-beams">
      <path d="M61 64 L-18 54 L-20 106 L61 79Z" fill="url(#rushLightBeam)" opacity=".60"/>
      <ellipse cx="61" cy="67" rx="31" ry="14" fill="url(#rushHeadGlow)"/>
      <path d="M49 71 Q65 63 78 60" stroke="#fffef1" stroke-width="3.2" stroke-linecap="round" fill="none" opacity=".96"/>
      <ellipse cx="13" cy="72" rx="15" ry="11" fill="url(#rushHeadGlow)"/>
      <ellipse cx="63" cy="83" rx="11" ry="8" fill="url(#rushHeadGlow)" opacity=".76"/>
      <ellipse cx="162" cy="49" rx="14" ry="10" fill="url(#rushTailGlow)" opacity=".95"/>
+     </g>
+     <g class="rush-high-beams" aria-label="Faro alto">
+      <path d="M57 63 L-36 26 L-37 93 L57 73Z" fill="url(#rushLightBeam)" opacity=".86"/>
+      <ellipse cx="60" cy="65" rx="38" ry="18" fill="url(#rushHighGlow)"/>
+      <ellipse cx="17" cy="74" rx="20" ry="13" fill="url(#rushHighGlow)"/>
+      <path d="M44 68 Q60 58 75 57" stroke="#eafaff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+     </g>
+     <g class="rush-indicator-left">
+      <ellipse cx="44" cy="62" rx="17" ry="14" fill="url(#rushAmberGlow)"/>
+      <ellipse cx="146" cy="49" rx="12" ry="9" fill="url(#rushAmberGlow)"/>
+     </g>
+     <g class="rush-indicator-right">
+      <ellipse cx="18" cy="84" rx="19" ry="15" fill="url(#rushAmberGlow)"/>
+      <ellipse cx="159" cy="82" rx="13" ry="10" fill="url(#rushAmberGlow)"/>
+     </g>
     </svg>
     <span id="vehicleLightBadge" class="rush-light-badge">Luces OFF</span>
    <div class="car-label">Mi Toyota Rush · 2021 XLI</div>
@@ -1428,7 +1467,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.20.9 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.20.10 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -1442,9 +1481,26 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
     <button type="button" class="actionbtn" data-vehicle-light-mode="off" aria-pressed="false">Luces OFF</button>
    </div>
    <p id="vehicleLightStatus" class="muted" role="status">Esperando datos de luces</p>
+    <p id="vehicleLightsResponse" class="muted">CAN rápido: escucha cíclica</p>
+    <h3>Previsualizar efectos (no enciende luces físicas)</h3>
+    <div class="tile-buttons">
+     <button type="button" class="actionbtn" data-light-preview="high">Altas</button>
+     <button type="button" class="actionbtn" data-light-preview="left">Izquierda</button>
+     <button type="button" class="actionbtn" data-light-preview="right">Derecha</button>
+     <button type="button" class="actionbtn" data-light-preview="hazard">Balizas</button>
+    </div>
    <p id="vehicleLightDetail" class="muted">En ausencia de señal CAN se utiliza el modo noche como respaldo, identificado.</p>
-   <h3>Calibración CAN experimental · vehículo estacionado</h3>
-   <p class="muted">Conecta ELM327, mantén velocidad ECU en 0 km/h y registra apagadas → encendidas → apagadas → encendidas. La escucha ATMA es pasiva, no escribe comandos en la ECU. Algunas redes Toyota no exponen este dato.</p>
+   <h3>Calibración CAN por circuito · vehículo estacionado</h3>
+    <label class="muted" for="vehicleLightsTarget">Circuito
+     <select id="vehicleLightsTarget" class="nameinput">
+      <option value="low">Luces bajas</option>
+      <option value="high">Luces altas</option>
+      <option value="left">Direccional izquierda</option>
+      <option value="right">Direccional derecha</option>
+      <option value="hazard">Balizas</option>
+     </select>
+    </label>
+   <p class="muted">Conecta ELM327, mantén velocidad ECU en 0 km/h y registra apagadas → encendidas → apagadas → encendidas. La escucha ATMA es pasiva, no escribe comandos en la ECU. Algunas redes Toyota no exponen este dato. Para cada circuito repite OFF/ON/OFF/ON; en intermitentes, mantenlos parpadeando en toda la captura.</p>
    <p class="muted" id="vehicleLightsLearnStep">1/4 · Luces apagadas</p>
    <div class="tile-buttons">
     <button type="button" class="actionbtn highlight" id="vehicleLightsLearn">Registrar fase 1/4</button>

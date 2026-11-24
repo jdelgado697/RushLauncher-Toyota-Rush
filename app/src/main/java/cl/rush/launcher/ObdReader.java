@@ -39,109 +39,146 @@ public final class ObdReader {
     private volatile boolean running;
     private volatile BluetoothSocket socket;
     private volatile Thread worker;
-    private volatile LightCanMonitor.Profile lightProfile;
+    // Perfiles identificados SOLO mediante calibración de cuatro estados.
+    // ELM327 comparte un único canal serial; el worker prioriza CAN y reduce
+    // las lecturas de motor, para que cambios de luces no esperen 3-5 s.
+    private final java.util.concurrent.ConcurrentHashMap<String,LightCanMonitor.Profile>
+        lightProfiles=new java.util.concurrent.ConcurrentHashMap<>();
     private volatile int learnRequest=0;
+    private volatile String learnTarget="low",foundTarget="low";
     private volatile boolean canMonitorUnavailable=false;
     private final LightCanMonitor.Capture[] learning=new LightCanMonitor.Capture[4];
     private volatile java.util.ArrayList<LightCanMonitor.Profile> foundSignals=
             new java.util.ArrayList<>();
-    private long lastCanMonitorAt=0;
     private void lightMessage(JSONObject info){ui.post(() -> listener.onLightCan(info));}
-    private void reportLight(String kind,String message) {
+    private static boolean validTarget(String type) {
+        return "low".equals(type)||"high".equals(type)||"left".equals(type)||
+            "right".equals(type)||"hazard".equals(type);
+    }
+    private void reportLight(String kind,String target,String message) {
         JSONObject info=new JSONObject();
-        try{
+        try {
             info.put("kind",kind);
+            info.put("target",target);
             info.put("message",message);
             info.put("at",System.currentTimeMillis());
         }catch(Exception ignored){}
         lightMessage(info);
     }
-    public void setLightProfile(LightCanMonitor.Profile value){
-        lightProfile=value;
+    private void reportLight(String kind,String message){
+        reportLight(kind,"low",message);
+    }
+    public void setLightProfile(LightCanMonitor.Profile value) {
+        setLightProfile("low",value);
+    }
+    public void setLightProfile(String target,LightCanMonitor.Profile profile){
+        if(!validTarget(target))return;
+        if(profile==null)lightProfiles.remove(target);
+        else lightProfiles.put(target,profile);
         canMonitorUnavailable=false;
-        lastCanMonitorAt=0;
-        reportLight("configured",value==null?
-            "No hay señal CAN calibrada para los faros":
-            "Señal CAN configurada; esperando lectura real del vehículo");
+        reportLight("configured",target,
+            profile==null?"CAN sin perfil: "+target:
+            "Perfil CAN "+target+" configurado; esperando lectura real");
     }
     public void requestLightCalibration(int step){
-        if(step<1||step>4||!running){
-            reportLight("error","Conecta primero el ELM327; calibra con el vehículo detenido.");
+        requestLightCalibration("low",step);
+    }
+    public void requestLightCalibration(String target,int step) {
+        if(!validTarget(target)||step<1||step>4||!running) {
+            reportLight("error",target,"Conecta ELM327. Calibra con el vehículo detenido.");
             return;
         }
         if(step==1){
             for(int i=0;i<4;i++)learning[i]=null;
             foundSignals=new java.util.ArrayList<>();
-        }else if(learning[step-2]==null){
-            reportLight("error","Realiza las cuatro etapas en orden: OFF, ON, OFF, ON.");
+            foundTarget=target;
+        }else if(!foundTarget.equals(target)||learning[step-2]==null){
+            reportLight("error",target,"Registra 4 fases del MISMO circuito en orden OFF/ON/OFF/ON.");
             return;
         }
+        learnTarget=target;
         learnRequest=step;
-        reportLight("progress","Preparando captura CAN de fase "+step+"/4. Mantén las luces en su estado.");
+        reportLight("progress",target,"Escuchando CAN "+target+" · fase "+step+"/4");
     }
-    public boolean isLightCandidate(String id,int byteIndex,int bitMask,int onBit){
+    public boolean isLightCandidate(String id,int index,int mask,int on){
+        return isLightCandidate("low",id,index,mask,on,false);
+    }
+    public boolean isLightCandidate(String target,String id,int index,int mask,
+                                    int on,boolean pulse){
+        if(!foundTarget.equals(target))return false;
         for(LightCanMonitor.Profile p:foundSignals)
-            if(p.id.equalsIgnoreCase(id)&&p.index==byteIndex&&
-                p.mask==bitMask&&p.onBit==onBit)return true;
+            if(p.id.equalsIgnoreCase(id)&&p.index==index&&p.mask==mask&&
+               p.onBit==on&&p.pulse==pulse)return true;
         return false;
     }
-    private void monitorLights(OutputStream out,InputStream in,Map<String,Double> values){
+    public boolean hasLightingProfiles(){return !lightProfiles.isEmpty();}
+    private static void restoreElmForEngine(OutputStream out,InputStream in){
+        try{LightCanMonitor.exchange(out,in,"ATH0",450);}catch(Exception ignored){}
+        try{LightCanMonitor.exchange(out,in,"ATS0",450);}catch(Exception ignored){}
+    }
+    private boolean monitorLights(OutputStream out,InputStream in,
+                   Map<String,Double> values,boolean configure,boolean restore){
         int stage=learnRequest;
+        String target=learnTarget;
         if(stage!=0)learnRequest=0;
-        if(stage==0&&(lightProfile==null||canMonitorUnavailable||
-           System.currentTimeMillis()-lastCanMonitorAt<5000))return;
-        // ELM y bus CAN compartidos con las mediciones OBD. Sólo lo escucha
-        // en una ventana breve, NUNCA transmite tramas de control al auto.
-        if(stage!=0){
+        if(stage==0&&(lightProfiles.isEmpty()||canMonitorUnavailable))return false;
+        if(stage!=0) {
             Double vehicleSpeed=values.get("0D");
             if(vehicleSpeed==null||vehicleSpeed>1.5){
-                reportLight("error","Calibración cancelada: velocidad ECU no disponible o vehículo en movimiento.");
-                return;
+                reportLight("error",target,
+                    "Calibración cancelada: velocidad OBD no disponible o auto en movimiento.");
+                return false;
             }
         }
-        lastCanMonitorAt=System.currentTimeMillis();
-        try{
-            LightCanMonitor.Capture capture=LightCanMonitor.listen(
-                out,in,stage!=0?1400:650);
-            if(stage!=0){
-                if(capture.messages<6){
-                    reportLight("error","ELM327 no muestra suficientes tramas CAN: "+capture.messages+
-                        ". Este vehículo/adaptador podría no exponer el estado de luces.");
-                    return;
+        try {
+            LightCanMonitor.Capture cap=LightCanMonitor.listen(out,in,
+                stage!=0?1750:260,configure,restore);
+            if(stage!=0) {
+                if(cap.messages<6){
+                    reportLight("error",target,
+                        "Muy pocas tramas CAN. Gateway Toyota/ELM327 podría no exponer "+
+                        "esta señal.");
+                    return false;
                 }
-                learning[stage-1]=capture;
+                learning[stage-1]=cap;
                 JSONObject result=new JSONObject();
-                result.put("kind","phase");
-                result.put("step",stage);
-                result.put("messages",capture.messages);
-                result.put("message","Fase "+stage+"/4 registrada; "+
-                    capture.messages+" tramas CAN recibidas.");
+                result.put("kind","phase");result.put("target",target);
+                result.put("step",stage);result.put("messages",cap.messages);
+                result.put("message","Fase "+stage+"/4 registrada · "+cap.messages+" tramas");
                 if(stage==4){
-                    foundSignals=LightCanMonitor.candidates(learning);
+                    boolean pulse="left".equals(target)||"right".equals(target)||
+                                  "hazard".equals(target);
+                    foundSignals=LightCanMonitor.candidates(learning,pulse);
                     JSONArray candidates=new JSONArray();
-                    for(LightCanMonitor.Profile profile:foundSignals)candidates.put(profile.json());
+                    for(LightCanMonitor.Profile p:foundSignals)candidates.put(p.json());
                     result.put("candidates",candidates);
-                    result.put("message",foundSignals.size()>0?
-                        "Calibración completa. Selecciona una señal candidata y verifica que cambie realmente con las luces.":
-                        "Sin bits CAN que reproduzcan OFF/ON/OFF/ON; no se detectaron faros por OBD.");
+                    result.put("message",foundSignals.isEmpty()?
+                        "No se detectaron señales compatibles; esta red podría no exponer "+
+                        target:"Selecciona una señal candidata y verifica la acción real.");
                 }
                 lightMessage(result);
-                return;
+                return false;
             }
-            Boolean active=LightCanMonitor.read(lightProfile,capture);
+            JSONObject readings=new JSONObject(),valid=new JSONObject();
+            for(java.util.Map.Entry<String,LightCanMonitor.Profile> e:
+                    lightProfiles.entrySet()){
+                Boolean active=LightCanMonitor.read(e.getValue(),cap);
+                valid.put(e.getKey(),active!=null);
+                if(active!=null)readings.put(e.getKey(),active);
+            }
             JSONObject reading=new JSONObject();
-            reading.put("kind","reading");
-            reading.put("valid",active!=null);
-            if(active!=null)reading.put("on",active);
+            reading.put("kind","readings");
+            reading.put("values",readings);reading.put("valid",valid);
             reading.put("at",System.currentTimeMillis());
-            reading.put("message",active==null?
-                "Sin trama CAN válida para luces; estado desconocido.":
-                active?"Luces ON detectadas por CAN":"Luces OFF detectadas por CAN");
+            reading.put("message","CAN rápido · "+cap.messages+" tramas");
             lightMessage(reading);
-        }catch(Exception error){
+            return true;
+        }catch(Exception ex) {
             canMonitorUnavailable=true;
-            reportLight("unavailable","No se pudo escuchar CAN por ELM327: "+
-                shortMessage(error)+". No se inventará el estado de las luces.");
+            reportLight("unavailable","all",
+                "Escucha CAN interrumpida: "+shortMessage(ex)+
+                ". Revisa si el ELM327 soporta ATMA.");
+            return false;
         }
     }
 
@@ -212,26 +249,73 @@ public final class ObdReader {
                 status(known ? "OBD-II conectado · sensores detectados" :
                         "OBD-II conectado · sondeo de sensores");
                 int cycle=0;
+                long lastEnginePoll=0;
+                boolean monitorConfigured=false;
                 while(running && Thread.currentThread()==worker) {
-                    for(String pid : new String[]{"0D","0C","05"}) {
-                        if(!running) break;
-                        if(known && !supported.contains(pid)) {
-                            values.remove(pid); continue;
+                    // Calibración: el vehículo debe estar DETENIDO y tener
+                    // lectura fresca de velocidad desde ECU, no solo GPS.
+                    if(learnRequest!=0) {
+                        if(monitorConfigured){
+                            restoreElmForEngine(out,in);monitorConfigured=false;
+                        }
+                        Double stationary=readPid(out,in,"0D",1000);
+                        if(stationary==null)values.remove("0D");
+                        else values.put("0D",stationary);
+                        monitorLights(out,in,values,true,true);
+                        continue;
+                    }
+                    boolean fastLights=hasLightingProfiles()&&!canMonitorUnavailable;
+                    if(fastLights){
+                        // Priorizar seguimiento de CAN. Una captura dura 260ms;
+                        // el render en JS es inmediato al recibir el evento.
+                        // Cada 5s se interrumpe CAN para refrescar RPM, motor.
+                        if(System.currentTimeMillis()-lastEnginePoll>5200){
+                            if(monitorConfigured){
+                                restoreElmForEngine(out,in);monitorConfigured=false;
+                            }
+                            for(String pid:new String[]{"0D","0C","05"}){
+                                if(known&&!supported.contains(pid)){
+                                    values.remove(pid);continue;
+                                }
+                                Double v=readPid(out,in,pid,900);
+                                if(v==null)values.remove(pid);else values.put(pid,v);
+                            }
+                            if(cycle%3==0){
+                                Double voltage=readVoltage(send(out,in,"ATRV",900));
+                                if(voltage!=null)values.put("RV",voltage);
+                            }
+                            data(snapshot(values,supported,known));
+                            lastEnginePoll=System.currentTimeMillis();
+                        }
+                        monitorConfigured=monitorLights(out,in,values,
+                            !monitorConfigured,false);
+                        if(!monitorConfigured)restoreElmForEngine(out,in);
+                        cycle++;
+                        Thread.sleep(30);
+                        continue;
+                    }
+                    if(monitorConfigured){
+                        restoreElmForEngine(out,in);monitorConfigured=false;
+                    }
+                    // Sin perfiles CAN calibrados: conservar tablero OBD.
+                    for(String pid:new String[]{"0D","0C","05"}){
+                        if(!running)break;
+                        if(known&&!supported.contains(pid)){
+                            values.remove(pid);continue;
                         }
                         Double v=readPid(out,in,pid,1500);
-                        if(v==null)values.remove(pid); else values.put(pid,v);
+                        if(v==null)values.remove(pid);else values.put(pid,v);
                     }
-                    String extra=EXTRA[cycle % EXTRA.length];
-                    if(running) {
-                        if("RV".equals(extra)) {
-                            Double voltage=readVoltage(send(out,in,"ATRV",1500));
-                            if(voltage==null) values.remove("RV"); else values.put("RV",voltage);
-                        } else if(!known || supported.contains(extra)) {
+                    String extra=EXTRA[cycle%EXTRA.length];
+                    if(running){
+                        if("RV".equals(extra)){
+                            Double v=readVoltage(send(out,in,"ATRV",1500));
+                            if(v==null)values.remove("RV");else values.put("RV",v);
+                        }else if(!known||supported.contains(extra)){
                             Double v=readPid(out,in,extra,1500);
-                            if(v==null) values.remove(extra); else values.put(extra,v);
+                            if(v==null)values.remove(extra);else values.put(extra,v);
                         }
                         data(snapshot(values,supported,known));
-                        if(running)monitorLights(out,in,values);
                     }
                     cycle++;
                     Thread.sleep(220);

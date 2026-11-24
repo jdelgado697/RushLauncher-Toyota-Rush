@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can, rush-launcher-42010-faros-rapidos-direccionales]
 
 permissions:
   contents: read
@@ -83,7 +83,7 @@ jobs:
           assert "function syncPanelZoom()" in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "isClassicPanel()" not in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "if (saved.drive) window.RushHomeMap.follow()" not in js
-          assert "4.20.9" in html and "id=\"navTestSpeech\"" in html
+          assert "4.20.10" in html and "id=\"navTestSpeech\"" in html
           assert "id=\"navTtsSettings\"" in html
           assert "has-active-route" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert "externalGpsFresh()" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
@@ -106,10 +106,20 @@ jobs:
           lights=Path('app/src/main/assets/vehicle_lights.js').read_text(encoding='utf-8')
           assert 'ATMA' in can and 'candidates(Capture[] four)' in can
           assert 'onLightCan(JSONObject info)' in reader
-          assert 'monitorLights(out,in,values)' in reader
+          assert 'monitorLights(out,in,values,' in reader
           assert 'calibrateObdLights(int step)' in native
           assert 'selectObdLightsSignal(' in native
           assert 'rushLightCanEvent' in lights
+          assert 'rushLightCanProfiles' in lights
+          assert 'rush-turn-left-active' in html and 'rush-turn-right-active' in html
+          assert 'rush-lights-high' in html and 'id="vehicleLightsTarget"' in html
+          assert 'data-light-preview="hazard"' in html
+          assert 'static Boolean read(Profile profile,Capture capture)' in can
+          assert 'candidates(Capture[] four,boolean pulse)' in can
+          assert 'monitorConfigured=monitorLights' in reader
+          assert 'Thread.sleep(30)' in reader
+          assert 'selectObdSignal(' in native and 'calibrateObdSignal(' in native
+          assert 'rush_light_can_pulse' in native
           assert 'rush-lights-on' in html
           assert 'vehicleLightStatus' in html
           assert 'Chile sin internet' in html
@@ -122,11 +132,11 @@ jobs:
           assert 'function followSmoothly(lat,lon)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'offlineMode' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'if(zoom===16&&motionSpeed<72)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
-          assert '4.20.9' in html and 'home-map-marker::after' in html
+          assert '4.20.10' in html and 'home-map-marker::after' in html
           assert '#5cd8bb' in html and '#8cd8ed' in html
-          assert "applicationId 'cl.rush.launcher.lightsobd'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert "applicationId 'cl.rush.launcher.lightsfast'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
-          assert 'Rush Faros OBD 4.20.9' in label
+          assert 'Rush Luces 4.20.10' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           nav=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           hm=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
@@ -158,7 +168,7 @@ jobs:
           assert 'Overpass' in Path("app/src/main/java/cl/rush/launcher/BuildingData3D.java").read_text(encoding="utf-8")
           assert 'buildingData3D.request' in native and 'buildingData3D.shutdown()' in native
           assert 'public void fetch3dBuildings(' in native
-          assert 'RushLauncher/4.20.9' in native
+          assert 'RushLauncher/4.20.10' in native
           assert 'getString(NMEA_HOST' in native and 'trafficTileUrl' in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "rush-map-fullscreen" in js and 'document.body.appendChild(homeMapHost)' in js
           assert "window.Rush.stopMapGps()" in js
@@ -428,8 +438,8 @@ jobs:
           assert '1600L,0f,this,Looper.getMainLooper()' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.lightsobd'" in Path("app/build.gradle").read_text(encoding="utf-8")
-          assert 'RushLauncher/4.20.9' in native
+          assert "applicationId 'cl.rush.launcher.lightsfast'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert 'RushLauncher/4.20.10' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -454,7 +464,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 61" in gradle
+          assert "versionCode 62" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -714,7 +724,7 @@ jobs:
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
         with:
-          name: RushLauncher-4.20.9-Faros-OBD-CAN-APK
+          name: RushLauncher-4.20.10-Luces-Rapidas-Direccionales-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

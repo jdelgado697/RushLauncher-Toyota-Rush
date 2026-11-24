@@ -8,11 +8,11 @@ android {
 
     defaultConfig {
         // Edición paralela: nunca reemplaza ni borra Rush Launcher instalado.
-        applicationId 'cl.rush.launcher.lightsobd'
+        applicationId 'cl.rush.launcher.lightsfast'
         minSdk 26
         targetSdk 33
-        versionCode 61
-        versionName '4.20.9-HeadlightsCan'
+        versionCode 62
+        versionName '4.20.10-FastLights'
     }
 
     compileOptions {
