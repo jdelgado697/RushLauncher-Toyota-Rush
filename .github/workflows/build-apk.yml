@@ -4,7 +4,7 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can, rush-launcher-42010-faros-rapidos-direccionales, rush-launcher-42011-navegacion-trafico-alternativas]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can, rush-launcher-42010-faros-rapidos-direccionales, rush-launcher-42011-navegacion-trafico-alternativas, rush-launcher-42012-diagnostico-integrado]
 
 permissions:
   contents: read
@@ -49,6 +49,7 @@ jobs:
           node --check app/src/main/assets/rush_3d.js
           node --check app/src/main/assets/home_navigation.js
           node --check app/src/main/assets/vehicle_lights.js
+          node --check app/src/main/assets/rush_diagnostic.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path("app/src/main/assets/index.html").read_text(encoding="utf-8")
@@ -83,7 +84,7 @@ jobs:
           assert "function syncPanelZoom()" in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "isClassicPanel()" not in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "if (saved.drive) window.RushHomeMap.follow()" not in js
-          assert "4.20.11" in html and "id=\"navTestSpeech\"" in html
+          assert "4.20.12" in html and "id=\"navTestSpeech\"" in html
           assert "id=\"navTtsSettings\"" in html
           assert "has-active-route" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert "externalGpsFresh()" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
@@ -96,6 +97,28 @@ jobs:
           assert 'id="navTestSound"' in html and 'id="navAudioDiag"' in html
           assert 'id="navAudioDiagStatus"' in html
           assert 'id="homeNavPeek"' in html
+          assert 'id="obdDiagnosticPanel"' in html
+          assert 'id="rushDiagScan"' in html
+          assert 'id="rushDiagExport"' in html
+          assert '<script src="rush_diagnostic.js"></script>' in html
+          assert 'rush-diagnostic-sheet' in html
+          diag=Path('app/src/main/java/cl/rush/launcher/RushObdDiagnostics.java').read_text(encoding='utf-8')
+          obd=Path('app/src/main/java/cl/rush/launcher/ObdReader.java').read_text(encoding='utf-8')
+          diag_ui=Path('app/src/main/assets/rush_diagnostic.js').read_text(encoding='utf-8')
+          assert 'String[] commands={"03","07","0A"}' in diag
+          assert '0101' in diag and '020C00' not in diag
+          assert '020500' not in diag and '"02"+pid+"00"' in diag
+          assert '0902' in diag and 'VIN' in diag
+          assert 'readReadiness' in diag and 'readCodes' in diag
+          assert 'send(out,in,"04"' not in obd and 'command.ask("04"' not in diag
+          assert 'onDiagnostic(JSONObject info)' in obd
+          assert 'RushObdDiagnostics.scan(' in obd
+          assert 'if(diagnosticRequested)' in obd
+          assert 'scanRushObdDiagnostics()' in native
+          assert 'saveRushDiagnosticCsv(String content)' in native
+          assert 'Intent.ACTION_CREATE_DOCUMENT' in native
+          assert 'rushDiagnosticEvent' in diag_ui
+          assert 'rush_diagnostic_history_42012' in diag_ui
           nav=Path('app/src/main/assets/home_navigation.js').read_text(encoding='utf-8')
           map_js=Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'routeHomeNavAdvanced' in native and 'retrieveTomTomTrafficRoute' in native
@@ -111,7 +134,7 @@ jobs:
           assert 'id="homeAlternateRoutes"' in html
           assert 'drawAlternates(center,w,h)' in map_js
           assert 'setAlternates:setAlternates' in map_js
-          assert '4.20.11' in html
+          assert '4.20.12' in html
           assert 'id="homeMapOfflineChip"' in html
           assert 'id="rushVehicleLightArt"' in html
           assert 'id="vehicleLightsLearn"' in html
@@ -148,11 +171,11 @@ jobs:
           assert 'function followSmoothly(lat,lon)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'offlineMode' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'if(zoom===16&&motionSpeed<72)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
-          assert '4.20.11' in html and 'home-map-marker::after' in html
+          assert '4.20.12' in html and 'home-map-marker::after' in html
           assert '#5cd8bb' in html and '#8cd8ed' in html
-          assert "applicationId 'cl.rush.launcher.navtraffic'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert "applicationId 'cl.rush.launcher.diagnostic'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
-          assert 'Rush Navigator 4.20.11' in label
+          assert 'Rush Diagnostic 4.20.12' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           nav=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           hm=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
@@ -184,7 +207,7 @@ jobs:
           assert 'Overpass' in Path("app/src/main/java/cl/rush/launcher/BuildingData3D.java").read_text(encoding="utf-8")
           assert 'buildingData3D.request' in native and 'buildingData3D.shutdown()' in native
           assert 'public void fetch3dBuildings(' in native
-          assert 'RushLauncher/4.20.11' in native
+          assert 'RushLauncher/4.20.12' in native
           assert 'getString(NMEA_HOST' in native and 'trafficTileUrl' in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "rush-map-fullscreen" in js and 'document.body.appendChild(homeMapHost)' in js
           assert "window.Rush.stopMapGps()" in js
@@ -454,8 +477,8 @@ jobs:
           assert '1600L,0f,this,Looper.getMainLooper()' in native
           assert 'public void startMapGps()' in native and 'public void stopMapGps()' in native
           gradle=Path("app/build.gradle").read_text(encoding="utf-8")
-          assert "applicationId 'cl.rush.launcher.navtraffic'" in Path("app/build.gradle").read_text(encoding="utf-8")
-          assert 'RushLauncher/4.20.11' in native
+          assert "applicationId 'cl.rush.launcher.diagnostic'" in Path("app/build.gradle").read_text(encoding="utf-8")
+          assert 'RushLauncher/4.20.12' in native
           assert 'cl.rush.launcher.MainActivity' in manifest
           obd=Path("app/src/main/java/cl/rush/launcher/ObdReader.java").read_text(encoding="utf-8")
           assert 'onData(JSONObject snapshot)' in obd
@@ -480,7 +503,7 @@ jobs:
           assert 'data-action="obdDashboard"' in html
 
           assert 'renderObdAdvanced' in js and 'obdMetricFields' in js
-          assert "versionCode 63" in gradle
+          assert "versionCode 64" in gradle
           asset=Path("app/src/main/assets/rush_gray.webp")
           car=asset.read_bytes()
           assert car[:4]==b'RIFF' and car[8:12]==b'WEBP' and len(car)>4000
@@ -724,6 +747,22 @@ jobs:
             print('Mapa incluido en APK, MB:',round(f.file_size/1048576,1))
           PY
 
+      - name: Verificar módulo diagnóstico dentro del APK
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          path='app/build/outputs/apk/debug/app-debug.apk'
+          with zipfile.ZipFile(path) as z:
+            js=z.read('assets/rush_diagnostic.js').decode('utf-8')
+            html=z.read('assets/index.html').decode('utf-8')
+            assert 'scanRushObdDiagnostics' in js
+            assert 'rushDiagOpenFromDashboard' in html
+            assert 'rushDiagConfirmedCount' in html
+            assert z.getinfo('assets/chile_offline.db').file_size>200000000
+            print('Rush Diagnostic: HTML y JS incluidos, SQLite Chile intacta')
+          PY
+
       - name: Validar imagen y función HOME en APK
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -740,7 +779,7 @@ jobs:
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
         with:
-          name: RushLauncher-4.20.11-Navegacion-TomTom-Waze-APK
+          name: RushLauncher-4.20.12-Diagnostic-Chile-Offline-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
