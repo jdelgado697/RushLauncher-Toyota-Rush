@@ -25,15 +25,22 @@ final class LightCanMonitor {
         final int index;
         final int mask;
         final int onBit;
+        final boolean pulse;
         Profile(String frameId,int byteIndex,int bitMask,int valueWhenOn) {
+            this(frameId,byteIndex,bitMask,valueWhenOn,false);
+        }
+        Profile(String frameId,int byteIndex,int bitMask,int valueWhenOn,
+                boolean blinking) {
             id=frameId.toUpperCase(Locale.US);
             index=byteIndex;mask=bitMask;onBit=valueWhenOn;
+            pulse=blinking;
         }
         JSONObject json(){
             JSONObject result=new JSONObject();
             try {
                 result.put("id",id);result.put("byte",index);
                 result.put("mask",mask);result.put("onBit",onBit);
+                result.put("pulse",pulse);
             } catch(Exception ignored){}
             return result;
         }
@@ -41,12 +48,12 @@ final class LightCanMonitor {
 
     static final class Stats {
         int count=0;
-        int[] and=new int[8],or=new int[8];
+        int[] and=new int[8],or=new int[8],last=new int[8];
         Stats(){for(int i=0;i<8;i++)and[i]=255;}
         void add(int[] bytes){
             count++;
             for(int i=0;i<Math.min(8,bytes.length);i++){
-                and[i]&=bytes[i];or[i]|=bytes[i];
+                and[i]&=bytes[i];or[i]|=bytes[i];last[i]=bytes[i];
             }
         }
         boolean stableBit(int index,int bit) {
@@ -67,13 +74,22 @@ final class LightCanMonitor {
     }
 
     static Capture listen(OutputStream out,InputStream in,long ms) throws Exception {
+        return listen(out,in,ms,true,true);
+    }
+    // Modo rápido: inicializar encabezados una vez, leer CAN con ventanas
+    // cortas y restaurar ATH0/ATS0 solo cuando toque consultar ECU.
+    // El puerto SPP se usa desde UN único worker, sin carreras de lectura.
+    static Capture listen(OutputStream out,InputStream in,long ms,
+                          boolean configure,boolean restore) throws Exception {
         Capture result=new Capture();
-        String protocol=exchange(out,in,"ATDPN",1600).replaceAll("[^A-Z0-9]","");
-        // Sólo ISO 15765-4 CAN (6/7/8/9) y protocolo ya negociado.
-        if(!protocol.matches(".*[A]?[6789].*"))
-            throw new IllegalStateException("ELM327 no usa protocolo CAN (ATDPN="+protocol+")");
-        exchange(out,in,"ATH1",1200);
-        exchange(out,in,"ATS1",1200);
+        if(configure){
+            String protocol=exchange(out,in,"ATDPN",650)
+                .replaceAll("[^A-Z0-9]","");
+            if(!protocol.matches(".*[A]?[6789].*"))
+                throw new IllegalStateException("ELM327 no usa CAN (ATDPN="+protocol+")");
+            exchange(out,in,"ATH1",650);
+            exchange(out,in,"ATS1",650);
+        }
         StringBuilder raw=new StringBuilder(48000);
         try{
             while(in.available()>0)in.read();
@@ -92,14 +108,16 @@ final class LightCanMonitor {
             // ATMA en modo continuo: CR lo interrumpe antes de otra consulta.
             out.write('\r');
             out.flush();
-            long stop=System.currentTimeMillis()+1200;
+            long stop=System.currentTimeMillis()+260;
             while(System.currentTimeMillis()<stop){
                 if(in.available()>0){if(in.read()=='>')break;}
                 else Thread.sleep(10);
             }
         }finally{
-            try{exchange(out,in,"ATH0",1300);}catch(Exception ignored){}
-            try{exchange(out,in,"ATS0",1300);}catch(Exception ignored){}
+            if(restore){
+                try{exchange(out,in,"ATH0",450);}catch(Exception ignored){}
+                try{exchange(out,in,"ATS0",450);}catch(Exception ignored){}
+            }
         }
         for(String line:raw.toString().toUpperCase(Locale.US).split("[\\r\\n]+")){
             String trimmed=line.trim();
@@ -130,6 +148,9 @@ final class LightCanMonitor {
     }
 
     static ArrayList<Profile> candidates(Capture[] four){
+        return candidates(four,false);
+    }
+    static ArrayList<Profile> candidates(Capture[] four,boolean pulse){
         ArrayList<Profile> candidates=new ArrayList<>();
         if(four.length!=4)return candidates;
         for(Capture capture:four)if(capture==null)return candidates;
@@ -140,12 +161,23 @@ final class LightCanMonitor {
             for(int s=0;s<4;s++)z[s]=four[s].frames.get(id);
             for(int i=0;i<8;i++){
                 for(int mask=1;mask<256;mask*=2){
-                    if(!z[0].stableBit(i,mask)||!z[1].stableBit(i,mask)||
-                       !z[2].stableBit(i,mask)||!z[3].stableBit(i,mask))continue;
-                    int off=z[0].value(i,mask),on=z[1].value(i,mask);
-                    if(on==off||z[2].value(i,mask)!=off||z[3].value(i,mask)!=on)
-                        continue;
-                    candidates.add(new Profile(id,i,mask,on));
+                    if(!z[0].stableBit(i,mask)||!z[2].stableBit(i,mask))continue;
+                    int off=z[0].value(i,mask);
+                    if(z[2].value(i,mask)!=off)continue;
+                    int on=1-off;
+                    if(pulse){
+                        // Intermitentes: OFF fijo, ON debe contener cambios
+                        // observables dentro de ambas capturas. No podemos
+                        // exigir bit estable mientras realmente parpadea.
+                        boolean change1=(z[1].or[i]&mask)!=(z[1].and[i]&mask);
+                        boolean change3=(z[3].or[i]&mask)!=(z[3].and[i]&mask);
+                        if(!change1||!change3)continue;
+                    }else {
+                        if(!z[1].stableBit(i,mask)||!z[3].stableBit(i,mask)||
+                            z[1].value(i,mask)!=on||z[3].value(i,mask)!=on)
+                            continue;
+                    }
+                    candidates.add(new Profile(id,i,mask,on,pulse));
                 }
             }
         }
@@ -159,8 +191,14 @@ final class LightCanMonitor {
     static Boolean read(Profile profile,Capture capture) {
         if(profile==null||capture==null)return null;
         Stats stats=capture.frames.get(profile.id);
-        if(stats==null||stats.count<2||!stats.stableBit(profile.index,profile.mask))
-            return null; // tramas ausentes o bits inestables no son luces OFF
+        if(stats==null||stats.count<1)return null;
+        if(profile.pulse){
+            // El registro ON se permite inestable: la propia luz parpadea.
+            // El último bit de la ventana es la fase vista en el bus.
+            return ((stats.last[profile.index]&profile.mask)!=0)==
+                   (profile.onBit==1);
+        }
+        if(!stats.stableBit(profile.index,profile.mask))return null;
         return stats.value(profile.index,profile.mask)==profile.onBit;
     }
 
