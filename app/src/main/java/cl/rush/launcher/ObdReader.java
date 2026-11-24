@@ -245,7 +245,6 @@ public final class ObdReader {
                 }
                 Map<String,Double> values=new HashMap<>();
                 canMonitorUnavailable=false;
-                lastCanMonitorAt=0;
                 status(known ? "OBD-II conectado · sensores detectados" :
                         "OBD-II conectado · sondeo de sensores");
                 int cycle=0;
