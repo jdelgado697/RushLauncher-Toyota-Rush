@@ -33,7 +33,7 @@ function storedBool(key){try{return localStorage.getItem(key)==='yes'}catch(e){r
  var input=pair[0];if(!input)return;
  input.checked=storedBool(pair[1]);
  input.addEventListener('change',function(){
-  try{localStorage.setItem(pair[1],input.checked?'yes':'no'}catch(e){}
+  try{localStorage.setItem(pair[1],input.checked?'yes':'no')}catch(e){}
   if(destination&&route&&stopped()){
    lastRouteAt=0;requestRoute(false);
   }else if(destination)showStatus('Se aplicará al próximo recálculo detenido',true);
