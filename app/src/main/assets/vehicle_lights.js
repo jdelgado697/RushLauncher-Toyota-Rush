@@ -213,5 +213,7 @@ window.RushVehicleLights={
 };
 syncCalibration();render();
 if(native&&typeof window.Rush.getObdSignals==='function')window.Rush.getObdSignals();
-setInterval(render,180);
+// La recepción CAN actualiza inmediatamente; este timer solo caduca datos.
+// Evitar refrescos DOM innecesarios que reduzcan fluidez del mapa TBox.
+setInterval(render,500);
 })();
