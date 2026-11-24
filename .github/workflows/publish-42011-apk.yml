@@ -1,0 +1,52 @@
+name: Publicar APK Rush Navigator 4.20.11
+on:
+  push:
+    branches: [rush-launcher-42011-release-publish]
+    paths:
+      - .github/workflows/publish-42011-apk.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Recuperar APK oficial verificado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/14885959070/zip" > artefacto.zip
+          mkdir extraido
+          unzip -q artefacto.zip -d extraido
+          APK=$(find extraido -type f -name '*.apk' -print -quit)
+          test -n "$APK"
+          cp "$APK" RushLauncher-4.20.11-Navegacion-Trafico-Chile-Offline.apk
+          python3 - <<'PY'
+          import zipfile,hashlib
+          path='RushLauncher-4.20.11-Navegacion-Trafico-Chile-Offline.apk'
+          with zipfile.ZipFile(path) as apk:
+              assert apk.testzip() is None
+              assert apk.getinfo('assets/chile_offline.db').file_size>200000000
+              js=apk.read('assets/home_navigation.js').decode('utf-8')
+              assert 'routeHomeNavAdvanced' in js and 'chooseAlternative' in js
+          print('SHA256',hashlib.sha256(open(path,'rb').read()).hexdigest())
+          PY
+
+      - name: Publicar descarga estable de APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create v4.20.11-navegacion-trafico \
+            RushLauncher-4.20.11-Navegacion-Trafico-Chile-Offline.apk \
+            --repo "$REPO" \
+            --target "rush-launcher-42011-navegacion-trafico-alternativas" \
+            --title "Rush Launcher 4.20.11 - Rutas TomTom y trafico" \
+            --notes "APK para Toyota Rush/Carlinkit TBox Lite S. Conserva estilo pastel, mapas offline Chile, GPS iPhone y OBD. Con clave personal TomTom Routing API: rutas con tráfico, alternativas (hasta 2), evitar peajes/autopistas/caminos sin pavimentar y ETA con demora. Sin clave: rutas OSRM de respaldo sin tráfico en ETA. Botón para abrir Waze oficial en otra app si está instalado. No incluye ni reproduce alertas y reportes privados Waze. La conexión y clave TomTom son obligatorias para servicio de tráfico/routing; pueden aplicar cuotas. APK se instala en paralelo, no elimina versiones anteriores. Prueba en Carlinkit pendiente." \
+            --latest=false
