@@ -373,6 +373,10 @@ public class MainActivity extends Activity implements LocationListener {
                 javascript("if(window.rushLightCanEvent)window.rushLightCanEvent("+
                     info.toString()+");");
             }
+            @Override public void onDiagnostic(JSONObject info) {
+                javascript("if(window.rushDiagnosticEvent)window.rushDiagnosticEvent("+
+                    info.toString()+");");
+            }
         });
         for(String signal:new String[]{"low","high","left","right","hazard"})
             obdReader.setLightProfile(signal,loadLightCanProfile(signal));
@@ -392,7 +396,7 @@ public class MainActivity extends Activity implements LocationListener {
         settings.setBlockNetworkImage(false);
         // Identificación de la app y caché estándar para los mosaicos OSM.
         settings.setUserAgentString(settings.getUserAgentString()
-                + " RushLauncher/4.20.11 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
+                + " RushLauncher/4.20.12 (+https://github.com/jdelgado697/RushLauncher-Toyota-Rush)");
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.addJavascriptInterface(new RushBridge(), "Rush");
         webView.setWebChromeClient(new WebChromeClient());
@@ -2174,6 +2178,49 @@ public class MainActivity extends Activity implements LocationListener {
         }
     }
 
+    // Archivo de diagnóstico mediante selector de archivos Android: no requiere
+    // permiso de almacenamiento ni guarda en servidores. Sólo al tocar Exportar.
+    private static final int DIAGNOSTIC_CSV_REQUEST=5197;
+    private String diagnosticCsvPending=null;
+    private void startDiagnosticCsvExport(String content){
+        if(content==null||content.length()<30||content.length()>250000){
+            message("El informe CSV está vacío o supera el tamaño permitido.");
+            return;
+        }
+        diagnosticCsvPending=content;
+        try{
+            Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("text/csv");
+            String date=new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm",
+                Locale.US).format(new java.util.Date());
+            intent.putExtra(Intent.EXTRA_TITLE,"Rush-Diagnostic-"+date+".csv");
+            startActivityForResult(intent,DIAGNOSTIC_CSV_REQUEST);
+        }catch(Exception ex){
+            diagnosticCsvPending=null;
+            message("No hay selector de archivos para guardar el diagnóstico.");
+        }
+    }
+    @Override
+    protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=DIAGNOSTIC_CSV_REQUEST)return;
+        String csv=diagnosticCsvPending;
+        diagnosticCsvPending=null;
+        if(resultCode!=RESULT_OK||data==null||data.getData()==null||csv==null){
+            return;
+        }
+        try(java.io.OutputStream output=getContentResolver()
+                .openOutputStream(data.getData())){
+            if(output==null)throw new java.io.IOException("Destino no escribible");
+            output.write(csv.getBytes(StandardCharsets.UTF_8));
+            output.flush();
+            message("Informe Rush Diagnostic guardado en CSV.");
+        }catch(Exception e){
+            message("No se pudo guardar el informe CSV: "+e.getClass().getSimpleName());
+        }
+    }
+
     private final class RushBridge {
         @JavascriptInterface public void ready() {
             runUi(() -> {
@@ -2477,6 +2524,19 @@ public class MainActivity extends Activity implements LocationListener {
         }
         @JavascriptInterface public void getObdSignals(){
             runUi(() -> sendLightCanProfiles());
+        }
+        @JavascriptInterface public void scanRushObdDiagnostics(){
+            runUi(()->{
+                if(obdReader==null || !bluetoothAvailable()){
+                    javascript("if(window.rushDiagnosticEvent)window.rushDiagnosticEvent("+
+                        "{\"kind\":\"error\",\"message\":\"Conecta el ELM327 primero\"});");
+                    return;
+                }
+                obdReader.requestDiagnosticScan();
+            });
+        }
+        @JavascriptInterface public void saveRushDiagnosticCsv(String content){
+            runUi(()->startDiagnosticCsvExport(content));
         }
         @JavascriptInterface public void requestObdDevices() {
             runUi(() -> showPairedObd());
