@@ -8,11 +8,11 @@ android {
 
     defaultConfig {
         // Edición paralela: nunca reemplaza ni borra Rush Launcher instalado.
-        applicationId 'cl.rush.launcher.navtraffic'
+        applicationId 'cl.rush.launcher.diagnostic'
         minSdk 26
         targetSdk 33
-        versionCode 63
-        versionName '4.20.11-NavTrafficRoutes'
+        versionCode 64
+        versionName '4.20.12-RushDiagnostic'
     }
 
     compileOptions {
