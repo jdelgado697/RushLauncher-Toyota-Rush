@@ -8,11 +8,11 @@ android {
 
     defaultConfig {
         // Edición paralela: nunca reemplaza ni borra Rush Launcher instalado.
-        applicationId 'cl.rush.launcher.lightsfast'
+        applicationId 'cl.rush.launcher.navtraffic'
         minSdk 26
         targetSdk 33
-        versionCode 62
-        versionName '4.20.10-FastLights'
+        versionCode 63
+        versionName '4.20.11-NavTrafficRoutes'
     }
 
     compileOptions {

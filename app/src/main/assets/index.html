@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.10 · Faros rápidos y direccionales</title>
+<title>Rush Launcher 4.20.11 · Navegación con rutas y tráfico</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -1278,6 +1278,34 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 .cararea.rush-hazard-active .rush-light-badge{color:#ffe2a0;border-color:#ffb455;background:#613b0ce8}
 #vehicleLightsSettings [data-light-preview][aria-pressed=true]{outline:2px solid #ffc04c}
 #vehicleLightsSettings #vehicleLightsTarget{margin:5px 0 7px;max-width:300px}
+
+/* 4.20.11 · rutas alternativas y opciones de navegación ligeras */
+.rush-home-alt-routes{
+ position:absolute;bottom:51px;right:7px;
+ width:min(252px,77%);max-height:min(195px,65%);overflow-y:auto;
+ z-index:20;border-radius:10px;padding:7px;display:flex;flex-direction:column;gap:4px;
+ background:#07354af2;color:#efffff;border:1px solid #86dcd0;
+ box-shadow:0 5px 18px #001d2c99;pointer-events:auto;
+}
+.rush-home-alt-routes[hidden]{display:none!important}
+.rush-home-alt-routes strong{font-size:11px;line-height:1.2;padding:3px 3px 5px}
+.rush-home-alt-routes button{
+ text-align:left;min-height:31px;font-size:11px;line-height:1.15;
+ border:1px solid #9bc8ca72;border-radius:8px;color:#fff;
+ background:#173d51;padding:5px 8px;
+}
+.rush-home-alt-routes button.rush-alt-selected{
+ border-color:#60e8be;color:#c7ffe7;background:#145d63;
+}
+.rush-home-alt-routes button:disabled{opacity:.55}
+.home-map-tools #homeNavOptions,.home-map-tools #homeNavWaze{
+ background:#0a4b58d9;color:#ecfffe;font-size:10px;font-weight:850
+}
+.home-map-tools #homeNavWaze{background:#1c426d}
+.home-map-tools #homeNavOptions[hidden],
+.home-map-tools #homeNavWaze[hidden]{display:none!important}
+#rushNavRoutingSettings label{display:block;margin:6px 0;font-size:13px}
+#rushNavRoutingSettings input[type=checkbox]{width:17px;height:17px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -1297,7 +1325,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.10</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.11</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1381,6 +1409,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 <section class="home-map glass" aria-label="Vista previa del mapa y acceso a la navegación">
    <div id="homeMapTiles" class="home-map-tiles" aria-hidden="true">
     <svg id="homeRouteSvg" class="home-route-svg" viewBox="0 0 500 300" preserveAspectRatio="none" hidden>
+     <g id="homeAlternateRoutes" aria-hidden="true"></g>
      <path id="homeRouteBorder" fill="none" stroke="#031b36" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
      <path id="homeRouteLine" fill="none" stroke="#24b6ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
      <circle id="homeRouteDestination" cx="-100" cy="-100" r="8" fill="#f3467b" stroke="white" stroke-width="3" />
@@ -1401,6 +1430,8 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
    </div>
    <div id="homeNavResults" class="home-nav-results" hidden aria-label="Lugares sugeridos"></div>
    <div id="homeNavStatus" class="home-nav-status" role="status" hidden></div>
+    <div id="homeNavAlternatives" class="rush-home-alt-routes" hidden
+     role="group" aria-label="Rutas alternativas disponibles"></div>
     <button id="homeNavPeek" class="home-nav-peek" type="button" aria-label="Mostrar la siguiente indicación de la ruta" title="Mostrar indicación o finalizar ruta" hidden>↱ Ruta</button>
    <div id="homeNavGuide" class="home-nav-guide" hidden aria-live="polite">
      <div class="home-nav-guide-title"><span id="homeNavTurnIcon">↑</span>
@@ -1417,6 +1448,8 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
     <button type="button" id="homeMapRetryGps" title="Reiniciar el receptor GPS de Android">↻ GPS</button>
     <button type="button" id="homeMapIphoneGps" title="Configurar GPS del iPhone">iPhone GPS</button>
     <button type="button" id="homeMapTraffic" title="Mostrar u ocultar tráfico TomTom" aria-pressed="false">Tráfico</button>
+     <button type="button" id="homeNavOptions" hidden title="Elegir otra ruta">Rutas</button>
+     <button type="button" id="homeNavWaze" hidden title="Abrir el destino en la aplicación oficial Waze">Waze ↗</button>
      <button type="button" id="homeMap3d" title="Edificios 3D y cámara en perspectiva · cambiar a 2D" aria-label="Activar o desactivar mapa 3D" aria-pressed="true">3D ✓</button>
     <button type="button" id="homeMapZoomIn" aria-label="Acercar mapa">+</button>
     <button type="button" id="homeMapZoomOut" aria-label="Alejar mapa">−</button>
@@ -1467,7 +1500,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.20.10 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.20.11 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -1540,6 +1573,15 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
    <p class="muted">Limitaciones: cartografía simplificada sin imágenes ni
    edificios descargados. Las búsquedas, rutas nuevas y el tráfico TomTom
    requieren internet. Datos © OpenStreetMap contributors (ODbL) · Geofabrik.</p>
+  </div>
+  <div class="set-line" id="rushNavRoutingSettings">
+   <h3>Rutas y tráfico · navegación avanzada</h3>
+   <p class="muted">Con la clave TomTom: rutas que consideran tráfico, hasta dos alternativas y ETA con demora real estimada. Sin clave: OSRM con ETA sin tráfico en tiempo real. Diseño de mapa pastel mantenido.</p>
+   <label class="muted"><input id="rushAvoidTolls" type="checkbox" /> Evitar peajes</label>
+   <label class="muted"><input id="rushAvoidMotorways" type="checkbox" /> Evitar autopistas</label>
+   <label class="muted"><input id="rushAvoidUnpaved" type="checkbox" /> Evitar caminos sin pavimentar</label>
+   <p class="muted">Requiere TomTom Routing API y conexión. Las consultas y recálculos consumen cuota. Las preferencias no aplican al respaldo OSRM.</p>
+   <p class="muted">«Waze ↗» abre Waze oficial si está instalado. Los reportes comunitarios, controles de velocidad y alertas propias de Waze funcionan únicamente dentro de Waze, no se replican ni simulan.</p>
   </div>
   <div class="set-line">
    <h3>Cartografía y tráfico TomTom Orbis</h3>

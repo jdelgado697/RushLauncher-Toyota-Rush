@@ -20,6 +20,91 @@ var currentStep=0,lastStepDistance=Infinity,offRouteCount=0,voiceStage='';
 var voiceEnabled=true,heldStatusTimer=null;
 var peek=$('homeNavPeek'),guideTimer=null,lastGuideStep=-1,lastGuideStage='';
 var routeCumulative=[],routeGeometryMeters=0,bestProgressMeters=0;
+/* Rush 4.20.11 · Alternativas TomTom, preferencias y Waze externo.
+   Nunca se afirman alertas comunitarias exclusivas de Waze. */
+var routeOptions=[],selectedOption=0,lastTrafficRefresh=0;
+var altPanel=$('homeNavAlternatives'),optionsButton=$('homeNavOptions'),
+    wazeButton=$('homeNavWaze'),avoidTolls=$('rushAvoidTolls'),
+    avoidMotorways=$('rushAvoidMotorways'),avoidUnpaved=$('rushAvoidUnpaved');
+function storedBool(key){try{return localStorage.getItem(key)==='yes'}catch(e){return false}}
+[[avoidTolls,'rush_nav_avoid_tolls'],
+ [avoidMotorways,'rush_nav_avoid_motorways'],
+ [avoidUnpaved,'rush_nav_avoid_unpaved']].forEach(function(pair){
+ var input=pair[0];if(!input)return;
+ input.checked=storedBool(pair[1]);
+ input.addEventListener('change',function(){
+  try{localStorage.setItem(pair[1],input.checked?'yes':'no')}catch(e){}
+  if(destination&&route&&stopped()){
+   lastRouteAt=0;requestRoute(false);
+  }else if(destination)showStatus('Se aplicará al próximo recálculo detenido',true);
+ });
+});
+function preferences(){
+ return {tolls:!!(avoidTolls&&avoidTolls.checked),
+   motorways:!!(avoidMotorways&&avoidMotorways.checked),
+   unpaved:!!(avoidUnpaved&&avoidUnpaved.checked)};
+}
+function ttKey(){
+ try{var v=localStorage.getItem('rush_tomtom_key_420')||'';
+  return /^[A-Za-z0-9_-]{12,128}$/.test(v)?v:''}
+ catch(e){return ''}
+}
+function minLabel(s){return Math.max(1,Math.ceil(Number(s||0)/60))+' min'}
+function renderAltButtons(){
+ if(!altPanel)return;
+ altPanel.textContent='';
+ if(routeOptions.length<=1){
+  altPanel.hidden=true;if(optionsButton)optionsButton.hidden=true;return;
+ }
+ var caption=document.createElement('strong');
+ caption.textContent='Rutas · selección con vehículo detenido';
+ altPanel.appendChild(caption);
+ routeOptions.forEach(function(item,i){
+  var button=document.createElement('button');button.type='button';
+  button.disabled=!stopped();
+  button.className=i===selectedOption?'rush-alt-selected':'';
+  button.textContent=(i===0?'Rápida':'Alternativa '+(i+1))+
+    ' · '+minLabel(item.seconds)+' · '+distanceLabel(item.meters);
+  if(item.traffic&&Number(item.trafficDelaySeconds)>30)
+   button.textContent+=' · +'+minLabel(item.trafficDelaySeconds)+' tráfico';
+  button.addEventListener('click',function(){
+   if(!stopped()){showStatus('Detén el vehículo para seleccionar otra ruta',true);return;}
+   chooseAlternative(i);
+  });
+  altPanel.appendChild(button);
+ });
+ if(optionsButton)optionsButton.hidden=false;
+}
+function chooseAlternative(index){
+ if(!routeOptions[index]||!routeResultValid(routeOptions[index]))return;
+ route=routeOptions[index];selectedOption=index;lastTrafficRefresh=Date.now();
+ currentStep=(route.steps[0]&&route.steps[0].type==='depart'&&
+   route.steps.length>1)?1:0;
+ lastStepDistance=Infinity;voiceStage='';offRouteCount=0;
+ indexRoute();
+ if(window.RushHomeMap){
+  window.RushHomeMap.setRoute(route.geometry);
+  if(window.RushHomeMap.setAlternates)
+   window.RushHomeMap.setAlternates(routeOptions.filter(function(x,i){return i!==index}));
+  window.RushHomeMap.follow();
+ }
+ renderAltButtons();
+ if(altPanel)altPanel.hidden=true;
+ updateGuidance();showGuideBriefly();
+}
+if(optionsButton)optionsButton.addEventListener('click',function(){
+ if(!stopped()){showStatus('Detén el vehículo para cambiar ruta',true);return;}
+ renderAltButtons();
+ if(altPanel&&routeOptions.length>1)altPanel.hidden=!altPanel.hidden;
+});
+if(wazeButton)wazeButton.addEventListener('click',function(){
+ if(!destination){showStatus('Selecciona primero un destino',true);return;}
+ if(!stopped()){showStatus('Detén el vehículo antes de abrir Waze',true);return;}
+ if(window.Rush&&typeof window.Rush.openWazeDestination==='function')
+  window.Rush.openWazeDestination(destination.lat,destination.lon);
+ else showStatus('Waze externo requiere aplicación Android instalada',true);
+});
+
 // ETA según distancia realmente recorrida sobre la polilínea OSRM.
 function measureSegment(a,b){
  var dx=(Number(b[0])-Number(a[0]))*111320*
@@ -245,6 +330,9 @@ function selectDestination(lat,lon,name){
  routeBusy=false;route=null;offRouteCount=0;currentStep=0;voiceStage='';
  lastGuideStage='';lastGuideStep=-1;closeGuide();
  routeCumulative=[];routeGeometryMeters=0;bestProgressMeters=0;
+ routeOptions=[];selectedOption=0;lastTrafficRefresh=0;
+ if(altPanel)altPanel.hidden=true;
+ if(optionsButton)optionsButton.hidden=true;
  if(peek)showing(peek,false);
  host.classList.remove('has-active-route');
  lastRouteAt=0;
@@ -264,12 +352,20 @@ function requestRoute(rerouting){
  if(!destination||routeBusy||!freshGps())return;
  if(!nativeApp){showStatus('Cálculo de rutas disponible solo en el APK Android',false);return}
  var now=Date.now();
- // No saturar proveedores públicos cuando el cálculo falla.
- if(now-lastRouteAt<45000)return;
+ // Límites conservadores de uso para APIs externas; no consultar cada GPS.
+ if(now-lastRouteAt<(rerouting?22000:9000))return;
  routeBusy=true;lastRouteAt=now;
  var token=++routeRequest;
  showStatus(rerouting?'Fuera de ruta: recalculando…':'Calculando ruta hacia '+destination.name+'…',false);
- window.Rush.routeHomeNav(fix.lat,fix.lon,destination.lat,destination.lon,token);
+ var key=ttKey(),flags=preferences();
+ if(key&&typeof window.Rush.routeHomeNavAdvanced==='function'){
+  window.Rush.routeHomeNavAdvanced(fix.lat,fix.lon,destination.lat,destination.lon,
+    key,flags.tolls,flags.motorways,flags.unpaved,token);
+ }else {
+  if((flags.tolls||flags.motorways||flags.unpaved)&&!key)
+   showStatus('Sin clave TomTom: restricciones de peajes/autopistas no se aplican a OSRM',true);
+  window.Rush.routeHomeNav(fix.lat,fix.lon,destination.lat,destination.lon,token);
+ }
 }
 window.rushHomeRouteProgress=function(reply){
  if(!reply||reply.requestId!==routeRequest||!routeBusy)return;
@@ -281,21 +377,23 @@ window.rushHomeRoute=function(reply){
  if(!destination)return;
  if(!routeResultValid(reply)){
   showStatus((reply.message||'No se pudo calcular ruta')+
-    '. Comprueba internet. Puedes elegir el mismo destino de nuevo para reintentar.',false);
+    '. Comprueba conexión y clave TomTom; reintenta con el vehículo detenido.',false);
   return;
  }
- route=reply;currentStep=(route.steps[0]&&route.steps[0].type==='depart'&&route.steps.length>1)?1:0;
- lastStepDistance=Infinity;offRouteCount=0;voiceStage='';
- indexRoute();
- if(window.RushHomeMap){
-  window.RushHomeMap.setRoute(route.geometry);
-  window.RushHomeMap.follow();
- }
+ routeOptions=[reply];
+ if(Array.isArray(reply.alternatives))reply.alternatives.forEach(function(alt){
+  if(routeOptions.length<3&&routeResultValid(alt))routeOptions.push(alt);
+ });
+ chooseAlternative(0);
  host.classList.add('has-active-route');
  showing(status,false);
  if(peek)showing(peek,true);
- updateGuidance();
- showGuideBriefly();
+ if(wazeButton)wazeButton.hidden=false;
+ if(reply.warning)showStatus(reply.warning,true);
+ if(routeOptions.length>1&&stopped()){
+  renderAltButtons();altPanel.hidden=false;
+  setTimeout(function(){if(altPanel)altPanel.hidden=true},10500);
+ }
  speak('Ruta calculada. Comienza la navegación.',true);
 };
 function describeStep(step){
@@ -311,7 +409,8 @@ function describeStep(step){
   left?'Gira a la izquierda':right?'Gira a la derecha':'Continúa por la vía';
  var icon=type==='arrive'?'●':left?'↰':right?'↱':
   type==='roundabout'||type==='rotary'?'⟳':type==='uturn'?'↶':'↑';
- return {text:text+(road&&type!=='arrive'?' · '+road:''),icon:icon};
+ var actual=String(step.text||'').trim();
+ return {text:actual||text+(road&&type!=='arrive'?' · '+road:''),icon:icon};
 }
 function nearestToRoute(point){
  if(!route||!Array.isArray(route.geometry))return Infinity;
@@ -439,7 +538,10 @@ function updateGuidance(){
   var remaining=distanceLabel(eta.meters);
   if(peek)write(peek,peekIcon+' '+remaining+' · ETA '+eta.time);
   write(summary,'Restan '+remaining+' · '+eta.minutes+
-    ' min · llegada estimada '+eta.time+' · sin tráfico en tiempo real');
+    ' min · llegada estimada '+eta.time+
+    (route.traffic?' · tráfico TomTom':' · sin tráfico en ETA')+
+    (Number(route.trafficDelaySeconds)>30?
+     ' · demora inicial +'+minLabel(route.trafficDelaySeconds):''));
  }else{
   var km=(Number(route.meters)||0)/1000;
   var minutes=Math.round((Number(route.seconds)||0)/60);
@@ -460,16 +562,22 @@ function updateFix(lat,lon,acc){
    // Un fix NMEA RMC reciente basta para detectar desvío. Cuatro
    // lecturas consecutivas evitan rerutas por un único salto de GPS.
    offRouteCount=off>70?offRouteCount+1:0;
-   if(offRouteCount>=4&&!routeBusy&&Date.now()-lastReroute>90000){
+   if(offRouteCount>=4&&!routeBusy&&Date.now()-lastReroute>42000){
     offRouteCount=0;lastReroute=Date.now();requestRoute(true);
    }
   }else offRouteCount=0;
+  // Actualizar ETA con tráfico cada cuatro minutos y solo con proveedor válido.
+  if(route.traffic&&ttKey()&&speed>5&&!routeBusy&&
+      Date.now()-lastTrafficRefresh>240000&&Date.now()-lastRouteAt>235000){
+    lastTrafficRefresh=Date.now();requestRoute(true);
+  }
  }
 }
 function updateSpeed(kmh,bearing){
  speed=Number.isFinite(kmh)?Math.max(0,kmh):0;
  if(Number.isFinite(bearing))lastBearing=bearing;
  var locked=!stopped();
+ if(locked&&altPanel)altPanel.hidden=true;
  query.disabled=locked;find.disabled=locked;
  if(locked){query.blur();clearResults()}
 }
@@ -477,6 +585,9 @@ function cancelRoute(){
  ++routeRequest;destination=null;route=null;routeBusy=false;
  currentStep=0;voiceStage='';offRouteCount=0;
  routeCumulative=[];routeGeometryMeters=0;bestProgressMeters=0;
+ routeOptions=[];selectedOption=0;lastTrafficRefresh=0;
+ if(altPanel)altPanel.hidden=true;
+ if(optionsButton)optionsButton.hidden=true;
  if(window.RushHomeMap)window.RushHomeMap.clearRoute();
  closeGuide();if(peek)showing(peek,false);
  lastGuideStage='';lastGuideStep=-1;
