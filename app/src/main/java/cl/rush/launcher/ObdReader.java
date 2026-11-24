@@ -20,14 +20,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * ELM327 Bluetooth Classic SPP. Exclusivamente Mode 01 de lectura y ATRV.
- * Consulta PIDs soportados, nunca escribe parámetros ni borra errores ECU.
+ * ELM327 Bluetooth Classic SPP. Mode 01 y servicios de diagnóstico
+ * 02/03/07/09/0A de SOLO LECTURA. Nunca borra errores ni escribe ECU.
+ * Serial compartido: una única hebra controla CAN, sensores y diagnóstico.
  */
 public final class ObdReader {
     public interface Listener {
         void onStatus(String message);
         void onData(JSONObject snapshot);
         void onLightCan(JSONObject info);
+        void onDiagnostic(JSONObject info);
     }
 
     private static final UUID SERIAL_PORT =
@@ -37,6 +39,30 @@ public final class ObdReader {
     private final Listener listener;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running;
+    private volatile boolean diagnosticRequested=false;
+    private volatile boolean diagnosticInProgress=false;
+    private void diagnosisMessage(JSONObject info){
+        ui.post(()->listener.onDiagnostic(info));
+    }
+    private void diagnosisStatus(String kind,String message){
+        JSONObject o=new JSONObject();
+        try{o.put("kind",kind);o.put("message",message);
+            o.put("at",System.currentTimeMillis());}catch(Exception ignored){}
+        diagnosisMessage(o);
+    }
+    public void requestDiagnosticScan(){
+        if(!running){
+            diagnosisStatus("error","Conecta el ELM327 antes de escanear.");
+            return;
+        }
+        if(diagnosticRequested||diagnosticInProgress){
+            diagnosisStatus("progress","Diagnóstico en curso; evita repetir la solicitud.");
+            return;
+        }
+        diagnosticRequested=true;
+        diagnosisStatus("progress",
+            "Escaneo solicitado; comprobando velocidad ECU antes de leer fallas…");
+    }
     private volatile BluetoothSocket socket;
     private volatile Thread worker;
     // Perfiles identificados SOLO mediante calibración de cuatro estados.
@@ -251,6 +277,47 @@ public final class ObdReader {
                 long lastEnginePoll=0;
                 boolean monitorConfigured=false;
                 while(running && Thread.currentThread()==worker) {
+                    if(diagnosticRequested){
+                        diagnosticRequested=false;
+                        diagnosticInProgress=true;
+                        if(monitorConfigured){
+                            restoreElmForEngine(out,in);
+                            monitorConfigured=false;
+                        }
+                        try{
+                            Double kmh=readPid(out,in,"0D",1200);
+                            if(kmh==null){
+                                diagnosisStatus("error",
+                                    "La ECU no confirma velocidad 0 km/h. "+
+                                    "Activa el contacto y conecta OBD con el auto detenido.");
+                            }else if(kmh>1.0){
+                                diagnosisStatus("error",
+                                    "Por seguridad, escanea solo estacionado (ECU: "+
+                                     Math.round(kmh)+" km/h).");
+                            }else {
+                                diagnosisStatus("progress",
+                                    "Vehículo detenido · leyendo parámetros de diagnóstico…");
+                                final InputStream diagnosticIn=in;
+                                final OutputStream diagnosticOut=out;
+                                JSONObject report=RushObdDiagnostics.scan(
+                                    (cmd,timeout)->send(diagnosticOut,diagnosticIn,cmd,timeout),
+                                    message->diagnosisStatus("progress",message));
+                                diagnosisMessage(report);
+                            }
+                        }catch(InterruptedException interruption){
+                            diagnosisStatus("error","Escaneo interrumpido.");
+                            Thread.currentThread().interrupt();
+                        }catch(Exception ex){
+                            diagnosisStatus("error",
+                                "Escaneo incompleto: "+shortMessage(ex)+
+                                ". Comprueba ELM327 y conexión.");
+                        }finally{
+                            diagnosticInProgress=false;
+                            monitorConfigured=false;
+                            lastEnginePoll=0;
+                        }
+                        continue;
+                    }
                     // Calibración: el vehículo debe estar DETENIDO y tener
                     // lectura fresca de velocidad desde ECU, no solo GPS.
                     if(learnRequest!=0) {
@@ -332,6 +399,8 @@ public final class ObdReader {
     }
 
     public synchronized void disconnect() {
+        diagnosticRequested=false;
+        diagnosticInProgress=false;
         running=false;
         Thread previous=worker;
         worker=null;
