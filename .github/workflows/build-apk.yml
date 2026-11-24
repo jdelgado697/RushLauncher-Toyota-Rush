@@ -175,7 +175,7 @@ jobs:
           assert '#5cd8bb' in html and '#8cd8ed' in html
           assert "applicationId 'cl.rush.launcher.diagnostic'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
-          assert 'Rush Diagnostic 4.20.12' in label
+          assert 'Rush Launcher 4.20.12' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           nav=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           hm=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
