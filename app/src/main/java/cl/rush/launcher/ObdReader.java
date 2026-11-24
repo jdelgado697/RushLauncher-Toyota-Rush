@@ -249,26 +249,73 @@ public final class ObdReader {
                 status(known ? "OBD-II conectado · sensores detectados" :
                         "OBD-II conectado · sondeo de sensores");
                 int cycle=0;
+                long lastEnginePoll=0;
+                boolean monitorConfigured=false;
                 while(running && Thread.currentThread()==worker) {
-                    for(String pid : new String[]{"0D","0C","05"}) {
-                        if(!running) break;
-                        if(known && !supported.contains(pid)) {
-                            values.remove(pid); continue;
+                    // Calibración: el vehículo debe estar DETENIDO y tener
+                    // lectura fresca de velocidad desde ECU, no solo GPS.
+                    if(learnRequest!=0) {
+                        if(monitorConfigured){
+                            restoreElmForEngine(out,in);monitorConfigured=false;
+                        }
+                        Double stationary=readPid(out,in,"0D",1000);
+                        if(stationary==null)values.remove("0D");
+                        else values.put("0D",stationary);
+                        monitorLights(out,in,values,true,true);
+                        continue;
+                    }
+                    boolean fastLights=hasLightingProfiles()&&!canMonitorUnavailable;
+                    if(fastLights){
+                        // Priorizar seguimiento de CAN. Una captura dura 260ms;
+                        // el render en JS es inmediato al recibir el evento.
+                        // Cada 5s se interrumpe CAN para refrescar RPM, motor.
+                        if(System.currentTimeMillis()-lastEnginePoll>5200){
+                            if(monitorConfigured){
+                                restoreElmForEngine(out,in);monitorConfigured=false;
+                            }
+                            for(String pid:new String[]{"0D","0C","05"}){
+                                if(known&&!supported.contains(pid)){
+                                    values.remove(pid);continue;
+                                }
+                                Double v=readPid(out,in,pid,900);
+                                if(v==null)values.remove(pid);else values.put(pid,v);
+                            }
+                            if(cycle%3==0){
+                                Double voltage=readVoltage(send(out,in,"ATRV",900));
+                                if(voltage!=null)values.put("RV",voltage);
+                            }
+                            data(snapshot(values,supported,known));
+                            lastEnginePoll=System.currentTimeMillis();
+                        }
+                        monitorConfigured=monitorLights(out,in,values,
+                            !monitorConfigured,false);
+                        if(!monitorConfigured)restoreElmForEngine(out,in);
+                        cycle++;
+                        Thread.sleep(30);
+                        continue;
+                    }
+                    if(monitorConfigured){
+                        restoreElmForEngine(out,in);monitorConfigured=false;
+                    }
+                    // Sin perfiles CAN calibrados: conservar tablero OBD.
+                    for(String pid:new String[]{"0D","0C","05"}){
+                        if(!running)break;
+                        if(known&&!supported.contains(pid)){
+                            values.remove(pid);continue;
                         }
                         Double v=readPid(out,in,pid,1500);
-                        if(v==null)values.remove(pid); else values.put(pid,v);
+                        if(v==null)values.remove(pid);else values.put(pid,v);
                     }
-                    String extra=EXTRA[cycle % EXTRA.length];
-                    if(running) {
-                        if("RV".equals(extra)) {
-                            Double voltage=readVoltage(send(out,in,"ATRV",1500));
-                            if(voltage==null) values.remove("RV"); else values.put("RV",voltage);
-                        } else if(!known || supported.contains(extra)) {
+                    String extra=EXTRA[cycle%EXTRA.length];
+                    if(running){
+                        if("RV".equals(extra)){
+                            Double v=readVoltage(send(out,in,"ATRV",1500));
+                            if(v==null)values.remove("RV");else values.put("RV",v);
+                        }else if(!known||supported.contains(extra)){
                             Double v=readPid(out,in,extra,1500);
-                            if(v==null) values.remove(extra); else values.put(extra,v);
+                            if(v==null)values.remove(extra);else values.put(extra,v);
                         }
                         data(snapshot(values,supported,known));
-                        if(running)monitorLights(out,in,values);
                     }
                     cycle++;
                     Thread.sleep(220);
