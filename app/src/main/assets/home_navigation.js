@@ -20,6 +20,8 @@ var currentStep=0,lastStepDistance=Infinity,offRouteCount=0,voiceStage='';
 var voiceEnabled=true,heldStatusTimer=null;
 var peek=$('homeNavPeek'),guideTimer=null,lastGuideStep=-1,lastGuideStage='';
 var routeCumulative=[],routeGeometryMeters=0,bestProgressMeters=0;
+var cachedProgressFix=null,cachedProgressRoute=null,cachedProgress=null;
+var lastOffRouteSampleAt=0;
 /* Rush 4.20.11 · Alternativas TomTom, preferencias y Waze externo.
    Nunca se afirman alertas comunitarias exclusivas de Waze. */
 var routeOptions=[],selectedOption=0,lastTrafficRefresh=0;
@@ -114,6 +116,7 @@ function measureSegment(a,b){
 }
 function indexRoute(){
  routeCumulative=[0];routeGeometryMeters=0;bestProgressMeters=0;
+ cachedProgressFix=null;cachedProgressRoute=null;cachedProgress=null;lastOffRouteSampleAt=0;
  var coords=route&&route.geometry||[];
  for(var i=1;i<coords.length;i++){
   var d=measureSegment(coords[i-1],coords[i]);
@@ -123,6 +126,7 @@ function indexRoute(){
 }
 function progressOnRoute(point){
  if(!point||!route||routeGeometryMeters<1)return null;
+ if(point===cachedProgressFix&&route===cachedProgressRoute)return cachedProgress;
  var coords=route.geometry,cos=Math.cos(point.lat*Math.PI/180);
  var closest=Infinity,along=0;
  for(var i=1;i<coords.length;i++){
@@ -139,7 +143,8 @@ function progressOnRoute(point){
  }
  var offset=Math.sqrt(closest);
  if(offset<=85)bestProgressMeters=Math.max(bestProgressMeters,along);
- return {offset:offset,along:bestProgressMeters};
+ cachedProgressFix=point;cachedProgressRoute=route;
+ cachedProgress={offset:offset,along:bestProgressMeters};return cachedProgress;
 }
 function etaForCurrentFix(){
  if(!route||!fix||!(Number(route.seconds)>0)||routeGeometryMeters<1)return null;
@@ -413,20 +418,8 @@ function describeStep(step){
  return {text:actual||text+(road&&type!=='arrive'?' · '+road:''),icon:icon};
 }
 function nearestToRoute(point){
- if(!route||!Array.isArray(route.geometry))return Infinity;
- var coords=route.geometry,cos=Math.cos(point.lat*Math.PI/180);
- var best=Infinity,step=Math.max(1,Math.floor(coords.length/240));
- for(var i=step;i<coords.length;i+=step){
-  var p=coords[i-step],q=coords[i];
-  if(!Array.isArray(p)||!Array.isArray(q))continue;
-  var ax=(Number(p[0])-point.lon)*111320*cos, ay=(Number(p[1])-point.lat)*111320;
-  var bx=(Number(q[0])-point.lon)*111320*cos, by=(Number(q[1])-point.lat)*111320;
-  var vx=bx-ax,vy=by-ay;
-  var t=(vx*vx+vy*vy)>1?Math.max(0,Math.min(1,-(ax*vx+ay*vy)/(vx*vx+vy*vy))):0;
-  var dist=Math.hypot(ax+t*vx,ay+t*vy);
-  if(dist<best)best=dist;
- }
- return best;
+ var progress=progressOnRoute(point);
+ return progress?progress.offset:Infinity;
 }
 function externalGpsFresh(){
  return !!(window.RushExternalGps&&window.RushExternalGps.active&&
@@ -561,8 +554,10 @@ function updateFix(lat,lon,acc){
    var off=nearestToRoute(fix);
    // Un fix NMEA RMC reciente basta para detectar desvío. Cuatro
    // lecturas consecutivas evitan rerutas por un único salto de GPS.
-   offRouteCount=off>70?offRouteCount+1:0;
-   if(offRouteCount>=4&&!routeBusy&&Date.now()-lastReroute>42000){
+   if(Date.now()-lastOffRouteSampleAt>=650){
+     offRouteCount=off>70?offRouteCount+1:0;lastOffRouteSampleAt=Date.now();
+    }
+   if(offRouteCount>=4&&!routeBusy&&Date.now()-lastReroute>28000){
     offRouteCount=0;lastReroute=Date.now();requestRoute(true);
    }
   }else offRouteCount=0;

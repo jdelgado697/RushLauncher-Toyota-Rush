@@ -4,10 +4,10 @@ name: Compilar APK Toyota Rush
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can, rush-launcher-42010-faros-rapidos-direccionales, rush-launcher-42011-navegacion-trafico-alternativas, rush-launcher-42012-diagnostico-integrado]
+    branches: [main, master, rush-launcher-4-paralelo, rush-launcher-obd-41, rush-launcher-obd-42-homelarge, rush-launcher-43-map-carplay, rush-launcher-44-unificado, rush-launcher-45-spotify-nav, rush-launcher-46-clima-home, rush-launcher-47-sin-accesibilidad, rush-launcher-48-autocompletar, rush-launcher-49-chile-local, rush-launcher-410-rutas-respaldo, rush-launcher-411-rutas-tls, rush-launcher-412-proveedor-tls, rush-launcher-413-navigation-follow, rush-launcher-414-smooth-follow, rush-launcher-415-gps-watchdog, rush-launcher-4151-nav-integrado, rush-launcher-4152-conduccion-home, rush-launcher-4153-buscador-resistente, rush-launcher-4154-inicio-vivo, rush-launcher-416-modo-conduccion, rush-launcher-417-rutas-en-inicio, rush-launcher-4171-busqueda-tema-auto, rush-launcher-4172-gps-follow-recovery, rush-launcher-418-gps-iphone-nmea-directo, rush-launcher-419-mapa-conduccion-cercano, rush-launcher-420-tomtom-trafico-cartografia, rush-launcher-4201-mapa-estable-limpio, rush-launcher-4202-mapa-unico-expandible, rush-launcher-4203-perspectiva-edificios, rush-launcher-4204-mapa-unificado-voz, rush-launcher-4205-ui-voz-diagnostico, rush-launcher-4206-pastel-instalacion-paralela, rush-launcher-4207-ruta-alineada-eta, rush-launcher-4208-fluid-offline-chile, rush-launcher-4209-faros-obd-can, rush-launcher-42010-faros-rapidos-direccionales, rush-launcher-42011-navegacion-trafico-alternativas, rush-launcher-42012-diagnostico-integrado, rush-launcher-42013-gps-fluido]
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -84,7 +84,7 @@ jobs:
           assert "function syncPanelZoom()" in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "isClassicPanel()" not in Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
           assert "if (saved.drive) window.RushHomeMap.follow()" not in js
-          assert "4.20.12" in html and "id=\"navTestSpeech\"" in html
+          assert "4.20.13" in html and "id=\"navTestSpeech\"" in html
           assert "id=\"navTtsSettings\"" in html
           assert "has-active-route" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           assert "externalGpsFresh()" in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
@@ -134,7 +134,7 @@ jobs:
           assert 'id="homeAlternateRoutes"' in html
           assert 'drawAlternates(center,w,h)' in map_js
           assert 'setAlternates:setAlternates' in map_js
-          assert '4.20.12' in html
+          assert '4.20.13' in html
           assert 'id="homeMapOfflineChip"' in html
           assert 'id="rushVehicleLightArt"' in html
           assert 'id="vehicleLightsLearn"' in html
@@ -171,11 +171,11 @@ jobs:
           assert 'function followSmoothly(lat,lon)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'offlineMode' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
           assert 'if(zoom===16&&motionSpeed<72)' in Path('app/src/main/assets/home_map.js').read_text(encoding='utf-8')
-          assert '4.20.12' in html and 'home-map-marker::after' in html
+          assert '4.20.13' in html and 'home-map-marker::after' in html
           assert '#5cd8bb' in html and '#8cd8ed' in html
           assert "applicationId 'cl.rush.launcher.diagnostic'" in Path("app/build.gradle").read_text(encoding="utf-8")
           label=Path("app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
-          assert 'Rush Launcher 4.20.12' in label
+          assert 'Rush Launcher 4.20.13' in label
           assert 'function showGuideBriefly()' in Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           nav=Path("app/src/main/assets/home_navigation.js").read_text(encoding="utf-8")
           hm=Path("app/src/main/assets/home_map.js").read_text(encoding="utf-8")
@@ -702,8 +702,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh api "repos/$REPO/actions/artifacts/14721733916/zip" > /tmp/old-offline.zip
-          unzip -q /tmp/old-offline.zip -d /tmp/old-artifact
+          mkdir -p /tmp/old-artifact
+          gh release download v4.20.12-diagnostic-integrado --repo "$REPO" --pattern '*.apk' --dir /tmp/old-artifact
           OLD_APK=$(find /tmp/old-artifact -type f -name '*.apk' -print -quit)
           test -n "$OLD_APK"
           unzip -p "$OLD_APK" assets/chile_offline.db > app/src/main/assets/chile_offline.db
@@ -779,7 +779,17 @@ jobs:
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
         with:
-          name: RushLauncher-4.20.12-Diagnostic-Chile-Offline-APK
+          name: RushLauncher-4.20.13-Diagnostic-Chile-Offline-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publicar APK 4.20.13 verificada
+        if: github.ref_name == 'rush-launcher-42013-gps-fluido'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk RushLauncher-4.20.13-GPS-Fluido-Chile-Offline.apk
+          gh release create v4.20.13-gps-fluido RushLauncher-4.20.13-GPS-Fluido-Chile-Offline.apk --repo "$REPO" --target "$GITHUB_SHA" --title 'Rush Launcher 4.20.13 - GPS fluido' --notes 'Proyección de ruta por bloques, giro suavizado, distancia exacta, conserva mapa offline y diagnóstico. Rutas nuevas y tráfico requieren internet. Sin prueba física en TBox.' --latest=false

@@ -37,6 +37,15 @@ var externalActive=false;
 var lastActualMoveAt=0,rawDiagnostic=null,lastManualPanAt=0;
 var previousFix=null;
 var centerMotion=null,centerMotionFrame=0,lastSmoothDraw=0;
+var bearingMotion=null,bearingFrame=0,lastBearingDraw=0;
+var previousPositionAt=0,fixInterval=1000;
+function animateBearing(now){
+ bearingFrame=0;if(!bearingMotion)return;
+ var t=clamp((now-bearingMotion.start)/bearingMotion.duration,0,1);
+ visualBearing=bearingMotion.from+(bearingMotion.to-bearingMotion.from)*t;
+ if(now-lastBearingDraw>=65||t>=1){lastBearingDraw=now;queueDraw()}
+ if(t<1)bearingFrame=requestAnimationFrame(animateBearing);else bearingMotion=null;
+}
 var offlineAvailable=!!(window.Rush&&typeof window.Rush.offlineMapAvailable==='function'&&window.Rush.offlineMapAvailable());
 var hasInternet=true,lastNetworkCheck=0,offlineMode=false,offlineReady=false;
 var offlineChip=document.getElementById('homeMapOfflineChip');
@@ -71,7 +80,7 @@ function followSmoothly(lat,lon){
   centerMotion=null;current={lat:lat,lon:lon};queueDraw();return;
  }
  centerMotion={from:{lat:current.lat,lon:current.lon},to:{lat:lat,lon:lon},
-               started:performance.now(),duration:960};
+               started:performance.now(),duration:clamp(fixInterval-40,180,1050)};
  if(!centerMotionFrame)centerMotionFrame=requestAnimationFrame(smoothCenterFrame);
 }
 
@@ -179,6 +188,16 @@ function getCartography(){return {
  error:!lastTrafficSuccess&&lastTrafficError>0
 }}
 
+var routeProjectionZoom=-1,routeProjection=[],routeChunks=[];
+function projectedRoute(){
+ if(routeProjectionZoom===zoom)return;
+ routeProjectionZoom=zoom;routeProjection=routeCoords.map(function(p){return project(p.lat,p.lon)});routeChunks=[];
+ for(var first=1;first<routeProjection.length;first+=128){
+  var last=Math.min(first+127,routeProjection.length-1),minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(var k=first-1;k<=last;k++){var p=routeProjection[k];minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y)}
+  routeChunks.push({first:first,last:last,minX:minX,maxX:maxX,minY:minY,maxY:maxY});
+ }
+}
 var routeCoords=[],routeSvg=document.getElementById('homeRouteSvg'),
     routeShadow=document.getElementById('homeRouteBorder'),
     routeLine=document.getElementById('homeRouteLine'),
@@ -401,8 +420,15 @@ function drawRoute(center,w,h){
  routeSvg.removeAttribute('hidden');
  routeSvg.setAttribute('viewBox','0 0 '+w+' '+h);
  var margin=160,lastVisible=false,path='',previous=null;
- for(var i=0;i<routeCoords.length;i++){
-  var pt=project(routeCoords[i].lat,routeCoords[i].lon);
+ projectedRoute();
+ var left=center.x-w/2-margin,right=center.x+w/2+margin,top=center.y-h/2-margin,bottom=center.y+h/2+margin;
+ for(var ch=0;ch<routeChunks.length;ch++){
+  var chunk=routeChunks[ch];
+  if(chunk.maxX<left||chunk.minX>right||chunk.maxY<top||chunk.minY>bottom){lastVisible=false;continue;}
+  var before=routeProjection[chunk.first-1];
+  previous={x:before.x-center.x+w/2,y:before.y-center.y+h/2};
+ for(var i=chunk.first;i<=chunk.last;i++){
+  var pt=routeProjection[i];
   var cur={x:pt.x-center.x+w/2,y:pt.y-center.y+h/2};
   if(previous){
    var intersects=Math.max(previous.x,cur.x)>=-margin &&
@@ -417,16 +443,17 @@ function drawRoute(center,w,h){
   }
   previous=cur;
  }
+ }
  drawAlternates(center,w,h);
  routeShadow.setAttribute('d',path);
  routeLine.setAttribute('d',path);
- var last=routeCoords[routeCoords.length-1],end=project(last.lat,last.lon);
+ var end=routeProjection[routeProjection.length-1];
  routeDestination.style.display='';
  routeDestination.setAttribute('cx',(end.x-center.x+w/2).toFixed(1));
  routeDestination.setAttribute('cy',(end.y-center.y+h/2).toFixed(1));
 }
 function setRoute(points){
- routeCoords=[];
+ routeProjectionZoom=-1;routeCoords=[];
  if(Array.isArray(points))points.forEach(function(c){
   if(!Array.isArray(c)||c.length<2)return;
   var lon=Number(c[0]),lat=Number(c[1]);
@@ -434,7 +461,7 @@ function setRoute(points){
  });
  queueDraw();
 }
-function clearRoute(){routeCoords=[];setAlternates([]);queueDraw()}
+function clearRoute(){routeProjectionZoom=-1;routeProjection=[];routeChunks=[];routeCoords=[];setAlternates([]);queueDraw()}
 function drawMarker(){
  if(!live||!position){marker.hidden=true;return;}
  var p=project(position.lat,position.lon),c=project(current.lat,current.lon);
@@ -461,6 +488,9 @@ function getBearing(){return bearing}
 function setPosition(lat,lon,acc){
  if(!valid(lat,lon))return;
  if(Number.isFinite(acc)&&acc>1000)return;
+ var now=Date.now();
+ if(previousPositionAt){var interval=now-previousPositionAt;if(interval>=180&&interval<=2500)fixInterval=fixInterval*.65+interval*.35;}
+ previousPositionAt=now;
  if(previousFix) {
   var dLat=(lat-previousFix.lat)*111320;
   var dLon=(lon-previousFix.lon)*111320*Math.cos(lat*Math.PI/180);
@@ -500,7 +530,10 @@ function setHeading(heading,speed){
  var delta=((next-bearing+540)%360)-180; // -180..180
  if(Math.abs(delta)<0.75)return;
  bearing=next;
- visualBearing+=delta; // sin salto de 359° a 0°
+ // visualBearing+=delta se sustituye por giro interpolado de arco mínimo.
+ var target=visualBearing+(((next-(visualBearing%360)+540)%360+360)%360-180);
+ bearingMotion={from:visualBearing,to:target,start:performance.now(),duration:clamp(fixInterval*.55,180,550)};
+ if(!bearingFrame)bearingFrame=requestAnimationFrame(animateBearing);
  lastDirectionAt=Date.now();
  queueDraw();
 }
@@ -662,7 +695,7 @@ setInterval(function(){
   // Repintar cada 30 s solo si hay tráfico visible y el mapa está en pantalla;
   // los mosaicos se actualizan con una ventana temporal de tres minutos.
   if(trafficReady()&&document.visibilityState!=='hidden')queueDraw();
-  if(currentMapTheme()!==lastThemeOnTiles)queueDraw();
+  if(currentMapTheme()+':'+(offlineMode?'offline':'online')+':'+offlineReady!==lastThemeOnTiles)queueDraw();
  }
 },30000);
 // Cambiar entre fuentes raster online y locales cuando se va la señal 4G.
