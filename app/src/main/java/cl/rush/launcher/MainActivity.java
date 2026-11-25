@@ -66,6 +66,7 @@ public class MainActivity extends Activity implements LocationListener {
 
     private static final int LOCATION_REQUEST_CODE = 1101;
     private static final int BLUETOOTH_REQUEST_CODE = 1102;
+    private static final int TOMTOM_IMPORT_REQUEST = 7194;
     private ObdReader obdReader;
     private ExternalNmeaGps externalNmea;
     private final BuildingData3D buildingData3D = new BuildingData3D();
@@ -86,8 +87,8 @@ public class MainActivity extends Activity implements LocationListener {
         JSONObject payload=new JSONObject();
         try {
             payload.put("status",status);
-            payload.put("host",nmeaSettings().getString(NMEA_HOST,"192.168.0.101"));
-            payload.put("port",nmeaSettings().getInt(NMEA_PORT,11123));
+            payload.put("host",nmeaSettings().getString(NMEA_HOST,"192.168.0.100"));
+            payload.put("port",nmeaSettings().getInt(NMEA_PORT,10110));
             payload.put("enabled",nmeaSettings().getBoolean(NMEA_ENABLED,false));
             payload.put("fixes",externalNmeaFixCounter);
             payload.put("recent",nmeaSettings().getBoolean(NMEA_ENABLED,false)
@@ -99,8 +100,8 @@ public class MainActivity extends Activity implements LocationListener {
 
     private void connectSavedNmea() {
         if(externalNmea==null || !nmeaSettings().getBoolean(NMEA_ENABLED,false))return;
-        externalNmea.connect(nmeaSettings().getString(NMEA_HOST,"192.168.0.101"),
-             nmeaSettings().getInt(NMEA_PORT,11123));
+        externalNmea.connect(nmeaSettings().getString(NMEA_HOST,"192.168.0.100"),
+             nmeaSettings().getInt(NMEA_PORT,10110));
     }
 
     private void acceptExternalNmea(double lat,double lon,Double speed,Double heading) {
@@ -2204,6 +2205,23 @@ public class MainActivity extends Activity implements LocationListener {
     @Override
     protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==TOMTOM_IMPORT_REQUEST){
+            if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;
+            try(InputStream input=getContentResolver().openInputStream(data.getData())){
+                if(input==null)throw new java.io.IOException("Archivo no disponible");
+                ByteArrayOutputStream buffer=new ByteArrayOutputStream();
+                byte[] chunk=new byte[512]; int n;
+                while((n=input.read(chunk))!=-1){
+                    if(buffer.size()+n>4096)throw new java.io.IOException("Archivo demasiado grande");
+                    buffer.write(chunk,0,n);
+                }
+                JSONObject config=new JSONObject(new String(buffer.toByteArray(),StandardCharsets.UTF_8));
+                String key=config.optString("tomtomKey","");
+                if(!key.matches("[A-Za-z0-9_-]{12,128}"))throw new IllegalArgumentException("Clave inválida");
+                javascript("if(window.rushImportTomtom)window.rushImportTomtom("+JSONObject.quote(key)+");");
+            }catch(Exception e){message("No se pudo importar la configuración TomTom.");}
+            return;
+        }
         if(requestCode!=DIAGNOSTIC_CSV_REQUEST)return;
         String csv=diagnosticCsvPending;
         diagnosticCsvPending=null;
@@ -2222,6 +2240,16 @@ public class MainActivity extends Activity implements LocationListener {
     }
 
     private final class RushBridge {
+        @JavascriptInterface public void importTomtomConfig(){
+            runUi(() -> {
+                try{
+                    Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    pick.setType("*/*");
+                    startActivityForResult(pick,TOMTOM_IMPORT_REQUEST);
+                }catch(Exception e){message("No hay selector de archivos. Guarda la clave manualmente.");}
+            });
+        }
         @JavascriptInterface public void ready() {
             runUi(() -> {
                 sendSpotifyState();
@@ -2286,7 +2314,7 @@ public class MainActivity extends Activity implements LocationListener {
                 externalNmeaFixCounter=0;
                 nmeaFixRecentlyReceived=false;
                 connectSavedNmea();
-                nmeaInfoToWeb("Conectando a GPS2IP…");
+                nmeaInfoToWeb("Conectando a GPS Metrics…"); // Compatible con GPS2IP por NMEA TCP.
             });
         }
         @JavascriptInterface public void disconnectIphoneGps() {

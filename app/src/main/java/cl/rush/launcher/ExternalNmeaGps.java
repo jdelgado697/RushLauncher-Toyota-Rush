@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
- * Receptor TCP NMEA para GPS2IP en Wi-Fi local.
+ * Receptor TCP NMEA para GPS Metrics o GPS2IP en Wi-Fi local.
  * NO inyecta ubicaciones simuladas en Android ni modifica otros programas.
  * Acepta RMC con checksum válido y estado A. RMC no proporciona precisión;
  * por tanto se notifica accuracy=null al tablero.
@@ -25,7 +25,7 @@ final class ExternalNmeaGps {
     private volatile Socket socket;
     private volatile Thread worker;
     private volatile String host = "";
-    private volatile int port = 11123;
+    private volatile int port = 10110;
 
     ExternalNmeaGps(Listener listener) {
         this.listener = listener;

@@ -11,8 +11,8 @@ android {
         applicationId 'cl.rush.launcher.diagnostic'
         minSdk 26
         targetSdk 33
-        versionCode 65
-        versionName '4.20.13-RushDiagnostic'
+        versionCode 66
+        versionName '4.20.14-RushDiagnostic'
     }
 
     compileOptions {

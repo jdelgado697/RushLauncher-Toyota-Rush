@@ -23,7 +23,7 @@
    dark?'#0e1036':'#e3defc');
 })();
 </script>
-<title>Rush Launcher 4.20.13 · Rush Diagnostic integrado</title>
+<title>Rush Launcher 4.20.14 · Rush Diagnostic integrado</title>
 <style>
 :root{font:500 14px/1.36 "Roboto","Arial",sans-serif;color-scheme:light;--text:#161630;--sub:#555b81;--muted:#70729a;--line:#ffffff8c;--glass:rgba(251,250,255,.55);--glass-strong:rgba(242,243,255,.74);--glass-soft:rgba(255,255,255,.44);--btn:rgba(243,242,255,.79);--shadow:0 14px 35px #6759b029;--accent:#5143d7;--accent2:#267be1;--bg1:#ddd5f8;--bg2:#9289df;--bg3:#83d6ff;--top:#eef0ff}
 :root[data-theme=dark]{color-scheme:dark;--text:#f9f8ff;--sub:#d4d4f3;--muted:#b2b4dc;--line:#aab3fa3b;--glass:rgba(29,28,76,.70);--glass-strong:rgba(25,27,75,.83);--glass-soft:rgba(38,39,100,.60);--btn:rgba(54,61,127,.92);--shadow:0 12px 38px #02071b6b;--accent:#afbdff;--accent2:#8db8ff;--bg1:#0e1036;--bg2:#1c1d6e;--bg3:#0c366f;--top:#16153e}
@@ -1307,7 +1307,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 #rushNavRoutingSettings label{display:block;margin:6px 0;font-size:13px}
 #rushNavRoutingSettings input[type=checkbox]{width:17px;height:17px;vertical-align:middle}
 
-/* 4.20.13 · Rush Diagnostic integrado, optimizado para radio 800x480 */
+/* 4.20.14 · Rush Diagnostic integrado, optimizado para radio 800x480 */
 .rush-diagnostic-sheet{
  width:min(790px,97vw);max-width:97vw;max-height:95vh;
  overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;
@@ -1393,7 +1393,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </svg>
 <div class="screen drive-ui" id="rushScreen">
 <header class="topbar">
- <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.13</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
+ <div class="rush-brand"><span class="toyota-mark">◉</span><div><strong>RUSH <small>LAUNCHER</small></strong><span class="version-pill">4.20.14</span></div><span class="car-model">Toyota Rush 2021 XLI</span></div>
  <div class="topright"><span class="top-signal">◉</span><span id="headerObd" class="top-obd">OBD sin conectar</span><span class="clock" id="clock">--:--</span><button id="driveModeToggle" class="driving-toggle" type="button" aria-pressed="true" title="Alternar panel clásico y conducción">Panel clásico</button><button class="roundsettings" type="button" data-action="settings" aria-label="Configuración"><svg class="icon"><use href="#i-gear"/></svg></button></div>
  <span id="greeting" class="legacy-greeting" hidden>Rush</span><span id="today" hidden>Fecha</span>
 </header>
@@ -1568,7 +1568,7 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
 </div>
 <div class="scrim" id="settingsPanel" hidden>
  <div class="sheet" role="dialog" aria-modal="true" aria-label="Configuración">
-  <div class="sheet-head"><h2>Rush Launcher 4.20.13 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
+  <div class="sheet-head"><h2>Rush Launcher 4.20.14 · Ajustes</h2><button class="close" type="button" data-close="settingsPanel">Cerrar ✕</button></div>
   <p class="muted">Toyota Rush 2021 XLI · Carlinkit TBox Lite S · la radio Toyota original no se modifica.</p>
   <div class="set-line"><h3>Personalizar saludo</h3><div style="display:flex;gap:8px"><input id="nameInput" class="nameinput" placeholder="Tu nombre" maxlength="32"/><button type="button" class="actionbtn highlight" id="saveName">Guardar</button></div></div>
   <div class="set-line"><h3>Apariencia</h3><div class="tile-buttons"><button data-theme-choice="auto" class="is-selected">Auto</button><button data-theme-choice="light">Día</button><button data-theme-choice="dark">Noche</button><button type="button" id="modeButton">Alternar <span id="modeSwitch">☀</span></button></div><p class="muted">Modo actual: <span id="modeLabel">Automático</span></p></div>
@@ -1620,17 +1620,17 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
   <div class="set-line"><h3>Ubicación y datos</h3><p id="gpsDetail" class="muted">Esperando GPS</p><p id="gpsSmall" class="muted">GPS sin velocidad</p><p id="rpmSmall" class="muted">OBD sin conectar</p><div class="tile-buttons"><button type="button" class="actionbtn" id="requestGps">Comprobar GPS</button><button type="button" class="actionbtn" data-action="obd">Conectar OBD2</button><button type="button" class="actionbtn" id="openBluetooth">Bluetooth Android</button></div></div>
   <div class="set-line">
    <h3>GPS del iPhone — NMEA directo</h3>
-   <p class="muted">Conecta Rush Launcher directamente a GPS2IP por Wi-Fi TCP. No requiere GPS Connector, licencia TCP/IP ni opciones de desarrollador. Mantén ambos dispositivos en la misma Wi-Fi.</p>
+   <p class="muted">GPS Metrics por Wi-Fi TCP, configurado de fábrica en 192.168.0.100:10110. Si GPS Connector ya funciona, conserva esa conexión. Activa NMEA directo solo si deseas sustituir GPS Connector y GPS Metrics ofrece servidor TCP.</p>
    <div class="tile-buttons">
-    <label class="muted">IP del iPhone <input id="iphoneGpsHost" class="nameinput" type="text" inputmode="decimal" maxlength="15" value="192.168.0.101" placeholder="192.168.0.101" aria-label="IP del iPhone"/></label>
-    <label class="muted">Puerto <input id="iphoneGpsPort" class="nameinput" type="number" inputmode="numeric" min="1024" max="65535" value="11123" aria-label="Puerto NMEA TCP"/></label>
+    <label class="muted">IP del iPhone <input id="iphoneGpsHost" class="nameinput" type="text" inputmode="decimal" maxlength="15" value="192.168.0.100" placeholder="192.168.0.100" aria-label="IP del iPhone"/></label>
+    <label class="muted">Puerto <input id="iphoneGpsPort" class="nameinput" type="number" inputmode="numeric" min="1024" max="65535" value="10110" aria-label="Puerto NMEA TCP"/></label>
    </div>
    <div class="tile-buttons">
     <button type="button" class="actionbtn highlight" id="iphoneGpsConnect">Conectar GPS iPhone</button>
     <button type="button" class="actionbtn" id="iphoneGpsDisconnect">Desconectar</button>
    </div>
    <p class="muted" id="iphoneGpsStatus" role="status">GPS iPhone desconectado</p>
-   <p class="muted">La sentencia RMC contiene posición, velocidad y rumbo, pero no precisión. Rush no mostrará un falso ±0 m. Al perder Wi-Fi, el último punto se indicará como antiguo. GPS2IP Lite puede limitar la duración de las sesiones.</p>
+   <p class="muted">La sentencia RMC contiene posición, velocidad y rumbo, pero no precisión. Rush no mostrará un falso ±0 m. Al perder Wi-Fi, el último punto se indicará como antiguo. Mantén GPS Metrics transmitiendo RMC y comprueba su funcionamiento en segundo plano.</p>
   </div>
 
   <div class="set-line">
@@ -1653,12 +1653,13 @@ body>.home-map.rush-map-fullscreen .home-map-offlinechip{
   </div>
   <div class="set-line">
    <h3>Cartografía y tráfico TomTom Orbis</h3>
-   <p class="muted">Por defecto funciona OpenStreetMap. Para utilizar mapas TomTom y congestión real, agrega tu clave personal de <b>my.tomtom.com</b>. No se incluyen claves ni tráfico simulado. Requiere internet; según tu cuenta puede haber límites y cargos por uso.</p>
+   <p class="muted">Por defecto funciona OpenStreetMap. Para utilizar mapas TomTom y congestión real, agrega tu clave personal de <b>my.tomtom.com</b>. Importa tu archivo de configuración personal para activar mapa y tráfico de una vez. No se incluyen claves públicas ni tráfico simulado. Requiere internet; según tu cuenta puede haber límites y cargos por uso.</p>
    <div class="tile-buttons">
      <label for="cartoTomtomKey" class="muted">Clave API TomTom
       <input id="cartoTomtomKey" class="nameinput" type="password" autocomplete="off" spellcheck="false" placeholder="Pega tu clave (no se muestra)" maxlength="128"/>
      </label>
      <button type="button" id="cartoSaveKey" class="actionbtn highlight">Guardar clave</button>
+     <button type="button" id="cartoImportKey" class="actionbtn">Importar configuración TomTom</button>
      <button type="button" id="cartoRemoveKey" class="actionbtn">Eliminar clave</button>
    </div>
    <div class="tile-buttons">

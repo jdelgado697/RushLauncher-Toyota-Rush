@@ -458,11 +458,24 @@ if($('cartoSaveKey'))$('cartoSaveKey').addEventListener('click',function(){
  if(!key){cartoControlsUpdate('Escribe primero tu clave TomTom personal');return;}
  var map=window.RushHomeMap;
  if(!map)return;
- var result=map.configureCartography({key:key,provider:'tomtom'});
+ var result=map.configureCartography({key:key,provider:'tomtom',traffic:true});
  if(result.ok){
   $('cartoTomtomKey').value='';
-  cartoControlsUpdate('Clave guardada · mapa TomTom seleccionado. Puedes activar tráfico.');
+  cartoControlsUpdate('Clave guardada · mapa y tráfico TomTom activados.');
  }else cartoControlsUpdate(result.message);
+});
+window.rushImportTomtom=function(key){
+ var map=window.RushHomeMap;
+ if(!map)return;
+ var result=map.configureCartography({key:key,provider:'tomtom',traffic:true});
+ if(result.ok){
+  if($('cartoTomtomKey'))$('cartoTomtomKey').value='';
+  cartoControlsUpdate('Configuración importada · mapa y tráfico TomTom activados.');
+ }else cartoControlsUpdate(result.message);
+};
+if($('cartoImportKey'))$('cartoImportKey').addEventListener('click',function(){
+ if(nativeApp&&typeof window.Rush.importTomtomConfig==='function')window.Rush.importTomtomConfig();
+ else cartoControlsUpdate('Importación disponible en el APK Android.');
 });
 if($('cartoRemoveKey'))$('cartoRemoveKey').addEventListener('click',function(){
  cartoConfigure({clearKey:true});
@@ -494,9 +507,9 @@ window.rushExternalNmeaState=function(info) {
  window.RushExternalGps.recent=!!info.recent;
  window.RushExternalGps.hasFix=(Number(info.fixes)||0)>0&&!!info.recent;
  if($('iphoneGpsHost')&&document.activeElement!==$('iphoneGpsHost'))
-   $('iphoneGpsHost').value=info.host||'192.168.0.101';
+   $('iphoneGpsHost').value=info.host||'192.168.0.100';
  if($('iphoneGpsPort')&&document.activeElement!==$('iphoneGpsPort'))
-   $('iphoneGpsPort').value=info.port||11123;
+   $('iphoneGpsPort').value=info.port||10110;
  var msg=String(info.status||'GPS iPhone no conectado');
  var fixes=Number(info.fixes)||0;
  write('iphoneGpsStatus',msg+(fixes?' · '+fixes+' lecturas RMC':''));
@@ -516,7 +529,7 @@ $('iphoneGpsConnect').addEventListener('click',function(){
   notice('Revisa IP privada y puerto del iPhone');return;
  }
  window.Rush.connectIphoneGps(ip,port);
- write('iphoneGpsStatus','Conectando a GPS2IP '+ip+':'+port+'…');
+ write('iphoneGpsStatus','Conectando a GPS Metrics '+ip+':'+port+'…');
 });
 $('iphoneGpsDisconnect').addEventListener('click',function(){
  if(nativeApp&&typeof window.Rush.disconnectIphoneGps==='function'){
